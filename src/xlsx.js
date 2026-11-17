@@ -64,9 +64,10 @@ const BASE_IMPORT_TARGETS=[
   ["label","Break name"],["rowType","Row type (Shot / Break)"]
 ];
 function importTargets(){
+  const extra=IMP&&IMP.app?[["rid","App row link (keeps days exact)"]]:[];
   const custom=cols().filter(c=>c.custom).map(c=>[c.key,c.label+" (your column)"]);
   const relabel=([k,l])=>{const c=colMap()[k];return [k,c&&c.label!==c.base&&!c.custom?`${c.label} (${l})`:l]};
-  return [...BASE_IMPORT_TARGETS.map(relabel),...custom,["new","+ New column (named after the heading)"]];
+  return [...BASE_IMPORT_TARGETS.map(relabel),...extra,...custom,["new","+ New column (named after the heading)"]];
 }
 const APPEND_TARGETS=["director","vfx","camera","location","props","script","description"];
 const IMPORT_SYN={
@@ -114,7 +115,11 @@ async function openImport(file){
     const sheets=await readSheets(file);
     if(!sheets.length) throw new Error("That file has no data.");
     const pick=sheets.find(s=>/shot|list|schedule|table/i.test(s.name)&&s.rows.length>1)||sheets.slice().sort((a,b)=>b.rows.length-a.rows.length)[0];
-    IMP={file:file.name,sheets,proj:sheets.find(s=>s.name==="Project")};
+    IMP={file:file.name,sheets,proj:sheets.find(s=>s.name==="Project"),app:null};
+    const ad=sheets.find(s=>s.name==="App data");
+    if(ad){try{const j=JSON.parse(ad.rows.slice(1).map(r=>String(r[0]??"")).join(""));if(j&&j.app==="shotlist-scheduler"&&Array.isArray(j.days))IMP.app=j}catch(e){}}
+    const opt=$("#impDest option[value=restore]"); if(opt) opt.remove();
+    if(IMP.app) $("#impDest").prepend(h("option",{value:"restore"},`the days as exported (${IMP.app.days.map(d=>d.name).join(", ")}: names, kinds, times and every field kept)`));
     $("#impModal").classList.add("open");
     $("#impSheet").innerHTML=""; sheets.forEach(s=>$("#impSheet").append(h("option",{value:s.name},`${s.name} (${s.rows.length} rows)`)));
     $("#impSheet").value=pick.name; setImpSheet(pick.name);
@@ -131,7 +136,7 @@ function buildImpMap(){
   const used=new Set(); IMP.map=[];
   for(let c=0;c<width;c++){
     const head=String(hdr[c]??"").trim()||`Column ${c+1}`;
-    let t=guessTarget(hdr[c],used); if(t!=="ignore") used.add(t);
+    let t=normH(hdr[c])==="app row id"?(IMP.app?"rid":"ignore"):guessTarget(hdr[c],used); if(t!=="ignore") used.add(t);
     if(!body.some(r=>String(r[c]??"").trim()!=="")) t="ignore";
     if(t==="new"&&!String(hdr[c]??"").trim()) t="ignore";
     IMP.map.push({h:head,t,sample:String((body.find(r=>String(r[c]??"").trim()!=="")||[])[c]??"")});
@@ -144,7 +149,7 @@ function buildImpMap(){
   });
   const has=k=>IMP.map.some(m=>m.t===k);
   $("#impTakes").checked=has("take")||has("hero")||has("safety");
-  $("#impDest").value=has("shootDay")?"bydays":(S&&D()&&D().rows.length?"newday":"append");
+  $("#impDest").value=IMP.app&&has("rid")?"restore":has("shootDay")?"bydays":(S&&D()&&D().rows.length?"newday":"append");
   updImpInfo();
 }
 function updImpInfo(){
@@ -166,6 +171,7 @@ function impRecords(){
     IMP.map.forEach((m,c)=>{
       if(m.t==="ignore") return; const raw=r[c]; const v=typeof raw==="string"?raw.trim():raw;
       if(v===""||v==null) return;
+      if(m.t==="rid"){rec.rid=String(v);return}
       if(m.t==="take"){const n=parseInt(v,10);if(!isNaN(n))rec.take=n;return}
       if(m.t==="shootDay"){rec.day=String(v);return}
       if(m.t==="rowType"){rec.brk=/break|move|lunch/i.test(String(v));return}
@@ -222,6 +228,43 @@ function groupToRow(g,recorded,kindCapture){
   if(!kindCapture&&!row.description&&row.action) row.description=row.action;
   return row;
 }
+// rebuild the exported days: each shot starts from its saved copy, then takes whatever was edited in the Shotlist tab
+function restoreDays(recs,recorded,colRemap){
+  const byRid=new Map(), loose=[];
+  for(const r of recs){ if(r.rid){ if(!byRid.has(r.rid)) byRid.set(r.rid,[]); byRid.get(r.rid).push(r); } else loose.push(r); }
+  const SKIP=new Set(["origStart","takes"]);   // "Planned start" in the sheet is the calculated time, not the original plan
+  const remapKeys=o=>{const out={};for(const [k,v] of Object.entries(o)){out[colRemap[k]||k]=v}return out};
+  const days=[];
+  for(const ad of IMP.app.days){
+    const d=Object.assign({},DAY_BLANK,{});
+    for(const k of DAY_FIELDS) if(ad[k]!==undefined&&ad[k]!==null) d[k]=ad[k];
+    d.id=uid("d"); d.archived=null; d.rows=[];
+    for(const sr of ad.rows||[]){
+      if(sr.type==="break"){ d.rows.push(Object.assign(remapKeys(sr),{id:uid("r")})); continue; }
+      const got=byRid.get(sr.id); if(!got) continue;   // deleted from the sheet
+      byRid.delete(sr.id);
+      const row=Object.assign({},ROW_BLANK,remapKeys(sr),{id:uid("r")});
+      const f=got[0].f;
+      for(const [k,v] of Object.entries(f)){ if(SKIP.has(k)||k.startsWith("new:")) continue; row[k]=v; }
+      // the sheet writes padded shot numbers (002); if it wasn't changed there, keep the app's own (02)
+      { let exp=""; try{exp=shotNumber(sr,ad)}catch(e){} if(normH(f.shot)===normH(exp)||(f.shot==null&&!exp)) row.shot=sr.shot; }
+      // fields that were emptied in the sheet come back empty
+      for(const m of IMP.map){ if(["ignore","rid","take","shootDay","rowType","new","origStart","label"].includes(m.t)) continue; if(!(m.t in f)&&typeof row[m.t]==="string") row[m.t]=""; }
+      if(got.some(r=>r.f.done)) row.done=true; else if("done" in f) row.done=false;
+      d.rows.push(row);
+    }
+    days.push(d);
+  }
+  // shots added in the sheet (no app row id) go on the day with the same Shoot Day number, or the last day
+  const extra=[...loose,...[...byRid.values()].flat()];
+  if(extra.length){
+    for(const g of groupImport(extra)){
+      const no=Number(g.day); const d=days.find(x=>Number(x.dayNo)===no)||days[days.length-1];
+      if(d) d.rows.push(groupToRow(g,recorded,d.kind==="capture"));
+    }
+  }
+  return days;
+}
 function guessColType(c){
   const vals=impDataRows().map(r=>r[c]).filter(v=>v!==""&&v!=null);
   if(!vals.length) return "text";
@@ -233,8 +276,17 @@ function guessColType(c){
 }
 async function runImport(){
   const dest=$("#impDest").value, recorded=$("#impTakes").checked;
+  // a new project gets its own columns; this project's columns are left as they were
+  const colsBefore=clone(S.cols), newCols=()=>{const ids=new Set(colsBefore.map(x=>x.id));const add=S.cols.filter(x=>!ids.has(x.id));S.cols=colsBefore;invalidateCols();return clone(add)};
   // columns mapped to "+ New column" become project columns first
   let made=0;
+  const appCols=(IMP.app&&IMP.app.cols)||[], colRemap={};
+  // exported custom columns come back as the same column (matched by id, then name), with their type and options
+  for(const ac of appCols){ const ex=S.cols.find(x=>x.id===ac.id)||S.cols.find(x=>normH(x.label)===normH(ac.label)); colRemap["c_"+ac.id]=ex?"c_"+ex.id:null; }
+  IMP.map.forEach(m=>{ if(m.t!=="new") return; const ac=appCols.find(x=>normH(x.label)===normH(m.h)); if(!ac) return;
+    if(!colRemap["c_"+ac.id]){ const id=S.cols.some(x=>x.id===ac.id)?uid("k").replace(/[^a-z0-9]/gi,""):ac.id; S.cols.push({id,label:ac.label,type:ac.type,options:ac.options||""}); colRemap["c_"+ac.id]="c_"+id; }
+    m.t=colRemap["c_"+ac.id]; });
+  for(const ac of appCols) if(!colRemap["c_"+ac.id]&&(dest==="restore"||dest==="newproject")){ S.cols.push({id:ac.id,label:ac.label,type:ac.type,options:ac.options||""}); colRemap["c_"+ac.id]="c_"+ac.id; }
   IMP.map.forEach((m,c)=>{ if(m.t!=="new") return;
     const type=guessColType(c), id=uid("k").replace(/[^a-z0-9]/gi,"");
     const options=type==="list"?[...new Set(impDataRows().map(r=>String(r[c]??"").trim()).filter(Boolean))].join(","):"";
@@ -248,6 +300,24 @@ async function runImport(){
   const mkDay=(name,no)=>Object.assign({},DAY_BLANK,{id:uid("d"),name,kind:capture?"capture":"schedule",dayNo:no,call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,rows:[]});
   commit();
   let target=null;
+  if(IMP.app&&has("rid")&&(dest==="restore"||dest==="newproject")){
+    const days=restoreDays(recs,recorded,colRemap);
+    if(dest==="newproject"){
+      const project={name:IMP.file.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ")};
+      if(IMP.proj){const pr=IMP.proj.rows;const lk={"client / production":"client","shoot date(s)":"dates","location":"location","capture system":"system","director / lead":"lead","shoot / production id":"prodId","frame rate (fps)":"fps","notes":"notes"};
+        if(pr[0]&&String(pr[0][0]).trim())project.name=String(pr[0][0]).trim();pr.slice(1).forEach(r=>{const k=lk[normH(r[0])];if(k&&String(r[1]??"").trim())project[k]=String(r[1])})}
+      const used=new Set(Object.values(colRemap)); const added=newCols();
+      const doc=normDoc({project,cols:[...added,...clone(colsBefore.filter(x=>used.has("c_"+x.id)))],days}); commit();
+      $("#impModal").classList.remove("open");
+      try{const id=await createProject(project.name,docToSeed(doc));await openProject(id);toast(`Imported ${days.length} day${days.length>1?"s":""} into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
+      return;
+    }
+    days.forEach(d=>S.days.push(d)); if(made||Object.keys(colRemap).length) invalidateCols();
+    commit(); P.activeByProject[pid()]=days[0]&&days[0].id; savePrefs(); renderAll();
+    $("#impModal").classList.remove("open");
+    toast(`Restored ${days.length} day${days.length>1?"s":""} as exported - Undo to take it back`);
+    return;
+  }
   if(dest==="newproject"){
     const days=[];
     const byDay=has("shootDay");
@@ -255,7 +325,7 @@ async function runImport(){
     const project={name:IMP.file.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ")};
     if(IMP.proj){const pr=IMP.proj.rows;const lk={"client / production":"client","shoot date(s)":"dates","location":"location","capture system":"system","director / lead":"lead","shoot / production id":"prodId","frame rate (fps)":"fps","notes":"notes"};
       if(pr[0]&&String(pr[0][0]).trim())project.name=String(pr[0][0]).trim();pr.slice(1).forEach(r=>{const k=lk[normH(r[0])];if(k&&String(r[1]??"").trim())project[k]=String(r[1])})}
-    const doc=normDoc({project,days});
+    const doc=normDoc({project,cols:newCols(),days}); commit();
     $("#impModal").classList.remove("open");
     try{const id=await createProject(project.name,docToSeed(doc));await openProject(id);toast(`Imported ${groups.length} shots into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
     return;
@@ -331,10 +401,11 @@ async function buildTracker(days,opt){
   if(opt.withTiming) tcols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
   { const cm=colMap(); const keymap={done:null,start:null,setup:"setup",shoot:"shoot",shot:"shot",priority:"priority",perfCount:"perfCount",props:"props",performers:"performers",genre:"genre",action:"action",body:"body",face:"face",glove:"glove",hero:"hero",safety:"safety",description:"description",location:"location",shotType:"shotType",camera:"camera",vfx:"vfx",director:"director"};
     tcols.forEach(x=>{const k=keymap[x.k];const c=k&&cm[k];if(c&&c.label!==c.base)x.h=c.label}); }
+  tcols.push({k:"rid",h:"App row ID",w:12});
   tcols.forEach((x,i)=>{x.i=i+1;x.L=colLetter(i+1)});
   const L=k=>(tcols.find(x=>x.k===k)||{}).L;
   const sl=wb.addWorksheet("Shotlist",{properties:{tabColor:{argb:XC.accent}},views:[{state:"frozen",xSplit:3,ySplit:2,showGridLines:false}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:2"}});
-  sl.columns=tcols.map(x=>({width:x.w}));
+  sl.columns=tcols.map(x=>({width:x.w,hidden:x.k==="rid"}));
   const hr=sl.getRow(1); hr.height=30;
   tcols.forEach(x=>{const cell=hr.getCell(x.i);cell.value=x.h;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}});cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};cell.border={bottom:{style:"medium",color:{argb:XC.accent}}}});
   const tr=sl.getRow(2); tr.height=20;
@@ -380,7 +451,7 @@ async function buildTracker(days,opt){
     const put=(k,v)=>{const col=tcols.find(y=>y.k===k);if(col)row.getCell(col.i).value=v};
     if(x){
       const r=x.r, d=x.d;
-      put("shot",shotNumber(r,d)); put("take",x.take); put("app",shotName(r,d,x.take));
+      put("rid",r.id); put("shot",shotNumber(r,d)); put("take",x.take); put("app",shotName(r,d,x.take));
       const pid_=String(S.project.prodId||"").trim(); put("prod",pid_===""?null:(isNaN(Number(pid_))?pid_:Number(pid_)));
       put("day",d.dayNo||dayIndex(d)+1);
       for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
@@ -412,7 +483,7 @@ async function buildTracker(days,opt){
   if(plist&&plist.length<=250) sl.dataValidations.add(rng("priority"),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${plist}"`]});
   const prules=popts.map(o=>{const hx=prioHex(o);if(!hx)return null;const argb="FF"+hx.slice(1).toUpperCase();return {type:"cellIs",operator:"equal",formulae:[`"${o.replace(/"/g,"")}"`],style:st(argb,inkOn(hx)==="#fff"?XC.white:XC.ink,1),priority:pri++}}).filter(Boolean);
   if(prules.length) sl.addConditionalFormatting({ref:rng("priority"),rules:prules});
-  for(const col of tcols.filter(y=>y.custom==="list")){const o=optList((S.tcols.find(x=>"c_"+x.id===col.k)||{}).options).join(",").replace(/"/g,"");if(o&&o.length<=250)sl.dataValidations.add(rng(col.k),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${o}"`]})}
+  for(const col of tcols.filter(y=>y.custom==="list")){const o=optList((S.cols.find(x=>"c_"+x.id===col.k)||{}).options).join(",").replace(/"/g,"");if(o&&o.length<=250)sl.dataValidations.add(rng(col.k),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${o}"`]})}
   sl.addConditionalFormatting({ref:`A3:${colLetter(tcols.length)}${last}`,rules:[{type:"expression",formulae:[`N($${L("done")}3)=1`],style:st(XC.done),priority:pri++}]});
   ["done","body","face","glove"].forEach(k=>sl.addConditionalFormatting({ref:rng(k),rules:[{type:"expression",formulae:[`AND($${aL}3<>"",N(${L(k)}3)=0)`],style:st(XC.soft,XC.accent),priority:pri++}]}));
 
@@ -444,6 +515,13 @@ async function buildTracker(days,opt){
   }
 
   // Instructions
+  // App data (hidden): everything the tracker columns don't carry - day names, kinds and times, script, refs, column types -
+  // so importing this file back restores the days exactly, while edits made in the Shotlist tab still come through
+  { const ad=wb.addWorksheet("App data",{state:"hidden"});
+    const payload=JSON.stringify({app:"shotlist-scheduler",v:1,exported:new Date().toISOString(),cols:S.cols,
+      days:days.map(d=>{const o={};for(const k of DAY_FIELDS)o[k]=d[k]??null;o.id=d.id;o.rows=d.rows.map(r=>Object.assign({},r));return o})});
+    ad.getCell("A1").value="Shotlist Scheduler app data - used when this file is imported back. Please leave it as it is.";
+    for(let i=0,rn=2;i<payload.length;i+=30000,rn++) ad.getCell("A"+rn).value=payload.slice(i,i+30000); }
   const ins=wb.addWorksheet("Instructions",{properties:{tabColor:{argb:XC.signal}},views:[{showGridLines:false}]});
   ins.columns=[{width:30},{width:100}];
   ins.getCell("A1").value="How to use this shotlist"; ins.getCell("A1").font=F({size:18,bold:true}); ins.getRow(1).height=30;
