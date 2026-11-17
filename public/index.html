@@ -502,7 +502,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <label id="joinKeyRow">Team key<input id="joinKey" type="password" autocomplete="current-password"></label>
   </div>
   <div class="err" id="joinErr"></div>
-  <div class="toolbar"><button class="btn primary" id="joinGo">Join</button><button class="btn" id="joinLocal" title="Use this copy on its own, saved only in this browser">Work offline instead</button></div>
+  <div class="toolbar"><button class="btn primary" id="joinGo">Join</button><button class="btn" id="joinLocal" title="Use a separate copy saved only in this browser. You can rejoin any time from the header or Settings > Team &amp; sync">Work offline instead</button></div>
 </div></div>
 
 <!-- Confirm -->
@@ -621,6 +621,13 @@ body.nosteps .mins.timing input{width:4.5em}
       </ul></li>
   </ul>
 
+  <h3>Working offline and rejoining</h3>
+  <ul>
+    <li><b>Work offline instead</b> on the join screen opens a separate copy saved only in this browser; it doesn't sync. Your team schedule is untouched.</li>
+    <li>To get back, click <b>Rejoin team project</b> next to the status in the header, or in Settings &gt; Team &amp; sync. Adding <code>?team</code> to the end of the site address does the same.</li>
+    <li>If you lose signal on set without choosing offline, you don't need to do anything: changes queue on the device and send when the connection is back.</li>
+  </ul>
+
   <h3>Tablets and phones</h3>
   <ul>
     <li>The tool works on iPads and other tablets, and on phones for quick checks and ticking shots off. Add it to your home screen (Share → Add to Home Screen) and it opens like an app.</li>
@@ -680,8 +687,9 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.6.1";
+const VERSION = "2.6.2";
 const CHANGELOG = [
+  ["2.6.2","2026-11-17","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
   ["2.6.1","2026-11-17","Print / PDF squeezes the columns to fit an A4 landscape page (notes columns give way first; your on-screen widths are untouched). The − / + buttons on Setup and Shoot can be switched off in Settings > Display if you prefer to type."],
   ["2.6.0","2026-11-17","Days are archived instead of deleted: Archive day puts the tab away for everyone and the Archived tab restores it. The day settings and filters sit on a coloured banner that joins the open tab. Timeline and banner colours in Settings > Display (or the Timeline colours link under the timeline). Timeline hour labels no longer get cropped. Short text columns (Action, Performer(s), custom text columns such as Runner notes) now wrap. Optional highlight of the rows teammates are working in, in their badge colour, off by default. Wrapped day tabs sit in the right third of the tab bar, and tabs shrink to fit as more days are added (hover for the full name). Tablet and phone friendly: the shot number stays in view while swiping along a row, the day banner folds down to the filters (tap Day settings for the rest), extra toolbar buttons move under More, tabs and summary cards scroll sideways, bigger touch targets, and column widths can be dragged with a finger."],
   ["2.5.1","2026-11-17","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
@@ -1261,7 +1269,7 @@ function flashRemote(batches){
 function updateStatus(){
   const el=$("#status"), label=$("span",el);
   el.className="status noprint";
-  if(MODE==="local"){label.textContent="Local - this browser";el.title="Saved in this browser only. Open the team site to work together.";return}
+  if(MODE==="local"){if(P.mode==="local-forced"&&teamAvailable){label.textContent="Working offline (your choice)";el.title="You chose Work offline, so this browser is using its own copy. Click Rejoin team project to go back to the shared schedule.";return}label.textContent="Local - this browser";el.title="Saved in this browser only. Open the team site to work together.";return}
   const n=pending.reduce((a,p)=>a+p.ops.length,0);
   if(netErr&&!navigator.onLine||netErr&&backoff){el.classList.add("off");label.textContent=n?`Offline - ${pending.length} change${pending.length>1?"s":""} waiting`:"Offline - retrying";el.title=netErr+". Changes are kept on this device and sent when the connection is back.";return}
   if(pending.length||flushing){el.classList.add("busy");label.textContent="Saving…";el.title=`${pending.length} change${pending.length>1?"s":""} sending`;return}
@@ -2072,7 +2080,10 @@ function renderSetTab(){
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
     if(MODE==="local"){
-      b.append(h("p",{},"You're working on your own: everything is saved in this browser."),
+      if(P.mode==="local-forced") b.append(h("p",{},"You chose ",h("b",{},"Work offline"),", so this browser is using its own copy and isn't syncing with the team."),
+        h("div",{class:"toolbar",style:"margin-bottom:.8rem"},h("button",{class:"btn primary",onclick:rejoinTeam},"Rejoin team project")),
+        h("p",{class:"note"},"Your shared team schedule is safe on the team site. Anything you changed while offline stays in this browser's own copy: to bring it across, use Settings > Projects > Export project file here, rejoin, then Import into a new project."));
+      else b.append(h("p",{},"You're working on your own: everything is saved in this browser."),
         h("p",{class:"note"},"To work as a team, deploy this tool to Netlify (see Help > Working as a team), then open the team site and enter the team key. Projects you made here can be brought across with Settings > Projects > Export project file and Import into a new project."));
     }else{
       const f=h("div",{class:"form"});
@@ -2744,6 +2755,14 @@ async function startTeam(){
     await openProject(P.projectId);
   }catch(e){ if(e.status===401) needKey(e.message); else { netErr=e.message; backoff=4000; updateStatus(); toast("Can't reach the team site: "+e.message); setTimeout(startTeam,5000) } }
 }
+let teamAvailable=false;
+function rejoinTeam(){P.mode=null;savePrefs();location.reload()}
+function showRejoin(){
+  const st=$("#status"); if(!st) return;
+  if(!$("#rejoinBtn")) st.after(h("button",{class:"btn small primary noprint",id:"rejoinBtn",title:"Go back to the shared team schedule",onclick:rejoinTeam},"Rejoin team project"));
+  $("span",st).textContent="Working offline (your choice)";
+  st.title="You chose Work offline, so this browser is using its own copy. Click Rejoin team project to go back to the shared schedule.";
+}
 async function startLocal(){
   MODE="local"; await loadProjects();
   if(!projects.length){const id=await createProject("Untitled project",blankSeed("Untitled project"));P.projectId=id}
@@ -2755,7 +2774,14 @@ async function boot(){
   $("#verLabel").textContent="v"+VERSION; $("#helpVer").textContent="Version v"+VERSION;
   $("#changelog").append(...CHANGELOG.map(([v,d,t])=>h("li",{},h("b",{},"v"+v)," ("+d+") - "+t)));
   setTimeout(checkVersion,5000); setInterval(checkVersion,60000);
-  const where=P.mode==="local-forced"?"local":await detectTeam();
+  if(/[?&]team\b/.test(location.search)&&P.mode==="local-forced"){P.mode=null;savePrefs()}
+  if(P.mode==="local-forced"){
+    // chose to work offline: open the local copy, but check whether the team site is here so they can get back
+    await startLocal();
+    detectTeam().then(w=>{if(w==="team"){teamAvailable=true;showRejoin()}}).catch(()=>{});
+    return;
+  }
+  const where=await detectTeam();
   if(where==="unreachable"&&P.projectId){
     // used the team site on this device before: start from the saved copy and keep retrying
     MODE="team"; NEEDS_KEY=!!P.needsKey; netErr="Can't reach the team site"; backoff=4000;
@@ -2838,7 +2864,7 @@ $("#joinGo").onclick=async()=>{const name=$("#joinName").value.trim(),key=$("#jo
   P.name=name;P.teamKey=key;P.mode=null;savePrefs();$("#joinErr").textContent="Checking…";
   try{await api("/api/projects",undefined,{noProject:true});$("#joinErr").textContent="";await startTeam()}catch(e){$("#joinErr").textContent=e.message}};
 $("#joinKey").addEventListener("keydown",e=>{if(e.key==="Enter")$("#joinGo").click()});
-$("#joinLocal").onclick=async()=>{P.mode="local-forced";savePrefs();$("#joinModal").classList.remove("open");await startLocal();toast("Working offline in this browser. Settings > Team & sync explains how to join later.")};
+$("#joinLocal").onclick=async()=>{const nm=$("#joinName").value.trim();if(nm)P.name=nm;P.mode="local-forced";savePrefs();$("#joinModal").classList.remove("open");await startLocal();toast("Working offline in this browser. Settings > Team & sync explains how to join later.")};
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape") $$(".modal.open").forEach(m=>{if(!["joinModal"].includes(m.id))m.classList.remove("open")});
   const tag=(document.activeElement||{}).tagName; if(tag==="TEXTAREA"||tag==="INPUT"||tag==="SELECT") return;
