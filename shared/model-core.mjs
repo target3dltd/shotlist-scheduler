@@ -175,7 +175,7 @@ function diffDocs(a, b){
   const put = (e, id, k, v, pv) => {
     const key = e + ":" + id;
     const o = ops[key] || (ops[key] = { e, id, set: {}, prev: {} });
-    o.set[k] = v; o.prev[k] = pv;
+    o.set[k] = v === undefined ? null : v; o.prev[k] = pv === undefined ? null : pv;
   };
   PROJECT_FIELDS.forEach(k => { if (!same((a.project || {})[k], (b.project || {})[k])) put("doc", "doc", "p_" + k, b.project[k], (a.project || {})[k]); });
   const aP = Object.fromEntries((a.people || []).map(p => [p.id, p]));

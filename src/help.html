@@ -45,10 +45,27 @@
     <li>Settings → <b>Projects</b>: open, create (blank, same settings without shots, or a full copy), remove, export a project file, or import one. Shotlist Builder project files (<code>.json</code>) and older Scheduler saves import too. A Builder file becomes a capture day, with retakes counted as takes.</li>
   </ul>
 
+  <h3>Spreadsheets</h3>
+  <ul>
+    <li><b>Import sheet</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>Group retakes</b> merges consecutive rows with the same Shot # and Action into one shot with a take count. Hero / Safety / NG marks per take are noted in Director notes, e.g. <code>Hero: T7</code>.</li>
+    <li>Tick <b>Rows are takes already recorded</b> when importing a log of what was shot. Leave it off for a plan, so the first take you log is T1.</li>
+    <li>Send the shots to a new day, to new days split by the Shoot Day column, to the open day, or to a new project. A Builder export's Project tab fills in the project details. Undo takes an import back.</li>
+    <li><b>Export .xlsx</b> writes the Shotlist Builder tracker for Google Sheets or Excel: a Project tab with cast and crew, then a Shotlist with one row per take. Take # and Shot ID are live formulas driven by an ID Settings tab, so retakes added in the sheet number themselves. Optional timecode and frame columns and a Schedule tab are included. In Google Sheets: File &gt; Import &gt; Upload &gt; Replace spreadsheet.</li>
+    <li>On the team site the spreadsheet library is served from the site itself. The standalone file fetches it from a public library server the first time you import or export.</li>
+  </ul>
+
   <h3>Settings</h3>
   <ul>
     <li><b>Team defaults</b> (shared): − / + step, setup and shoot minutes for new shots, the break name and length, and the call, wrap, buffers and minimum setup for new days.</li>
-    <li><b>Display</b> (just you): light, dark or match-device theme (also the ◐ button), interface and table text size, compact or comfortable rows, and a 12 or 24-hour clock.</li>
+    <li><b>Display</b> (just you, on this device). If your eyes get tired, start with a preset: <i>Easy on the eyes</i> (warm paper colours, Atkinson Hyperlegible, bigger text, more space, striped rows), <i>Night / dark set</i>, <i>High contrast</i> or <i>Compact</i>. Then fine-tune:
+      <ul>
+        <li><b>Colour theme</b>: match device, light, warm paper (less glare), dim (soft grey dark), dark, high contrast and high-contrast dark. The ◐ button flips between your chosen light and dark themes.</li>
+        <li><b>Highlight colour</b> for selections, warnings and the wrap line.</li>
+        <li><b>Font</b>: System, Atkinson Hyperlegible (designed for low-vision readability), Lexend (wider, calmer letterforms), serif, rounded or monospace. The team site serves the fonts itself.</li>
+        <li><b>Text weight</b>, <b>interface</b> and <b>table text size</b>, <b>line spacing</b>, <b>letter spacing</b> and <b>row spacing</b> (compact, comfortable, roomy).</li>
+        <li><b>Stripe alternate rows</b> to help follow a row across a wide table, <b>reduce motion</b> to stop the highlight flashes, and a 12 or 24-hour <b>clock</b>.</li>
+      </ul></li>
   </ul>
 
   <h3>Working as a team</h3>
@@ -67,6 +84,13 @@
     <li>On your own, everything saves in this browser automatically. For a backup, or to move a project, use Settings → Projects → <b>Export project file</b>.</li>
     <li><b>Export CSV</b> gives one row per shot for every day, with Day, Kind and Date columns, calculated times, takes and the last take's name. It opens in Numbers, Excel or Google Sheets, and most shotlist apps can import it.</li>
     <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Dark mode prints light.</li>
+  </ul>
+
+  <h3>Updates</h3>
+  <ul>
+    <li>Updating the site never touches the schedule: the shared data lives in the site's storage, not in the code that gets replaced.</li>
+    <li>If a new version goes live while you have the page open, a bar offers <b>Refresh now</b>. It sends any unsaved changes first. Changes that can't be sent yet (offline) stay on your device and go after the refresh.</li>
+    <li>Test versions (deploy previews and branch deploys) use separate storage, so trying something out can't change the live schedule.</li>
   </ul>
 
   <h3>Setting up the team site (Netlify)</h3>

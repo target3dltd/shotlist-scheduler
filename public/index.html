@@ -6,7 +6,13 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Shotlist Scheduler</title>
 <style>
+@font-face{font-family:"Atkinson Hyperlegible";font-weight:400;font-display:swap;src:url("vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.3.0/files/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible";font-weight:700;font-display:swap;src:url("vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.3.0/files/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"Lexend";font-weight:400;font-display:swap;src:url("vendor/fonts/lexend-latin-400-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/lexend@5.3.0/files/lexend-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Lexend";font-weight:700;font-display:swap;src:url("vendor/fonts/lexend-latin-700-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/lexend@5.3.0/files/lexend-latin-700-normal.woff2") format("woff2")}
 :root{
+  --lh:1.35; --ls:0; --fw:400; --zebra:rgba(0,0,0,.025);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ui:13px; --tbl:13px;
   --bg:#f6f5f2; --panel:#ffffff; --panel2:#fbfaf8; --field:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e2e0db; --line2:#bdb9b1;
   --accent:#c2412d; --accent-soft:#f6e3df; --setup:#c9c3b6; --shoot:#2f4858; --break:#d9a441;
@@ -17,18 +23,51 @@
   --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   color-scheme: light;
 }
+html[data-theme="warm"]{
+  --bg:#f3ecdf; --panel:#fbf6ec; --panel2:#f6efe2; --field:#fffaf0; --ink:#3b3229; --muted:#7c6f60; --line:#e3d8c5; --line2:#c9b99f;
+  --accent:#b5532e; --accent-soft:#f3dccd; --setup:#d2c4ad; --shoot:#5b6f63; --break:#d4a24c;
+  --ok:#4f7a46; --warn:#a85a1e; --bad:#a8382c; --done-bg:#e6ead5; --over-bg:#f6e1d6; --break-bg:#f4e7c9;
+  --info-bg:#ebe3d3; --info-ink:#5b4a35; --tab-bg:#ece3d2; --focus:#b59b74; --code-bg:#efe6d6; --shadow:rgba(60,40,10,.10);
+  --handle:#a8997f; --tick:#ebe2d1; --ref-bg:#f6efe2; --zebra:rgba(120,90,40,.035);
+  color-scheme: light;
+}
+html[data-theme="hc"]{
+  --bg:#ffffff; --panel:#ffffff; --panel2:#f2f2f2; --field:#ffffff; --ink:#000000; --muted:#333333; --line:#8a8a8a; --line2:#444444;
+  --accent:#a3000b; --accent-soft:#ffe1e1; --setup:#9a9a9a; --shoot:#003c78; --break:#a86a00;
+  --ok:#006b2b; --warn:#8a4500; --bad:#a3000b; --done-bg:#d9f2df; --over-bg:#ffdcdc; --break-bg:#fff0c8;
+  --info-bg:#e1ecf7; --info-ink:#002e5c; --tab-bg:#e6e6e6; --focus:#003c78; --code-bg:#ededed; --shadow:rgba(0,0,0,.2);
+  --handle:#333; --tick:#cccccc; --ref-bg:#f5f5f5; --zebra:rgba(0,0,0,.05);
+  color-scheme: light;
+}
+html[data-theme="dim"]{
+  --bg:#2a2c31; --panel:#32353b; --panel2:#373a41; --field:#3a3d44; --ink:#d9d6cf; --muted:#a5a29b; --line:#454850; --line2:#5c5f68;
+  --accent:#e0907a; --accent-soft:#4a3632; --setup:#7d786e; --shoot:#8fb0c2; --break:#c9a052;
+  --ok:#86c59c; --warn:#e3a173; --bad:#ec8d83; --done-bg:#33433a; --over-bg:#4a3434; --break-bg:#45412e;
+  --info-bg:#38434b; --info-ink:#b9cfdc; --tab-bg:#373a41; --focus:#7f9bb3; --code-bg:#3a3d44; --shadow:rgba(0,0,0,.4);
+  --handle:#8a8a8a; --tick:#3d4047; --overlay:rgba(0,0,0,.55); --ref-bg:#373a41; --zebra:rgba(255,255,255,.03);
+  color-scheme: dark;
+}
+html[data-theme="hcdark"]{
+  --bg:#000000; --panel:#0b0b0b; --panel2:#151515; --field:#111111; --ink:#ffffff; --muted:#d0d0d0; --line:#6e6e6e; --line2:#bdbdbd;
+  --accent:#ffb000; --accent-soft:#3d2c00; --setup:#8c8c8c; --shoot:#5cc8ff; --break:#ffcc33;
+  --ok:#5df08f; --warn:#ffb000; --bad:#ff6b6b; --done-bg:#0e2b17; --over-bg:#3a0e0e; --break-bg:#332700;
+  --info-bg:#0b2233; --info-ink:#9fd8ff; --tab-bg:#151515; --focus:#5cc8ff; --code-bg:#1a1a1a; --shadow:rgba(0,0,0,.7);
+  --handle:#bbbbbb; --tick:#222222; --overlay:rgba(0,0,0,.75); --ref-bg:#151515; --zebra:rgba(255,255,255,.06);
+  color-scheme: dark;
+}
 html[data-theme="dark"]{
   --bg:#141518; --panel:#1d1e22; --panel2:#222328; --field:#25262b; --ink:#ececec; --muted:#9c9ca6; --line:#33343a; --line2:#4b4c54;
   --accent:#ec7a5f; --accent-soft:#3b2420; --setup:#6e6a60; --shoot:#86b0c9; --break:#cf9b34;
   --ok:#62c38a; --warn:#e8935a; --bad:#f07367; --done-bg:#1d2c23; --over-bg:#3a2222; --break-bg:#33301f;
   --info-bg:#232f37; --info-ink:#a9c8db; --tab-bg:#25262b; --focus:#5d7d99; --code-bg:#2a2b30; --shadow:rgba(0,0,0,.5);
-  --handle:#777; --tick:#2a2b30; --overlay:rgba(0,0,0,.65); --ref-bg:#232428;
+  --handle:#777; --tick:#2a2b30; --overlay:rgba(0,0,0,.65); --ref-bg:#232428; --zebra:rgba(255,255,255,.025);
   color-scheme: dark;
 }
 *{box-sizing:border-box}
 html{font-size:var(--ui)}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
-body{font-size:1rem}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font)}
+body{font-size:1rem;line-height:var(--lh);letter-spacing:var(--ls);font-weight:var(--fw)}
+b,strong,h1,h2,h3,th{font-weight:max(700, var(--fw))}
 button,input,select,textarea{font:inherit;color:inherit}
 input,select,textarea{background:var(--field)}
 header.top{background:var(--bg);border-bottom:1px solid var(--line);padding:.9rem 1.4rem .8rem}
@@ -86,6 +125,10 @@ main{padding:.9rem 1.4rem 4.5rem}
 #grid{font-size:var(--tbl);border-collapse:separate;border-spacing:0;table-layout:fixed}
 #grid th,#grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:.46em;overflow:hidden}
 body.compact #grid th,body.compact #grid td{padding:.2em .35em}
+body.roomy #grid td{padding:.8em .6em}
+body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td{background:var(--zebra)}
+body.calm *,body.calm *::before{animation:none!important;transition:none!important}
+body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
 #grid th{position:sticky;top:0;background:var(--panel2);z-index:5;text-align:left;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
 #grid th .thl{display:flex;align-items:center;gap:.3em;min-height:1.2em;overflow:hidden}
 #grid th.sortable .thl{cursor:pointer;user-select:none}
@@ -110,7 +153,7 @@ td.num,th.num{text-align:center}
 .sorted .rowbtns .mv{display:none}
 .handle{cursor:grab;color:var(--handle);user-select:none;font-size:1.15em;line-height:1;padding:.15em}
 .ctl{display:flex;gap:.3em;align-items:center;white-space:nowrap}
-textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:1.35;overflow:hidden;min-height:1.9em;display:block}
+textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:var(--lh);overflow:hidden;min-height:1.9em;display:block}
 textarea.cell:hover,input.cell:hover,select.cell:hover{border-color:var(--line)}
 textarea.cell:focus,input.cell:focus,select.cell:focus{outline:none;border-color:var(--focus);background:var(--field)}
 input.cell,select.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;padding:.22em .3em}
@@ -186,13 +229,17 @@ table.plain input[type=checkbox]{width:auto}
 .act-list li{border-bottom:1px solid var(--line);padding:.45rem 0;font-size:.95rem}
 .act-list .meta{color:var(--muted);font-size:.85rem}
 .err{color:var(--bad);font-size:.92rem;min-height:1.2em}
+.updatebar{position:sticky;top:0;z-index:150;display:none;gap:.8rem;align-items:center;justify-content:center;flex-wrap:wrap;padding:.5rem 1rem;background:var(--info-bg);color:var(--info-ink);border-bottom:1px solid var(--line);font-size:.95rem}
+.updatebar.show{display:flex}
+.form label.inline{flex-direction:row;align-items:center;gap:.5rem;color:var(--ink)}
+.form label.inline input{width:auto}
 .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.55rem 1.1rem;border-radius:6px;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
 .toast.show{opacity:1}
 
 @media print{
   @page{size:A4 landscape;margin:8mm}
   html{--ui:9.5px;--tbl:9.5px}
-  html[data-theme="dark"]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
+  html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
   .noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
@@ -208,6 +255,7 @@ table.plain input[type=checkbox]{width:auto}
 </style>
 </head>
 <body>
+<div class="updatebar noprint" id="updateBar"><span id="updateText"></span><button class="btn small primary" id="updateGo">Refresh now</button><button class="btn small" id="updateLater">Later</button></div>
 <header class="top">
   <div class="titlebar">
     <h1><span id="projTitle" title="Project name - change it in Settings">Shotlist</span> <small>Shotlist Scheduler <span id="verLabel"></span></small></h1>
@@ -219,6 +267,8 @@ table.plain input[type=checkbox]{width:auto}
       <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
       <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
       <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
+      <button class="btn small" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
+      <button class="btn small" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
       <button class="btn small" id="csvBtn">Export CSV</button>
       <button class="btn small" id="printBtn">Print / PDF</button>
       <button class="btn small" id="actBtn" title="Who changed what">Activity</button>
@@ -282,6 +332,44 @@ table.plain input[type=checkbox]{width:auto}
   <table class="plain dit"><thead><tr><th style="width:5rem">Shot #</th><th>Next take name</th><th style="width:9rem;text-align:center">Takes</th><th style="width:12rem"></th></tr></thead><tbody id="ditRows"></tbody></table>
   <h3>Copied list</h3>
   <textarea class="dit-list" id="ditOut" readonly placeholder="Names you copy appear here too, so you can select and copy them by hand."></textarea>
+</div></div>
+
+<!-- Import spreadsheet -->
+<div class="modal" id="impModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Import a spreadsheet</h2>
+  <p class="note">Choose where each column goes. Columns that match by name are filled in for you. The file is read in your browser. Only the shots you import are saved to the project.</p>
+  <div class="form" style="margin:.6rem 0">
+    <label>Sheet<select id="impSheet"></select></label>
+    <label>Header row<input id="impHeader" type="number" min="1"></label>
+    <label>Put the shots in<select id="impDest">
+      <option value="newday">a new day</option><option value="bydays">new days, one per Shoot Day value</option>
+      <option value="append">the open day (add to the end)</option><option value="replace">the open day (replace its shots)</option>
+      <option value="newproject">a new project</option></select></label>
+  </div>
+  <div class="form" style="grid-template-columns:1fr;gap:.4rem">
+    <label class="inline"><input type="checkbox" id="impGroup" checked> Group retakes: consecutive rows with the same Shot # and Action become one shot with a take count</label>
+    <label class="inline"><input type="checkbox" id="impTakes"> Rows are takes already recorded (set the take count and mark them shot). Leave off for a plan.</label>
+  </div>
+  <p class="note" id="impInfo" style="margin-top:.6rem"></p>
+  <div style="max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:6px">
+    <table class="plain"><thead><tr><th>Column in the file</th><th>First value</th><th>Goes to</th></tr></thead><tbody id="impMap"></tbody></table>
+  </div>
+  <div class="toolbar" style="margin-top:.8rem"><button class="btn primary" id="impGo">Import</button><button class="btn" data-close>Cancel</button></div>
+</div></div>
+
+<!-- Export xlsx -->
+<div class="modal" id="expModal"><div class="box narrow">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Export tracker (.xlsx)</h2>
+  <p class="note">The Shotlist Builder layout: a Project tab, then a Shotlist with one row per take and live Take # and Shot ID formulas. Retakes added in Sheets or Excel number themselves.</p>
+  <h3>Days</h3><div id="expDays" class="form" style="grid-template-columns:1fr;gap:.3rem"></div>
+  <h3>Include</h3>
+  <div class="form" style="grid-template-columns:1fr;gap:.3rem">
+    <label class="inline"><input type="checkbox" id="expTiming" checked> Timecode and frame columns (TC IN/OUT, frames, fps)</label>
+    <label class="inline"><input type="checkbox" id="expSchedule" checked> Schedule tab with each day's calculated times</label>
+  </div>
+  <div class="toolbar" style="margin-top:.8rem"><button class="btn primary" id="expGo">Download .xlsx</button></div>
 </div></div>
 
 <!-- Activity -->
@@ -371,10 +459,27 @@ table.plain input[type=checkbox]{width:auto}
     <li>Settings → <b>Projects</b>: open, create (blank, same settings without shots, or a full copy), remove, export a project file, or import one. Shotlist Builder project files (<code>.json</code>) and older Scheduler saves import too. A Builder file becomes a capture day, with retakes counted as takes.</li>
   </ul>
 
+  <h3>Spreadsheets</h3>
+  <ul>
+    <li><b>Import sheet</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>Group retakes</b> merges consecutive rows with the same Shot # and Action into one shot with a take count. Hero / Safety / NG marks per take are noted in Director notes, e.g. <code>Hero: T7</code>.</li>
+    <li>Tick <b>Rows are takes already recorded</b> when importing a log of what was shot. Leave it off for a plan, so the first take you log is T1.</li>
+    <li>Send the shots to a new day, to new days split by the Shoot Day column, to the open day, or to a new project. A Builder export's Project tab fills in the project details. Undo takes an import back.</li>
+    <li><b>Export .xlsx</b> writes the Shotlist Builder tracker for Google Sheets or Excel: a Project tab with cast and crew, then a Shotlist with one row per take. Take # and Shot ID are live formulas driven by an ID Settings tab, so retakes added in the sheet number themselves. Optional timecode and frame columns and a Schedule tab are included. In Google Sheets: File &gt; Import &gt; Upload &gt; Replace spreadsheet.</li>
+    <li>On the team site the spreadsheet library is served from the site itself. The standalone file fetches it from a public library server the first time you import or export.</li>
+  </ul>
+
   <h3>Settings</h3>
   <ul>
     <li><b>Team defaults</b> (shared): − / + step, setup and shoot minutes for new shots, the break name and length, and the call, wrap, buffers and minimum setup for new days.</li>
-    <li><b>Display</b> (just you): light, dark or match-device theme (also the ◐ button), interface and table text size, compact or comfortable rows, and a 12 or 24-hour clock.</li>
+    <li><b>Display</b> (just you, on this device). If your eyes get tired, start with a preset: <i>Easy on the eyes</i> (warm paper colours, Atkinson Hyperlegible, bigger text, more space, striped rows), <i>Night / dark set</i>, <i>High contrast</i> or <i>Compact</i>. Then fine-tune:
+      <ul>
+        <li><b>Colour theme</b>: match device, light, warm paper (less glare), dim (soft grey dark), dark, high contrast and high-contrast dark. The ◐ button flips between your chosen light and dark themes.</li>
+        <li><b>Highlight colour</b> for selections, warnings and the wrap line.</li>
+        <li><b>Font</b>: System, Atkinson Hyperlegible (designed for low-vision readability), Lexend (wider, calmer letterforms), serif, rounded or monospace. The team site serves the fonts itself.</li>
+        <li><b>Text weight</b>, <b>interface</b> and <b>table text size</b>, <b>line spacing</b>, <b>letter spacing</b> and <b>row spacing</b> (compact, comfortable, roomy).</li>
+        <li><b>Stripe alternate rows</b> to help follow a row across a wide table, <b>reduce motion</b> to stop the highlight flashes, and a 12 or 24-hour <b>clock</b>.</li>
+      </ul></li>
   </ul>
 
   <h3>Working as a team</h3>
@@ -393,6 +498,13 @@ table.plain input[type=checkbox]{width:auto}
     <li>On your own, everything saves in this browser automatically. For a backup, or to move a project, use Settings → Projects → <b>Export project file</b>.</li>
     <li><b>Export CSV</b> gives one row per shot for every day, with Day, Kind and Date columns, calculated times, takes and the last take's name. It opens in Numbers, Excel or Google Sheets, and most shotlist apps can import it.</li>
     <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Dark mode prints light.</li>
+  </ul>
+
+  <h3>Updates</h3>
+  <ul>
+    <li>Updating the site never touches the schedule: the shared data lives in the site's storage, not in the code that gets replaced.</li>
+    <li>If a new version goes live while you have the page open, a bar offers <b>Refresh now</b>. It sends any unsaved changes first. Changes that can't be sent yet (offline) stay on your device and go after the refresh.</li>
+    <li>Test versions (deploy previews and branch deploys) use separate storage, so trying something out can't change the live schedule.</li>
   </ul>
 
   <h3>Setting up the team site (Netlify)</h3>
@@ -416,11 +528,13 @@ table.plain input[type=checkbox]{width:auto}
 <div class="modal lightbox" id="lightbox"><div class="box"><img id="lightImg" alt=""></div></div>
 <input type="file" id="imgInput" accept="image/*" hidden>
 <input type="file" id="fileInput" accept=".json,application/json" hidden>
+<input type="file" id="sheetInput" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden>
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const CHANGELOG = [
+  ["2.1.0","2026-11-17","Spreadsheet import and export. Import sheet brings in .xlsx or .csv (Google Sheets, Excel, Numbers, the Shotlist Builder or the Shotlist tracker): pick the sheet and header row, map each column, group retakes into take counts, and send them to a new day, one day per Shoot Day, the open day or a new project. Export .xlsx writes the Shotlist Builder tracker: Project tab with cast and crew, Shotlist with one row per take and live Take # and Shot ID formulas driven by an ID Settings tab, optional timecode and frame columns, a Schedule tab and Instructions. Drop a file anywhere to import it. Easier on the eyes: Settings > Display now has colour themes (warm paper, dim, high contrast light and dark, plus light and dark), a highlight colour, readable fonts (Atkinson Hyperlegible, Lexend, serif, rounded, mono), text weight, line and letter spacing, roomy rows, striped rows, reduce motion, and one-click presets. The ◐ button flips between your chosen light and dark themes. Safer updates: open copies show a 'new version' bar and save before refreshing, and test deploys use separate data so they can't touch the live schedule."],
   ["2.0.0","2026-11-17","Team edition and project settings. Runs on Netlify so the whole team edits one live schedule: every change saves as its own small edit and merges field by field, so people working at the same time don't overwrite each other; offline changes queue and send when you reconnect. Activity log and who's-online. Projects you can save, switch, copy and import, with project details, cast and crew in Settings. Capture (mocap / volcap) days with the Shotlist Builder columns and Shot ID builder, plus a DIT names panel that copies shot names with take numbers. Dark mode, text size, row spacing, 12/24h clock and team defaults in Settings. Paste a list of actions. Hyphens instead of dashes throughout. Day 4 - Mocap added."],
   ["1.2.1","2026-11-17","Move handle sits to the left of the Shot tick box."],
   ["1.2.0","2026-11-17","Multi-day tabs for Day 1 and Day 2 VolCap alongside the LV day. Add, copy, rename and delete days. CSV exports every day."],
@@ -606,7 +720,7 @@ function diffDocs(a, b){
   const put = (e, id, k, v, pv) => {
     const key = e + ":" + id;
     const o = ops[key] || (ops[key] = { e, id, set: {}, prev: {} });
-    o.set[k] = v; o.prev[k] = pv;
+    o.set[k] = v === undefined ? null : v; o.prev[k] = pv === undefined ? null : pv;
   };
   PROJECT_FIELDS.forEach(k => { if (!same((a.project || {})[k], (b.project || {})[k])) put("doc", "doc", "p_" + k, b.project[k], (a.project || {})[k]); });
   const aP = Object.fromEntries((a.people || []).map(p => [p.id, p]));
@@ -699,7 +813,8 @@ const HIDDEN_DEFAULT={
   schedule:["priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes"],
   capture:["duration","orig","script","camera","priority","location"]
 };
-const P=Object.assign({name:"",theme:"auto",ui:13,tbl:13,density:"comfortable",clock:"24",poll:3,
+const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24"};
+const P=Object.assign({name:"",poll:3},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
 function savePrefs(){lsSet(PREF_KEY,P)}
@@ -738,7 +853,7 @@ const COLS=[
   {key:"actions",label:"",fixed:true},
 ];
 const COLMAP=Object.fromEntries(COLS.map(c=>[c.key,c]));
-const DEFAULT_WIDTHS={handle:76,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
+const DEFAULT_WIDTHS={handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
 const NO_SORT=["handle","refs","actions"];
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
 
@@ -791,6 +906,10 @@ function commit(){
   savePrefs();
   const ops=diffDocs(lastView,S);
   if(!ops.length) return;
+  // positions given to new or moved items are written back, so the next save sees them as settled
+  for(const o of ops){ if(!("pos" in o.set)) continue;
+    const obj=o.e==="day"?S.days.find(d=>d.id===o.id):o.e==="row"?(findRow(o.id)||{}).r:o.e==="person"?S.people.find(p=>p.id===o.id):null;
+    if(obj) obj.pos=o.set.pos; }
   undoStack.push(ops); if(undoStack.length>200) undoStack.shift();
   redoStack=[];
   enqueue(ops);
@@ -1479,15 +1598,29 @@ function renderSetTab(){
     b.append(f);
   }
   else if(setTab==="display"){
-    b.append(h("p",{class:"note"},"Just for you, on this device."));
+    b.append(h("p",{class:"note"},"Just for you, on this device. Try a preset, then fine-tune."));
+    const presets={
+      "Easy on the eyes":{theme:"warm",accent:"",font:"atkinson",fw:400,ui:14,tbl:15,lh:1.6,ls:0.01,density:"roomy",zebra:true,calm:true},
+      "Night / dark set":{theme:"dim",accent:"",font:"atkinson",fw:400,ui:14,tbl:14,lh:1.55,ls:0.01,density:"comfortable",zebra:true,calm:true},
+      "High contrast":{theme:"hc",accent:"",font:"atkinson",fw:500,ui:15,tbl:16,lh:1.55,ls:0.02,density:"roomy",zebra:true,calm:true},
+      "Compact (fit more)":{theme:P.theme,font:"system",fw:400,ui:12,tbl:12,lh:1.3,ls:0,density:"compact",zebra:true},
+      "Default":Object.assign({},DISPLAY_DEFAULTS)};
+    b.append(h("div",{class:"toolbar",style:"margin-bottom:1rem"},...Object.entries(presets).map(([n,v])=>h("button",{class:"btn small",onclick:()=>{Object.assign(P,v);savePrefs();applyDisplay();renderAll();renderSetTab();toast(n)}},n))));
     const f=h("div",{class:"form"});
-    const sel=(label,key,opts,after)=>{const s=h("select",{});for(const [v,l] of opts)s.append(h("option",{value:v},l));s.value=String(P[key]);s.addEventListener("change",()=>{P[key]=s.value;savePrefs();applyDisplay();after&&after()});f.append(h("label",{},label,s))};
-    sel("Theme","theme",[["auto","Match my device"],["light","Light"],["dark","Dark"]]);
-    sel("Row spacing","density",[["comfortable","Comfortable"],["compact","Compact"]],()=>reflow());
+    const sel=(label,key,opts,after,num)=>{const s=h("select",{});for(const [v,l] of opts)s.append(h("option",{value:v},l));s.value=String(P[key]);s.addEventListener("change",()=>{P[key]=num?Number(s.value):s.value;savePrefs();applyDisplay();after&&after()});f.append(h("label",{},label,s))};
+    const range=(label,key,min,max,step,unit,after)=>{const show=v=>unit==="px"?v+"px":unit==="x"?Number(v).toFixed(2):unit==="em"?(Number(v)===0?"normal":"+"+Math.round(Number(v)*100)+"%"):v;const out=h("span",{},show(P[key]));const i=h("input",{type:"range",min:String(min),max:String(max),step:String(step),value:String(P[key])});i.addEventListener("input",()=>{P[key]=Number(i.value);out.textContent=show(i.value);applyDisplay()});i.addEventListener("change",()=>{savePrefs();reflow();after&&after()});f.append(h("label",{},h("span",{},label," ",out),i))};
+    const tog=(label,key)=>{const c=h("input",{type:"checkbox"});c.checked=!!P[key];c.addEventListener("change",()=>{P[key]=c.checked;savePrefs();applyDisplay()});f.append(h("label",{class:"inline"},c,label))};
+    sel("Colour theme","theme",[["auto","Match my device (light / dark)"],["light","Light"],["warm","Warm paper (softer, less glare)"],["dim","Dim (soft dark grey)"],["dark","Dark"],["hc","High contrast"],["hcdark","High contrast dark"]]);
+    sel("Highlight colour","accent",[["","Theme default"],["#c2412d","Red"],["#d0700f","Orange"],["#2e7d4f","Green"],["#1f7a7a","Teal"],["#2f6fb0","Blue"],["#7a5ea8","Purple"],["#a33b6b","Magenta"]]);
+    sel("Font","font",[["system","System (default)"],["atkinson","Atkinson Hyperlegible (made for easier reading)"],["lexend","Lexend (wider, calmer letters)"],["serif","Serif"],["rounded","Rounded"],["mono","Monospace"]],()=>setTimeout(reflow,300));
+    sel("Text weight","fw",[["400","Regular"],["500","Medium"],["600","Semi-bold"]],null,true);
+    range("Interface text size","ui",11,20,1,"px"); range("Table text size","tbl",10,22,1,"px");
+    range("Line spacing","lh",1.2,2,0.05,"x"); range("Letter spacing","ls",0,0.08,0.01,"em");
+    sel("Row spacing","density",[["compact","Compact"],["comfortable","Comfortable"],["roomy","Roomy"]],()=>reflow());
     sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
-    const range=(label,key,min,max)=>{const out=h("span",{},P[key]+"px");const i=h("input",{type:"range",min:String(min),max:String(max),step:"1",value:String(P[key])});i.addEventListener("input",()=>{P[key]=Number(i.value);out.textContent=i.value+"px";applyDisplay()});i.addEventListener("change",()=>{savePrefs();reflow()});f.append(h("label",{},h("span",{},label," ",out),i))};
-    range("Interface text size","ui",11,18); range("Table text size","tbl",10,20);
-    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,{theme:"auto",ui:13,tbl:13,density:"comfortable",clock:"24",widths:{}});savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
+    tog("Stripe alternate rows (easier to follow a row across)","zebra");
+    tog("Reduce motion (no flashing or fades)","calm");
+    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{}});savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
   }
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
@@ -1632,15 +1765,469 @@ async function renderActivity(){
 
 /* ===================== display ===================== */
 const mq=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+const FONTS={system:'-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif',
+  atkinson:'"Atkinson Hyperlegible", -apple-system, "Segoe UI", Arial, sans-serif', lexend:'"Lexend", -apple-system, "Segoe UI", Arial, sans-serif',
+  serif:'Charter, "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif', rounded:'ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", "Segoe UI", Arial, sans-serif',
+  mono:'ui-monospace, "SF Mono", Menlo, Consolas, monospace'};
+const DARK_THEMES=["dark","dim","hcdark"];
+function effTheme(){ return P.theme==="auto"?((mq&&mq.matches)?"dark":"light"):(P.theme||"light"); }
 function applyDisplay(){
-  const dark=P.theme==="dark"||(P.theme==="auto"&&mq&&mq.matches);
-  document.documentElement.dataset.theme=dark?"dark":"light";
-  document.documentElement.style.setProperty("--ui",(Number(P.ui)||13)+"px");
-  document.documentElement.style.setProperty("--tbl",(Number(P.tbl)||13)+"px");
+  const th=effTheme(), dark=DARK_THEMES.includes(th), root=document.documentElement;
+  root.dataset.theme=th;
+  root.style.setProperty("--ui",(Number(P.ui)||13)+"px");
+  root.style.setProperty("--tbl",(Number(P.tbl)||13)+"px");
+  root.style.setProperty("--lh",String(Number(P.lh)||1.35));
+  root.style.setProperty("--ls",(Number(P.ls)||0)+"em");
+  root.style.setProperty("--fw",String(Number(P.fw)||400));
+  root.style.setProperty("--font",FONTS[P.font]||FONTS.system);
+  if(P.accent){root.style.setProperty("--accent",P.accent);root.style.setProperty("--accent-soft",`color-mix(in srgb, ${P.accent} ${dark?28:14}%, var(--panel))`)}
+  else{root.style.removeProperty("--accent");root.style.removeProperty("--accent-soft")}
   document.body.classList.toggle("compact",P.density==="compact");
-  $("#themeBtn").textContent=dark?"☀":"☾"; $("#themeBtn").title=dark?"Switch to light":"Switch to dark";
+  document.body.classList.toggle("roomy",P.density==="roomy");
+  document.body.classList.toggle("zebra",!!P.zebra);
+  document.body.classList.toggle("calm",!!P.calm);
+  $("#themeBtn").textContent=dark?"☀":"☾"; $("#themeBtn").title=dark?"Switch to a light theme":"Switch to a dark theme";
 }
 if(mq&&mq.addEventListener) mq.addEventListener("change",applyDisplay);
+
+/* ===================== spreadsheets: import (.xlsx / .csv) and tracker export (.xlsx) ===================== */
+let excelLoading=null;
+function loadExcel(){
+  if(window.ExcelJS) return Promise.resolve();
+  if(excelLoading) return excelLoading;
+  const tryLoad=src=>new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=()=>window.ExcelJS?res():rej(new Error("no ExcelJS"));s.onerror=()=>{s.remove();rej(new Error("load failed"))};document.head.append(s)});
+  // the team site hosts its own copy; the standalone file falls back to the public CDN
+  excelLoading=tryLoad("vendor/exceljs.min.js").catch(()=>tryLoad("https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js")).catch(e=>{excelLoading=null;throw new Error("The spreadsheet library couldn't load. Check your connection and try again.")});
+  return excelLoading;
+}
+
+/* ---------- reading ---------- */
+function cellText(v){
+  if(v==null) return "";
+  if(v instanceof Date){
+    const base=Date.UTC(1899,11,30);
+    if(Math.abs(v.getTime()-base)<86400000) return String(v.getUTCHours()).padStart(2,"0")+":"+String(v.getUTCMinutes()).padStart(2,"0");
+    return v.toISOString().slice(0,10);
+  }
+  if(typeof v==="object"){
+    if(v.richText) return v.richText.map(x=>x.text).join("");
+    if("result" in v) return cellText(v.result);
+    if(v.text!=null) return cellText(v.text);
+    if(v.error) return "";
+    return "";
+  }
+  return v;
+}
+function parseCSV(text){
+  text=text.replace(/^﻿/,"");
+  const first=text.split(/\r?\n/)[0]||"";
+  const delim=[",","\t",";"].map(d=>[d,first.split(d).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++} else q=false } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===delim){row.push(cur);cur=""}
+    else if(c==="\n"||c==="\r"){ if(c==="\r"&&text[i+1]==="\n")i++; row.push(cur);rows.push(row);row=[];cur="" }
+    else cur+=c;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>r.some(x=>String(x).trim()!==""));
+}
+async function readSheets(file){
+  const name=file.name.toLowerCase();
+  if(/\.(csv|tsv|txt)$/.test(name)) return [{name:file.name.replace(/\.[^.]+$/,""),rows:parseCSV(await file.text())}];
+  if(!/\.(xlsx|xlsm)$/.test(name)) throw new Error("Save it as .xlsx or .csv first (from Google Sheets: File > Download).");
+  await loadExcel();
+  const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+  return wb.worksheets.map(ws=>{
+    const rows=[]; ws.eachRow({includeEmpty:false},(row)=>{const vals=row.values.slice(1).map(cellText);rows.push(vals)});
+    return {name:ws.name,rows:rows.filter(r=>r.some(x=>String(x).trim()!==""))};
+  });
+}
+
+/* ---------- mapping ---------- */
+const IMPORT_TARGETS=[
+  ["ignore","Ignore"],["shot","Shot #"],["take","Take # (groups retakes)"],["shootDay","Shoot day (one day per value)"],
+  ["action","Action"],["description","Description"],["performers","Performer(s)"],["perfCount","# Of performers"],["props","Prop / set notes"],
+  ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
+  ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
+  ["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera & lighting"],["vfx","VFX notes"],["director","Director notes"],
+  ["label","Break name"],["rowType","Row type (Shot / Break)"]
+];
+const APPEND_TARGETS=["director","vfx","camera","location","props","script","description"];
+const IMPORT_SYN={
+  shot:["shot #","shot","shot no","shot number","shot#","sc/shot","scene/shot"],
+  take:["take #","take","take no","take#","tk"],
+  shootDay:["shoot day","day","shooting day","day #"],
+  action:["action","shot name","task","move","action name","name"],
+  description:["description","desc"],
+  performers:["performer(s)","performers","performer","actor","actors","talent","cast"],
+  perfCount:["# of performers","# performers","no. of performers","performer count","num performers"],
+  props:["prop","props","prop / set design notes","prop / set notes","set notes"],
+  genre:["genre"],body:["body"],face:["face"],glove:["glove","gloves"],hero:["hero"],safety:["safety"],priority:["priority","pri"],
+  done:["shot?","done","shot (done)","complete","completed"],
+  setup:["time to setup","setup","setup (min)","setup mins"],shoot:["time to shoot","shoot","shoot (min)","shoot mins"],
+  origStart:["start shooting","start","start time","planned start","original start"],duration:["duration","screen dur.","screen duration"],
+  location:["location and setup","location / setup","location","capture"],script:["script / dialogue","script","dialogue"],
+  shotType:["shot type"],camera:["camera & lighting notes","camera & lighting","camera","technical notes"],
+  vfx:["vfx notes","vfx","gs process?","capture notes","mocap notes"],director:["director notes","notes","other notes","comments","comment"],
+  rowType:["type","row type"]
+};
+const IMPORT_SKIP=["shot id","totals","seconds (tc)","frame range","seconds (frames)","shoot/production id","frame rate","tc in","tc out","frame start","frame end","storyboard / ref image","alternate reference","shot name (app)","shot name (last take)","video export","mocap export","m&t process?","post filter?","m&t export","gs export","order","end","setup from","calculated end","kind","date","takes"];
+const normH=s=>String(s==null?"":s).toLowerCase().replace(/\s+/g," ").trim();
+function guessTarget(h,used){
+  const n=normH(h); if(!n) return "ignore";
+  if(IMPORT_SKIP.includes(n)) return "ignore";
+  for(const [k,list] of Object.entries(IMPORT_SYN)) if(list.includes(n)&&(!used.has(k)||APPEND_TARGETS.includes(k))) return k;
+  return "ignore";
+}
+function detectHeader(rows){
+  for(let i=0;i<Math.min(rows.length,15);i++){const strs=rows[i].filter(c=>typeof c==="string"&&c.trim()&&isNaN(c)).length;if(strs>=2)return i}
+  return 0;
+}
+function parseMinutes(v){
+  if(v===""||v==null) return null; if(typeof v==="number") return Math.round(v<1&&v>0?v*1440:v);
+  const s=String(v).toLowerCase().trim(); if(!s) return null;
+  let m=0,hit=false; const hm=s.match(/(\d+(?:\.\d+)?)\s*h/); const mm=s.match(/(\d+(?:\.\d+)?)\s*m/);
+  if(hm){m+=parseFloat(hm[1])*60;hit=true} if(mm){m+=parseFloat(mm[1]);hit=true}
+  if(!hit){const c=s.match(/^(\d+):(\d{2})$/);if(c)return Number(c[1])*60+Number(c[2]);const n=parseFloat(s);return isNaN(n)?null:Math.round(n)}
+  return Math.round(m);
+}
+let IMP=null;
+async function openImport(file){
+  try{
+    const sheets=await readSheets(file);
+    if(!sheets.length) throw new Error("That file has no data.");
+    const pick=sheets.find(s=>/shot|list|schedule|table/i.test(s.name)&&s.rows.length>1)||sheets.slice().sort((a,b)=>b.rows.length-a.rows.length)[0];
+    IMP={file:file.name,sheets,proj:sheets.find(s=>s.name==="Project")};
+    $("#impModal").classList.add("open");
+    $("#impSheet").innerHTML=""; sheets.forEach(s=>$("#impSheet").append(h("option",{value:s.name},`${s.name} (${s.rows.length} rows)`)));
+    $("#impSheet").value=pick.name; setImpSheet(pick.name);
+  }catch(e){toast(e.message||"That file couldn't be read")}
+}
+function setImpSheet(name){
+  IMP.sheet=name; IMP.rows=IMP.sheets.find(s=>s.name===name).rows; IMP.header=detectHeader(IMP.rows);
+  $("#impHeader").value=IMP.header+1; buildImpMap();
+}
+function impDataRows(){return IMP.rows.slice(IMP.header+1).filter(r=>normH(r.find(c=>String(c).trim()!==""))!=="totals")}
+function buildImpMap(){
+  const hdr=IMP.rows[IMP.header]||[], body=impDataRows();
+  const width=Math.max(hdr.length,...body.slice(0,50).map(r=>r.length),0);
+  const used=new Set(); IMP.map=[];
+  for(let c=0;c<width;c++){
+    const head=String(hdr[c]??"").trim()||`Column ${c+1}`;
+    let t=guessTarget(hdr[c],used); if(t!=="ignore") used.add(t);
+    if(!body.some(r=>String(r[c]??"").trim()!=="")) t="ignore";
+    IMP.map.push({h:head,t,sample:String((body.find(r=>String(r[c]??"").trim()!=="")||[])[c]??"")});
+  }
+  const tb=$("#impMap"); tb.innerHTML="";
+  IMP.map.forEach((m,i)=>{
+    const s=h("select",{"data-mi":i}); IMPORT_TARGETS.forEach(([v,l])=>s.append(h("option",{value:v},l))); s.value=m.t;
+    s.addEventListener("change",()=>{IMP.map[i].t=s.value;updImpInfo()});
+    tb.append(h("tr",{},h("td",{},h("b",{},m.h)),h("td",{class:"note",style:"max-width:16rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",title:m.sample},m.sample),h("td",{},s)));
+  });
+  const has=k=>IMP.map.some(m=>m.t===k);
+  $("#impTakes").checked=has("take")||has("hero")||has("safety");
+  $("#impDest").value=has("shootDay")?"bydays":(S&&D()&&D().rows.length?"newday":"append");
+  updImpInfo();
+}
+function updImpInfo(){
+  const has=k=>IMP.map.some(m=>m.t===k);
+  const recs=impRecords();
+  const groups=groupImport(recs);
+  const days=[...new Set(groups.map(g=>g.day))];
+  $("#impInfo").textContent=`${IMP.file} · ${recs.length} row${recs.length===1?"":"s"} found`+
+    ($("#impGroup").checked?` · ${groups.length} shot${groups.length===1?"":"s"} after grouping retakes`:"")+
+    ($("#impDest").value==="bydays"?(has("shootDay")?` · ${days.length} day${days.length===1?"":"s"}`:" · map a column to Shoot day to split by day"):"")+
+    (!has("action")&&!has("shot")?" · no column is mapped to Action or Shot #, so names will be blank until you fill them in":"");
+  $("#impGo").disabled=!recs.length;
+}
+function impRecords(){
+  const out=[];
+  for(const r of impDataRows()){
+    const rec={f:{},take:null,day:null,brk:false};
+    let any=false;
+    IMP.map.forEach((m,c)=>{
+      if(m.t==="ignore") return; const raw=r[c]; const v=typeof raw==="string"?raw.trim():raw;
+      if(v===""||v==null) return;
+      if(m.t==="take"){const n=parseInt(v,10);if(!isNaN(n))rec.take=n;return}
+      if(m.t==="shootDay"){rec.day=String(v);return}
+      if(m.t==="rowType"){rec.brk=/break|move|lunch/i.test(String(v));return}
+      // a row only counts if it carries real content: pre-built blank tracker rows have just a number and 0/FALSE ticks
+      if(!["shot","perfCount","body","face","glove","done","setup","shoot"].includes(m.t)) any=true;
+      if(["setup","shoot"].includes(m.t)&&parseMinutes(v)>0) any=true;
+      if(["body","face","glove","done"].includes(m.t)) rec.f[m.t]=isOn(v);
+      else if(m.t==="setup"||m.t==="shoot") rec.f[m.t]=parseMinutes(v);
+      else if(m.t==="perfCount"){const n=Number(v);rec.f.perfCount=isNaN(n)?String(v):n}
+      else if(APPEND_TARGETS.includes(m.t)&&rec.f[m.t]) rec.f[m.t]+="\n"+v;
+      else rec.f[m.t]=typeof v==="number"&&["shot","origStart","duration"].includes(m.t)?String(v):v;
+    });
+    if(any) out.push(rec);
+  }
+  return out;
+}
+function groupImport(recs){
+  const doGroup=$("#impGroup").checked;
+  const key=r=>normH(r.f.shot)+"|"+normH(r.f.action||(!r.f.shot?r.f.description:""));
+  const groups=[];
+  for(const r of recs){
+    const last=groups[groups.length-1];
+    if(doGroup&&!r.brk&&last&&!last.recs[0].brk&&last.day===r.day&&key(last.recs[0])===key(r)&&key(r)!=="|") last.recs.push(r);
+    else groups.push({day:r.day,recs:[r]});
+  }
+  return groups;
+}
+function groupToRow(g,recorded,kindCapture){
+  const first=g.recs[0].f, row=Object.assign({},ROW_BLANK,{id:uid("r")});
+  for(const k of Object.keys(first)) row[k]=first[k];
+  // merge text from later takes, collect per-take hero / safety / NG marks
+  const tn=(r,i)=>r.take!=null?r.take:i+1;
+  const marks={hero:[],safety:[],ng:[],test:[]};
+  g.recs.forEach((r,i)=>{
+    for(const k of APPEND_TARGETS){const v=r.f[k];if(i>0&&v&&!String(row[k]||"").includes(String(v)))row[k]=(row[k]?row[k]+"\n":"")+v}
+    const hv=String(r.f.hero||"").trim(), sv=String(r.f.safety||"").trim();
+    if(/^x$/i.test(hv))marks.hero.push("T"+tn(r,i)); else if(/^ng$/i.test(hv))marks.ng.push("T"+tn(r,i)); else if(/^test$/i.test(hv))marks.test.push("T"+tn(r,i));
+    if(/^x$/i.test(sv))marks.safety.push("T"+tn(r,i));
+    if(r.f.done) row.done=true;
+  });
+  const markish=v=>/^(x|ng|test)$/i.test(String(v||"").trim());
+  if(markish(row.hero)) row.hero=""; if(markish(row.safety)) row.safety="";
+  const bits=[];
+  if(marks.hero.length)bits.push("Hero: "+marks.hero.join(", ")); if(marks.safety.length)bits.push("Safety: "+marks.safety.join(", "));
+  if(marks.ng.length)bits.push("NG: "+marks.ng.join(", ")); if(marks.test.length)bits.push("Test: "+marks.test.join(", "));
+  if(g.recs.length>1||bits.length) row.director=[g.recs.length>1?`${g.recs.length} rows imported as takes`:"",bits.join(". "),row.director].filter(Boolean).join(". ");
+  row.takes=recorded?g.recs.length:0;
+  if(recorded&&!("done" in first)) row.done=true;
+  if(row.setup==null) row.setup=0; if(row.shoot==null) row.shoot=0;
+  if(g.recs[0].brk||(row.label&&!row.action&&!row.shot&&!row.description)){row.type="break";row.label=row.label||row.shot||"Break";row.shot="";row.takes=0;row.done=false;}
+  if(!kindCapture&&!row.description&&row.action) row.description=row.action;
+  return row;
+}
+async function runImport(){
+  const dest=$("#impDest").value, recorded=$("#impTakes").checked;
+  const recs=impRecords(); if(!recs.length) return;
+  const groups=groupImport(recs);
+  const has=k=>IMP.map.some(m=>m.t===k);
+  const capture=has("action")||has("performers")||has("body")||has("take");
+  const c=cfg();
+  const mkDay=(name,no)=>Object.assign({},DAY_BLANK,{id:uid("d"),name,kind:capture?"capture":"schedule",dayNo:no,call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,rows:[]});
+  commit();
+  let target=null;
+  if(dest==="newproject"){
+    const days=[];
+    const byDay=has("shootDay");
+    for(const g of groups){const name=byDay?("Day "+(g.day||"?")):"Imported day";let d=days.find(x=>x.name===name);if(!d){d=mkDay(name,byDay&&!isNaN(Number(g.day))?Number(g.day):days.length+1);days.push(d)}d.rows.push(groupToRow(g,recorded,capture))}
+    const project={name:IMP.file.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ")};
+    if(IMP.proj){const pr=IMP.proj.rows;const lk={"client / production":"client","shoot date(s)":"dates","location":"location","capture system":"system","director / lead":"lead","shoot / production id":"prodId","frame rate (fps)":"fps","notes":"notes"};
+      if(pr[0]&&String(pr[0][0]).trim())project.name=String(pr[0][0]).trim();pr.slice(1).forEach(r=>{const k=lk[normH(r[0])];if(k&&String(r[1]??"").trim())project[k]=String(r[1])})}
+    const doc=normDoc({project,days});
+    $("#impModal").classList.remove("open");
+    try{const id=await createProject(project.name,docToSeed(doc));await openProject(id);toast(`Imported ${groups.length} shots into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
+    return;
+  }
+  if(dest==="bydays"&&has("shootDay")){
+    const made={};
+    for(const g of groups){const key=g.day||"?";if(!made[key]){const no=Number(key);const ex=S.days.find(d=>Number(d.dayNo)===no&&!isNaN(no)&&!d.rows.length);made[key]=ex||mkDay("Day "+key,isNaN(no)?S.days.length+1:no);if(!ex)S.days.push(made[key])}made[key].rows.push(groupToRow(g,recorded,capture))}
+    target=Object.values(made)[0];
+  }else if(dest==="newday"||!D()){
+    target=mkDay(IMP.file.replace(/\.[^.]+$/,""),S.days.length+1); S.days.push(target);
+    groups.forEach(g=>target.rows.push(groupToRow(g,recorded,capture)));
+  }else{
+    target=D(); if(dest==="replace") target.rows=[];
+    groups.forEach(g=>target.rows.push(groupToRow(g,recorded,target.kind==="capture"||capture)));
+  }
+  commit(); P.activeByProject[pid()]=target.id; savePrefs(); renderAll();
+  $("#impModal").classList.remove("open");
+  toast(`Imported ${groups.length} shot${groups.length===1?"":"s"} - Undo to take it back`);
+}
+
+/* ---------- export: tracker workbook in the Shotlist Builder format ---------- */
+function openExport(){
+  const box=$("#expDays"); box.innerHTML="";
+  S.days.forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>r.type!=="break").length} shots)`)))});
+  $("#expModal").classList.add("open");
+}
+const XC={ink:"FF1D1D1F",paper:"FFF6F5F2",muted:"FF6B6B70",rule:"FFE2E0DB",stage:"FFE9EEF2",accent:"FFC2412D",soft:"FFF6E3DF",signal:"FF2F4858",white:"FFFFFFFF",note:"FFF2F6EE",done:"FFE8F1EA",break:"FFFBF3E2"};
+async function exportXlsx(){
+  const ids=$$("#expDays input:checked").map(x=>x.value);
+  const withTiming=$("#expTiming").checked, withSchedule=$("#expSchedule").checked;
+  const days=S.days.filter(d=>ids.includes(d.id));
+  if(!days.length){toast("Pick at least one day");return}
+  const btn=$("#expGo"); btn.disabled=true; btn.textContent="Building…";
+  try{
+    commit(); await loadExcel();
+    const buf=await buildTracker(days,{withTiming,withSchedule});
+    download(fileBase()+"_Shotlist.xlsx",new Blob([buf]),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    $("#expModal").classList.remove("open"); toast("Spreadsheet ready. For Google Sheets use File > Import > Replace spreadsheet.");
+  }catch(e){toast(e.message||"Couldn't build the spreadsheet")}
+  finally{btn.disabled=false;btn.textContent="Download .xlsx"}
+}
+function colLetter(n){let s="";while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s}
+async function buildTracker(days,opt){
+  const c=cfg(); const wb=new ExcelJS.Workbook(); wb.creator=""; wb.title=S.project.name||"Shotlist";
+  const fill=x=>({type:"pattern",pattern:"solid",fgColor:{argb:x}});
+  const thin={style:"thin",color:{argb:XC.rule}}; const box={top:thin,left:thin,bottom:thin,right:thin};
+  const F=(o={})=>Object.assign({name:"Calibri",size:10,color:{argb:XC.ink}},o);
+  const st=(bg,fc,bold)=>({fill:{type:"pattern",pattern:"solid",bgColor:{argb:bg}},font:fc?{color:{argb:fc},bold:!!bold}:undefined});
+  const xs=s=>String(s==null?"":s).replace(/"/g,"").trim();
+
+  // Project
+  const pj=wb.addWorksheet("Project",{properties:{tabColor:{argb:XC.signal}},views:[{showGridLines:false}]});
+  pj.columns=[{width:26},{width:80}];
+  pj.getCell("A1").value=S.project.name||"Untitled project"; pj.getCell("A1").font=F({size:20,bold:true}); pj.getRow(1).height=34;
+  [["Client / production",S.project.client],["Shoot date(s)",S.project.dates],["Location",S.project.location],["Capture system",S.project.system],["Director / lead",S.project.lead],["Shoot / production ID",S.project.prodId],["Frame rate (fps)",S.project.fps],["Notes",S.project.notes]].forEach(([k,v],i)=>{
+    const r=pj.getRow(i+3); r.getCell(1).value=k; const n=Number(v); r.getCell(2).value=v===""||v==null?null:(String(v).trim()!==""&&!isNaN(n)?n:v);
+    r.getCell(1).font=F({size:11,bold:true}); r.getCell(2).font=F({size:11}); r.getCell(2).alignment={wrapText:true,vertical:"top",horizontal:"left"}; r.getCell(1).border={bottom:thin}; r.getCell(2).border={bottom:thin};
+  });
+  if(S.people.length){
+    let r0=13; pj.getCell(`A${r0}`).value="Cast & crew"; pj.getCell(`A${r0}`).font=F({size:13,bold:true});
+    S.people.forEach((p,i)=>{const r=pj.getRow(r0+1+i);r.getCell(1).value=`${p.group}: ${p.name}`;r.getCell(2).value=[p.role,p.phone,p.email,p.notes].filter(Boolean).join(" · ");r.getCell(1).font=F({bold:true});r.getCell(2).font=F()});
+  }
+
+  // Shotlist: one row per take
+  const flagCols=["body","face","glove"];
+  const cols=[{k:"shot",h:"Shot #",w:9},{k:"take",h:"Take #",w:8},{k:"sid",h:"Shot ID",w:44},{k:"app",h:"Shot name (app)",w:44},{k:"prod",h:"Shoot/Production ID",w:12},
+    {k:"day",h:"Shoot Day",w:8},{k:"priority",h:"Priority",w:9},{k:"perfCount",h:"# Of Performers",w:10},{k:"props",h:"Prop",w:16},{k:"performers",h:"Performer(s)",w:16},
+    {k:"genre",h:"Genre",w:12},{k:"action",h:"Action",w:30},{k:"done",h:"Shot?",w:7},{k:"body",h:"Body",w:7},{k:"face",h:"Face",w:7},{k:"glove",h:"Glove",w:7},
+    {k:"hero",h:"Hero",w:8},{k:"safety",h:"Safety",w:8},{k:"description",h:"Description",w:30},{k:"location",h:"Location / Setup",w:18},{k:"shotType",h:"Shot type",w:14},
+    {k:"camera",h:"Technical Notes",w:28},{k:"vfx",h:"Capture Notes",w:24},{k:"director",h:"Notes",w:30},{k:"setup",h:"Setup (min)",w:9},{k:"shoot",h:"Shoot (min)",w:9},{k:"start",h:"Planned start",w:10}];
+  if(opt.withTiming) cols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
+  cols.forEach((x,i)=>{x.i=i+1;x.L=colLetter(i+1)});
+  const L=k=>(cols.find(x=>x.k===k)||{}).L;
+  const sl=wb.addWorksheet("Shotlist",{properties:{tabColor:{argb:XC.accent}},views:[{state:"frozen",xSplit:3,ySplit:2,showGridLines:false}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:2"}});
+  sl.columns=cols.map(x=>({width:x.w}));
+  const hr=sl.getRow(1); hr.height=30;
+  cols.forEach(x=>{const cell=hr.getCell(x.i);cell.value=x.h;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}});cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};cell.border={bottom:{style:"medium",color:{argb:XC.accent}}}});
+  const tr=sl.getRow(2); tr.height=20;
+  cols.forEach(x=>{const cell=tr.getCell(x.i);cell.fill=fill(XC.stage);cell.font=F({bold:true});cell.alignment={horizontal:"center",vertical:"middle"};cell.border={bottom:thin}});
+  tr.getCell(1).value="Totals";
+  ["done","body","face","glove"].forEach(k=>{const l=L(k);tr.getCell(cols.find(x=>x.k===k).i).value={formula:`SUMPRODUCT(--(${l}3:${l}100000))`}});
+
+  // the rows: every logged take of every shot; planned shots with no takes get one row
+  const data=[];
+  for(const d of days){
+    const C=compute(d);
+    for(const r of d.rows){
+      if(r.type==="break") continue;
+      const base=takeBase(r,d), n=Math.max(1,Number(r.takes)||0);
+      for(let t=1;t<=n;t++) data.push({d,r,take:base+t,logged:t<=(Number(r.takes)||0),start:C.rows[r.id].start});
+    }
+  }
+  // ID Settings rows: one per name part, in the app's order
+  const parts=c.idParts||[]; const idRow=k=>3+parts.findIndex(p=>p.key===k);
+  const T=k=>`'ID Settings'!$B$${idRow(k)}`;
+  const sep=xs(c.idSep==null?"_":c.idSep);
+  // same clean-up as the app: trim, "/" and "&" become "+", characters that break file names are removed
+  const DROP=[",",";",":","(",")","[","]","{","}","!","?","*","'","<",">","|","\\"];
+  const cleanF=x=>{let f=x;for(const [a,b] of [[" / ","+"],[" & ","+"],["/","+"],["&","+"]])f=`SUBSTITUTE(${f},"${a}","${b}")`;for(const ch of DROP)f=`SUBSTITUTE(${f},"${ch}","")`;f=`SUBSTITUTE(${f},CHAR(34),"")`;return f};
+  const segFormula=(p,rn)=>{
+    const pre=xs(p.prefix);
+    const ref=k=>`TRIM(${L(k)}${rn})`;
+    switch(p.key){
+      case "shot": return `IF(${ref("shot")}="","",${pre?`"${pre}"&`:""}${ref("shot")})`;
+      case "take": return `IF(${ref("take")}="","",${pre?`"${pre}"&`:""}TEXT(${ref("take")},"${"0".repeat(Math.max(1,Number(c.takePad)||1))}"))`;
+      case "prod": return `IF(${ref("prod")}="","",${pre?`"${pre}"&`:""}${ref("prod")})`;
+      case "day": return `IF(${ref("day")}="","",${pre?`"${pre}"&`:""}${ref("day")})`;
+      case "body": case "face": case "glove": return `IF(N(${L(p.key)}${rn})=1,"${pre}","")`;
+      default: { const k=p.key; if(!L(k)) return `""`; return `IF(OR(${ref(k)}="",${ref(k)}="-"),"",${pre?`"${pre}"&`:""}${ref(k)})`; }
+    }
+  };
+  const total=Math.max(300,data.length+50);
+  const aL=L("action");
+  for(let i=0;i<total;i++){
+    const rn=i+3, row=sl.getRow(rn), x=data[i];
+    const put=(k,v)=>{const col=cols.find(y=>y.k===k);if(col)row.getCell(col.i).value=v};
+    if(x){
+      const r=x.r, d=x.d;
+      put("shot",shotNumber(r,d)); put("take",x.take); put("app",shotName(r,d,x.take));
+      const pid_=String(S.project.prodId||"").trim(); put("prod",pid_===""?null:(isNaN(Number(pid_))?pid_:Number(pid_)));
+      put("day",d.dayNo||dayIndex(d)+1);
+      for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
+      if(r.perfCount!==""&&r.perfCount!=null) put("perfCount",isNaN(Number(r.perfCount))?r.perfCount:Number(r.perfCount));
+      put("done",x.logged||r.done?1:0); flagCols.forEach(k=>put(k,isOn(r[k])?1:0));
+      put("setup",Number(r.setup)||0); put("shoot",Number(r.shoot)||0); put("start",hhmm(x.start));
+      if(opt.withTiming&&S.project.fps!==""&&!isNaN(Number(S.project.fps))) put("fps",Number(S.project.fps));
+    }
+    // live formulas, so the sheet keeps working when rows are added in Sheets
+    const spaces=c.idSpaces; const joined=cleanF(`_xlfn.TEXTJOIN("${sep}",TRUE${parts.map(p=>`,IF(${T(p.key)},${segFormula(p,rn)},"")`).join("")})`);
+    const idF=spaces==="keep"?joined:`SUBSTITUTE(${joined}," ","${spaces==null?"_":xs(spaces)}")`;
+    put("sid",{formula:`IF(AND(${aL}${rn}="",${L("shot")}${rn}=""),"",${idF})`,result:x?shotName(x.r,x.d,x.take):""});
+    if(!x) put("take",{formula:`IF(${aL}${rn}="","",COUNTIF($${aL}$3:${aL}${rn},${aL}${rn}))`});
+    if(opt.withTiming){
+      put("secTc",{formula:`IFERROR(IF(OR(${L("tcIn")}${rn}="",${L("tcOut")}${rn}=""),"",MOD(${L("tcOut")}${rn}-${L("tcIn")}${rn},1)*86400),"")`});
+      put("range",{formula:`IFERROR(IF(OR(${L("fs")}${rn}="",${L("fe")}${rn}=""),"",${L("fe")}${rn}-${L("fs")}${rn}),"")`});
+      put("secFr",{formula:`IFERROR(IF(OR(${L("range")}${rn}="",${L("fps")}${rn}="",${L("fps")}${rn}=0),"",${L("range")}${rn}/${L("fps")}${rn}),"")`});
+      if(!x) put("fps",{formula:`IF(${L("fps")}${rn-1}="","",${L("fps")}${rn-1})`});
+    }
+    cols.forEach(col=>{const cell=row.getCell(col.i);cell.border=box;const auto=["sid","app","secTc","range","secFr"].includes(col.k);
+      cell.fill=fill(auto?XC.paper:XC.white);cell.font=auto?F({name:"Consolas",size:9,color:{argb:XC.signal}}):F();
+      const centre=["shot","take","prod","day","priority","perfCount","done","body","face","glove","hero","safety","setup","shoot","start","fps","fs","fe"].includes(col.k);
+      cell.alignment={vertical:"top",horizontal:centre?"center":undefined,wrapText:["description","camera","vfx","director","location"].includes(col.k)}});
+    if(opt.withTiming){row.getCell(cols.find(y=>y.k==="tcIn").i).numFmt="hh:mm:ss";row.getCell(cols.find(y=>y.k==="tcOut").i).numFmt="hh:mm:ss"}
+  }
+  const last=total+2; const rng=k=>`${L(k)}3:${L(k)}${last}`; let pri=1;
+  sl.dataValidations.add(rng("priority"),{type:"list",allowBlank:true,showErrorMessage:false,formulae:['"HIGH,MID,LOW"']});
+  sl.addConditionalFormatting({ref:rng("priority"),rules:[["HIGH",XC.accent,XC.white],["MID","FFD9A441",XC.ink],["LOW",XC.stage,XC.muted]].map(([v,bg,fc])=>({type:"cellIs",operator:"equal",formulae:[`"${v}"`],style:st(bg,fc,1),priority:pri++}))});
+  sl.addConditionalFormatting({ref:`A3:${colLetter(cols.length)}${last}`,rules:[{type:"expression",formulae:[`N($${L("done")}3)=1`],style:st(XC.done),priority:pri++}]});
+  ["done","body","face","glove"].forEach(k=>sl.addConditionalFormatting({ref:rng(k),rules:[{type:"expression",formulae:[`AND($${aL}3<>"",N(${L(k)}3)=0)`],style:st(XC.soft,XC.accent),priority:pri++}]}));
+
+  // ID Settings
+  const ids=wb.addWorksheet("ID Settings",{properties:{tabColor:{argb:XC.signal}},views:[{showGridLines:false}]});
+  ids.columns=[{width:26},{width:12},{width:64}];
+  ids.getCell("A1").value="Shot ID Builder"; ids.getCell("A1").font=F({size:18,bold:true}); ids.getRow(1).height=30;
+  ["Part","Include?","How it appears when ON"].forEach((t,i)=>{const cell=ids.getCell(2,i+1);cell.value=t;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}})});
+  parts.forEach((p,i)=>{const r=ids.getRow(3+i);r.getCell(1).value=ID_PART_LABELS[p.key]||p.key;r.getCell(2).value=!!p.on;
+    r.getCell(3).value=["body","face","glove"].includes(p.key)?`'${xs(p.prefix)}' when ticked, otherwise skipped`:(xs(p.prefix)?`Value prefixed with ${xs(p.prefix)} (skipped if blank or '-')`:"Value as entered (skipped if blank or '-')");
+    r.getCell(1).font=F({bold:true});r.getCell(2).alignment={horizontal:"center"};for(let k=1;k<=3;k++){r.getCell(k).border=box}});
+  ids.dataValidations.add(`B3:B${parts.length+2}`,{type:"list",allowBlank:false,formulae:['"TRUE,FALSE"']});
+  const tip=parts.length+4; ids.getCell(`A${tip}`).value=`Parts join with "${sep||"(nothing)"}" in this order; blank or switched-off parts are dropped. Spaces inside parts ${c.idSpaces==="keep"?"are kept":"become "+(c.idSpaces||"(nothing)")}. The Shot name (app) column shows the name the Scheduler generated, for checking.`;
+  ids.mergeCells(`A${tip}:C${tip}`); ids.getCell(`A${tip}`).alignment={wrapText:true,vertical:"top"}; ids.getRow(tip).height=44; ids.getCell(`A${tip}`).font=F({italic:true,color:{argb:XC.muted}});
+
+  // Schedule (values, as calculated in the Scheduler)
+  if(opt.withSchedule){
+    const sc=wb.addWorksheet("Schedule",{properties:{tabColor:{argb:"FFD9A441"}},views:[{showGridLines:false}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0}});
+    sc.columns=[{width:6},{width:10},{width:10},{width:40},{width:10},{width:9},{width:9},{width:9},{width:9},{width:7}];
+    let rn=1;
+    for(const d of days){
+      const C=compute(d);
+      const t=sc.getRow(rn); t.getCell(1).value=`${d.name}${d.date?" · "+d.date:""} · call ${hhmm(toMin(d.call))} · wrap ${hhmm(C.wrap)} (target ${hhmm(toMin(d.wrap))})`; t.getCell(1).font=F({size:13,bold:true}); rn++;
+      const hd=sc.getRow(rn); ["#","Type","Shot #","Action / description","Setup from","Setup","Start","Shoot","End","Done"].forEach((v,i)=>{const cell=hd.getCell(i+1);cell.value=v;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}})}); rn++;
+      d.rows.forEach((r,i)=>{const c2=C.rows[r.id];const br=r.type==="break";const row=sc.getRow(rn++);
+        [i+1,br?"Break":"Shot",br?(r.label||"Break"):shotNumber(r,d),br?(r.description||""):(r.action||r.description||""),hhmm(c2.setupStart),Math.round(c2.su),hhmm(c2.start),Math.round(c2.sh),hhmm(c2.end),br?"":(r.done?"Y":"")].forEach((v,j)=>{const cell=row.getCell(j+1);cell.value=v;cell.border=box;cell.font=F();if(br)cell.fill=fill(XC.break);else if(r.done)cell.fill=fill(XC.done)})});
+      rn++;
+    }
+  }
+
+  // Instructions
+  const ins=wb.addWorksheet("Instructions",{properties:{tabColor:{argb:XC.signal}},views:[{showGridLines:false}]});
+  ins.columns=[{width:30},{width:100}];
+  ins.getCell("A1").value="How to use this shotlist"; ins.getCell("A1").font=F({size:18,bold:true}); ins.getRow(1).height=30;
+  const help=[["Made by",`Shotlist Scheduler v${VERSION} on ${new Date().toISOString().slice(0,10)} for ${S.project.name||"this project"}: ${days.map(d=>d.name).join(", ")}.`],
+    ["One row per take","Every logged take is its own row. Shots with no takes logged yet have a single planned row."],
+    ["Shot ID","A formula built from the ID Settings tab: set a part to FALSE to drop it from every ID. 'Shot name (app)' is what the Scheduler generated, for checking."],
+    ["Retakes added here",`Add a row and type the same Action. Blank rows already carry the Take # and Shot ID formulas (Take # counts earlier rows with that Action). ${total} rows are ready.`],
+    ["Tick-box columns","Shot?, Body, Face and Glove hold 1 or 0. In Sheets you can select them and use Insert > Checkbox; totals and colours keep working."],
+    ["Google Sheets","File > Import > Upload this file > Replace spreadsheet. Formulas, dropdowns and colours come across."]];
+  if(opt.withTiming) help.push(["Timecode & frames","TC IN / TC OUT as hh:mm:ss give Seconds (TC), including takes that cross midnight. Frame Start / End give Frame Range and Seconds (Frames)."]);
+  help.forEach(([a,b],i)=>{const r=ins.getRow(i+3);r.getCell(1).value=a;r.getCell(2).value=b;r.getCell(1).font=F({size:11,bold:true});r.getCell(2).font=F({size:11,color:{argb:XC.muted}});r.getCell(1).alignment={vertical:"top"};r.getCell(2).alignment={vertical:"top",wrapText:true};r.getCell(1).border={bottom:thin};r.getCell(2).border={bottom:thin}});
+  wb.views=[{activeTab:1}];
+  return wb.xlsx.writeBuffer();
+}
+
+/* ---------- new version available ---------- */
+let newVersionShown=false;
+async function checkVersion(){
+  if(!/^https?:$/.test(location.protocol)||newVersionShown) return;
+  try{const r=await fetch("version.json",{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+    if(j&&j.version&&j.version!==VERSION){newVersionShown=true;const bar=$("#updateBar");$("#updateText").textContent=`Version ${j.version} is ready (you have ${VERSION}). Your work is safe - it saves before refreshing.`;bar.classList.add("show")}}catch(e){}
+}
+async function refreshForUpdate(){
+  const b=$("#updateGo"); b.disabled=true; b.textContent="Saving…";
+  commit(); if(MODE==="team"&&pending.length){try{await flush()}catch(e){}}
+  location.reload();
+}
+
 
 /* ===================== start-up ===================== */
 let NEEDS_KEY=false;
@@ -1677,6 +2264,7 @@ async function boot(){
   applyDisplay();
   $("#verLabel").textContent="v"+VERSION; $("#helpVer").textContent="Version v"+VERSION;
   $("#changelog").append(...CHANGELOG.map(([v,d,t])=>h("li",{},h("b",{},"v"+v)," ("+d+") - "+t)));
+  setTimeout(checkVersion,5000); setInterval(checkVersion,60000);
   const where=P.mode==="local-forced"?"local":await detectTeam();
   if(where==="unreachable"&&P.projectId){
     // used the team site on this device before: start from the saved copy and keep retrying
@@ -1702,7 +2290,18 @@ $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=
   if(!(await ask("Reset "+d.name+"?","Puts this day back exactly as it was imported"+(MODE==="team"?", for everyone":"")+". Undo straight afterwards brings your version back.","Reset")))return;
   const n=normDoc({days:[o]}).days[0];n.id=d.id;S.days[S.days.indexOf(d)]=n;commit();renderAll();toast("Reset "+d.name+" - Undo to go back")};
 $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
-$("#csvBtn").onclick=exportCSV; $("#printBtn").onclick=()=>window.print();
+$("#csvBtn").onclick=exportCSV;
+$("#impBtn").onclick=()=>{commit();$("#sheetInput").value="";$("#sheetInput").click()};
+$("#sheetInput").addEventListener("change",e=>{const f=e.target.files[0];if(f)openImport(f)});
+$("#impSheet").addEventListener("change",e=>setImpSheet(e.target.value));
+$("#impHeader").addEventListener("change",e=>{IMP.header=Math.max(0,Math.min(IMP.rows.length-1,(Number(e.target.value)||1)-1));buildImpMap()});
+["impGroup","impTakes","impDest"].forEach(id=>$("#"+id).addEventListener("change",updImpInfo));
+$("#impGo").onclick=runImport;
+$("#xlsxBtn").onclick=()=>{commit();openExport()};
+$("#expGo").onclick=exportXlsx;
+$("#updateGo").onclick=refreshForUpdate; $("#updateLater").onclick=()=>$("#updateBar").classList.remove("show");
+document.addEventListener("dragover",e=>{if([...(e.dataTransfer||{}).types||[]].includes("Files"))e.preventDefault()});
+document.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();if(/\.json$/i.test(f.name)){importMode="new";importFile(f)}else openImport(f)}); $("#printBtn").onclick=()=>window.print();
 $("#ditBtn").onclick=()=>{commit();renderDit();$("#ditModal").classList.add("open")};
 $("#ditShowDone").addEventListener("change",e=>{P.ditShowDone=e.target.checked;savePrefs();renderDit()});
 $("#ditCopyAll").onclick=async()=>{const d=D();const list=[];for(const r of ditRows()){const b2=takeBase(r,d);for(let t=b2+1;t<=b2+(Number(r.takes)||0);t++){const n=shotName(r,d,t);if(n)list.push(n)}}if(!list.length){toast("No takes logged yet");return}await copyText(list.join("\n"));addOut(list.join("\n"),true);toast("Copied "+list.length+" names")};
@@ -1711,7 +2310,7 @@ $("#actBtn").onclick=()=>{$("#actModal").classList.add("open");renderActivity()}
 $("#setBtn").onclick=()=>{commit();openSettings()};
 $("#projTitle").onclick=()=>{commit();openSettings("project")};
 $("#projTitle").style.cursor="pointer";
-$("#themeBtn").onclick=()=>{const dark=document.documentElement.dataset.theme==="dark";P.theme=dark?"light":"dark";savePrefs();applyDisplay()};
+$("#themeBtn").onclick=()=>{const th=effTheme();if(DARK_THEMES.includes(th)){P.lastDark=th;P.theme=P.lastLight||"light"}else{P.lastLight=th;P.theme=P.lastDark||"dark"}savePrefs();applyDisplay();if($("#setModal").classList.contains("open")&&setTab==="display")renderSetTab()};
 $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));

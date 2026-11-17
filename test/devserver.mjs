@@ -14,5 +14,5 @@ http.createServer(async (req, res) => {
   if (url.pathname === "/__offline") { globalThis.__OFFLINE__ = url.searchParams.get("on") === "1"; res.end("ok"); return; }
   const f = path.join(repo, "public", url.pathname === "/" ? "index.html" : url.pathname);
   if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { "content-type": "text/html" }); fs.createReadStream(f).pipe(res);
+  res.writeHead(200, { "content-type": f.endsWith(".js") ? "text/javascript" : f.endsWith(".json") ? "application/json" : f.endsWith(".woff2") ? "font/woff2" : "text/html" }); fs.createReadStream(f).pipe(res);
 }).listen(port, () => console.log("dev server on", port));

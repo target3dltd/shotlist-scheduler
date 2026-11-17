@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const CHANGELOG = [
+  ["2.1.0","2026-11-17","Spreadsheet import and export. Import sheet brings in .xlsx or .csv (Google Sheets, Excel, Numbers, the Shotlist Builder or the Shotlist tracker): pick the sheet and header row, map each column, group retakes into take counts, and send them to a new day, one day per Shoot Day, the open day or a new project. Export .xlsx writes the Shotlist Builder tracker: Project tab with cast and crew, Shotlist with one row per take and live Take # and Shot ID formulas driven by an ID Settings tab, optional timecode and frame columns, a Schedule tab and Instructions. Drop a file anywhere to import it. Easier on the eyes: Settings > Display now has colour themes (warm paper, dim, high contrast light and dark, plus light and dark), a highlight colour, readable fonts (Atkinson Hyperlegible, Lexend, serif, rounded, mono), text weight, line and letter spacing, roomy rows, striped rows, reduce motion, and one-click presets. The ◐ button flips between your chosen light and dark themes. Safer updates: open copies show a 'new version' bar and save before refreshing, and test deploys use separate data so they can't touch the live schedule."],
   ["2.0.0","2026-11-17","Team edition and project settings. Runs on Netlify so the whole team edits one live schedule: every change saves as its own small edit and merges field by field, so people working at the same time don't overwrite each other; offline changes queue and send when you reconnect. Activity log and who's-online. Projects you can save, switch, copy and import, with project details, cast and crew in Settings. Capture (mocap / volcap) days with the Shotlist Builder columns and Shot ID builder, plus a DIT names panel that copies shot names with take numbers. Dark mode, text size, row spacing, 12/24h clock and team defaults in Settings. Paste a list of actions. Hyphens instead of dashes throughout. Day 4 - Mocap added."],
   ["1.2.1","2026-11-17","Move handle sits to the left of the Shot tick box."],
   ["1.2.0","2026-11-17","Multi-day tabs for Day 1 and Day 2 VolCap alongside the LV day. Add, copy, rename and delete days. CSV exports every day."],
@@ -44,7 +45,8 @@ const HIDDEN_DEFAULT={
   schedule:["priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes"],
   capture:["duration","orig","script","camera","priority","location"]
 };
-const P=Object.assign({name:"",theme:"auto",ui:13,tbl:13,density:"comfortable",clock:"24",poll:3,
+const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24"};
+const P=Object.assign({name:"",poll:3},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
 function savePrefs(){lsSet(PREF_KEY,P)}
@@ -83,7 +85,7 @@ const COLS=[
   {key:"actions",label:"",fixed:true},
 ];
 const COLMAP=Object.fromEntries(COLS.map(c=>[c.key,c]));
-const DEFAULT_WIDTHS={handle:76,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
+const DEFAULT_WIDTHS={handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
 const NO_SORT=["handle","refs","actions"];
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
 
@@ -136,6 +138,10 @@ function commit(){
   savePrefs();
   const ops=diffDocs(lastView,S);
   if(!ops.length) return;
+  // positions given to new or moved items are written back, so the next save sees them as settled
+  for(const o of ops){ if(!("pos" in o.set)) continue;
+    const obj=o.e==="day"?S.days.find(d=>d.id===o.id):o.e==="row"?(findRow(o.id)||{}).r:o.e==="person"?S.people.find(p=>p.id===o.id):null;
+    if(obj) obj.pos=o.set.pos; }
   undoStack.push(ops); if(undoStack.length>200) undoStack.shift();
   redoStack=[];
   enqueue(ops);
@@ -824,15 +830,29 @@ function renderSetTab(){
     b.append(f);
   }
   else if(setTab==="display"){
-    b.append(h("p",{class:"note"},"Just for you, on this device."));
+    b.append(h("p",{class:"note"},"Just for you, on this device. Try a preset, then fine-tune."));
+    const presets={
+      "Easy on the eyes":{theme:"warm",accent:"",font:"atkinson",fw:400,ui:14,tbl:15,lh:1.6,ls:0.01,density:"roomy",zebra:true,calm:true},
+      "Night / dark set":{theme:"dim",accent:"",font:"atkinson",fw:400,ui:14,tbl:14,lh:1.55,ls:0.01,density:"comfortable",zebra:true,calm:true},
+      "High contrast":{theme:"hc",accent:"",font:"atkinson",fw:500,ui:15,tbl:16,lh:1.55,ls:0.02,density:"roomy",zebra:true,calm:true},
+      "Compact (fit more)":{theme:P.theme,font:"system",fw:400,ui:12,tbl:12,lh:1.3,ls:0,density:"compact",zebra:true},
+      "Default":Object.assign({},DISPLAY_DEFAULTS)};
+    b.append(h("div",{class:"toolbar",style:"margin-bottom:1rem"},...Object.entries(presets).map(([n,v])=>h("button",{class:"btn small",onclick:()=>{Object.assign(P,v);savePrefs();applyDisplay();renderAll();renderSetTab();toast(n)}},n))));
     const f=h("div",{class:"form"});
-    const sel=(label,key,opts,after)=>{const s=h("select",{});for(const [v,l] of opts)s.append(h("option",{value:v},l));s.value=String(P[key]);s.addEventListener("change",()=>{P[key]=s.value;savePrefs();applyDisplay();after&&after()});f.append(h("label",{},label,s))};
-    sel("Theme","theme",[["auto","Match my device"],["light","Light"],["dark","Dark"]]);
-    sel("Row spacing","density",[["comfortable","Comfortable"],["compact","Compact"]],()=>reflow());
+    const sel=(label,key,opts,after,num)=>{const s=h("select",{});for(const [v,l] of opts)s.append(h("option",{value:v},l));s.value=String(P[key]);s.addEventListener("change",()=>{P[key]=num?Number(s.value):s.value;savePrefs();applyDisplay();after&&after()});f.append(h("label",{},label,s))};
+    const range=(label,key,min,max,step,unit,after)=>{const show=v=>unit==="px"?v+"px":unit==="x"?Number(v).toFixed(2):unit==="em"?(Number(v)===0?"normal":"+"+Math.round(Number(v)*100)+"%"):v;const out=h("span",{},show(P[key]));const i=h("input",{type:"range",min:String(min),max:String(max),step:String(step),value:String(P[key])});i.addEventListener("input",()=>{P[key]=Number(i.value);out.textContent=show(i.value);applyDisplay()});i.addEventListener("change",()=>{savePrefs();reflow();after&&after()});f.append(h("label",{},h("span",{},label," ",out),i))};
+    const tog=(label,key)=>{const c=h("input",{type:"checkbox"});c.checked=!!P[key];c.addEventListener("change",()=>{P[key]=c.checked;savePrefs();applyDisplay()});f.append(h("label",{class:"inline"},c,label))};
+    sel("Colour theme","theme",[["auto","Match my device (light / dark)"],["light","Light"],["warm","Warm paper (softer, less glare)"],["dim","Dim (soft dark grey)"],["dark","Dark"],["hc","High contrast"],["hcdark","High contrast dark"]]);
+    sel("Highlight colour","accent",[["","Theme default"],["#c2412d","Red"],["#d0700f","Orange"],["#2e7d4f","Green"],["#1f7a7a","Teal"],["#2f6fb0","Blue"],["#7a5ea8","Purple"],["#a33b6b","Magenta"]]);
+    sel("Font","font",[["system","System (default)"],["atkinson","Atkinson Hyperlegible (made for easier reading)"],["lexend","Lexend (wider, calmer letters)"],["serif","Serif"],["rounded","Rounded"],["mono","Monospace"]],()=>setTimeout(reflow,300));
+    sel("Text weight","fw",[["400","Regular"],["500","Medium"],["600","Semi-bold"]],null,true);
+    range("Interface text size","ui",11,20,1,"px"); range("Table text size","tbl",10,22,1,"px");
+    range("Line spacing","lh",1.2,2,0.05,"x"); range("Letter spacing","ls",0,0.08,0.01,"em");
+    sel("Row spacing","density",[["compact","Compact"],["comfortable","Comfortable"],["roomy","Roomy"]],()=>reflow());
     sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
-    const range=(label,key,min,max)=>{const out=h("span",{},P[key]+"px");const i=h("input",{type:"range",min:String(min),max:String(max),step:"1",value:String(P[key])});i.addEventListener("input",()=>{P[key]=Number(i.value);out.textContent=i.value+"px";applyDisplay()});i.addEventListener("change",()=>{savePrefs();reflow()});f.append(h("label",{},h("span",{},label," ",out),i))};
-    range("Interface text size","ui",11,18); range("Table text size","tbl",10,20);
-    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,{theme:"auto",ui:13,tbl:13,density:"comfortable",clock:"24",widths:{}});savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
+    tog("Stripe alternate rows (easier to follow a row across)","zebra");
+    tog("Reduce motion (no flashing or fades)","calm");
+    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{}});savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
   }
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
@@ -977,15 +997,32 @@ async function renderActivity(){
 
 /* ===================== display ===================== */
 const mq=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+const FONTS={system:'-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif',
+  atkinson:'"Atkinson Hyperlegible", -apple-system, "Segoe UI", Arial, sans-serif', lexend:'"Lexend", -apple-system, "Segoe UI", Arial, sans-serif',
+  serif:'Charter, "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif', rounded:'ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", "Segoe UI", Arial, sans-serif',
+  mono:'ui-monospace, "SF Mono", Menlo, Consolas, monospace'};
+const DARK_THEMES=["dark","dim","hcdark"];
+function effTheme(){ return P.theme==="auto"?((mq&&mq.matches)?"dark":"light"):(P.theme||"light"); }
 function applyDisplay(){
-  const dark=P.theme==="dark"||(P.theme==="auto"&&mq&&mq.matches);
-  document.documentElement.dataset.theme=dark?"dark":"light";
-  document.documentElement.style.setProperty("--ui",(Number(P.ui)||13)+"px");
-  document.documentElement.style.setProperty("--tbl",(Number(P.tbl)||13)+"px");
+  const th=effTheme(), dark=DARK_THEMES.includes(th), root=document.documentElement;
+  root.dataset.theme=th;
+  root.style.setProperty("--ui",(Number(P.ui)||13)+"px");
+  root.style.setProperty("--tbl",(Number(P.tbl)||13)+"px");
+  root.style.setProperty("--lh",String(Number(P.lh)||1.35));
+  root.style.setProperty("--ls",(Number(P.ls)||0)+"em");
+  root.style.setProperty("--fw",String(Number(P.fw)||400));
+  root.style.setProperty("--font",FONTS[P.font]||FONTS.system);
+  if(P.accent){root.style.setProperty("--accent",P.accent);root.style.setProperty("--accent-soft",`color-mix(in srgb, ${P.accent} ${dark?28:14}%, var(--panel))`)}
+  else{root.style.removeProperty("--accent");root.style.removeProperty("--accent-soft")}
   document.body.classList.toggle("compact",P.density==="compact");
-  $("#themeBtn").textContent=dark?"☀":"☾"; $("#themeBtn").title=dark?"Switch to light":"Switch to dark";
+  document.body.classList.toggle("roomy",P.density==="roomy");
+  document.body.classList.toggle("zebra",!!P.zebra);
+  document.body.classList.toggle("calm",!!P.calm);
+  $("#themeBtn").textContent=dark?"☀":"☾"; $("#themeBtn").title=dark?"Switch to a light theme":"Switch to a dark theme";
 }
 if(mq&&mq.addEventListener) mq.addEventListener("change",applyDisplay);
+
+/*__XLSX__*/
 
 /* ===================== start-up ===================== */
 let NEEDS_KEY=false;
@@ -1022,6 +1059,7 @@ async function boot(){
   applyDisplay();
   $("#verLabel").textContent="v"+VERSION; $("#helpVer").textContent="Version v"+VERSION;
   $("#changelog").append(...CHANGELOG.map(([v,d,t])=>h("li",{},h("b",{},"v"+v)," ("+d+") - "+t)));
+  setTimeout(checkVersion,5000); setInterval(checkVersion,60000);
   const where=P.mode==="local-forced"?"local":await detectTeam();
   if(where==="unreachable"&&P.projectId){
     // used the team site on this device before: start from the saved copy and keep retrying
@@ -1047,7 +1085,18 @@ $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=
   if(!(await ask("Reset "+d.name+"?","Puts this day back exactly as it was imported"+(MODE==="team"?", for everyone":"")+". Undo straight afterwards brings your version back.","Reset")))return;
   const n=normDoc({days:[o]}).days[0];n.id=d.id;S.days[S.days.indexOf(d)]=n;commit();renderAll();toast("Reset "+d.name+" - Undo to go back")};
 $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
-$("#csvBtn").onclick=exportCSV; $("#printBtn").onclick=()=>window.print();
+$("#csvBtn").onclick=exportCSV;
+$("#impBtn").onclick=()=>{commit();$("#sheetInput").value="";$("#sheetInput").click()};
+$("#sheetInput").addEventListener("change",e=>{const f=e.target.files[0];if(f)openImport(f)});
+$("#impSheet").addEventListener("change",e=>setImpSheet(e.target.value));
+$("#impHeader").addEventListener("change",e=>{IMP.header=Math.max(0,Math.min(IMP.rows.length-1,(Number(e.target.value)||1)-1));buildImpMap()});
+["impGroup","impTakes","impDest"].forEach(id=>$("#"+id).addEventListener("change",updImpInfo));
+$("#impGo").onclick=runImport;
+$("#xlsxBtn").onclick=()=>{commit();openExport()};
+$("#expGo").onclick=exportXlsx;
+$("#updateGo").onclick=refreshForUpdate; $("#updateLater").onclick=()=>$("#updateBar").classList.remove("show");
+document.addEventListener("dragover",e=>{if([...(e.dataTransfer||{}).types||[]].includes("Files"))e.preventDefault()});
+document.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();if(/\.json$/i.test(f.name)){importMode="new";importFile(f)}else openImport(f)}); $("#printBtn").onclick=()=>window.print();
 $("#ditBtn").onclick=()=>{commit();renderDit();$("#ditModal").classList.add("open")};
 $("#ditShowDone").addEventListener("change",e=>{P.ditShowDone=e.target.checked;savePrefs();renderDit()});
 $("#ditCopyAll").onclick=async()=>{const d=D();const list=[];for(const r of ditRows()){const b2=takeBase(r,d);for(let t=b2+1;t<=b2+(Number(r.takes)||0);t++){const n=shotName(r,d,t);if(n)list.push(n)}}if(!list.length){toast("No takes logged yet");return}await copyText(list.join("\n"));addOut(list.join("\n"),true);toast("Copied "+list.length+" names")};
@@ -1056,7 +1105,7 @@ $("#actBtn").onclick=()=>{$("#actModal").classList.add("open");renderActivity()}
 $("#setBtn").onclick=()=>{commit();openSettings()};
 $("#projTitle").onclick=()=>{commit();openSettings("project")};
 $("#projTitle").style.cursor="pointer";
-$("#themeBtn").onclick=()=>{const dark=document.documentElement.dataset.theme==="dark";P.theme=dark?"light":"dark";savePrefs();applyDisplay()};
+$("#themeBtn").onclick=()=>{const th=effTheme();if(DARK_THEMES.includes(th)){P.lastDark=th;P.theme=P.lastLight||"light"}else{P.lastLight=th;P.theme=P.lastDark||"dark"}savePrefs();applyDisplay();if($("#setModal").classList.contains("open")&&setTab==="display")renderSetTab()};
 $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));

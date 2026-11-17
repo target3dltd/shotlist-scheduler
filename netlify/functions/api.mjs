@@ -31,7 +31,10 @@ const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
 });
 const rand = (n = 6) => Math.random().toString(36).slice(2, 2 + n).padEnd(n, "0");
 const newKey = () => M.pad13(Date.now()) + "-" + rand(6);
-const store = () => getStore({ name: "shotlist", consistency: "strong" });
+// Production keeps the real schedule. Deploy previews and branch deploys get their own
+// store, so testing a change can never touch the team's data.
+let STORE_NAME = "shotlist";
+const store = () => getStore({ name: STORE_NAME, consistency: "strong" });
 const cleanPid = (s) => String(s || "").replace(/[^a-z0-9-]/gi, "").slice(0, 40);
 
 async function readBody(req){
@@ -80,13 +83,15 @@ async function compact(st, pid, snap, etag, keys){
   if (res.modified) await Promise.all(old.map(k => st.delete(k)));   // only the winner of a race deletes
 }
 
-export default async (req) => {
+export default async (req, context) => {
+  const ctx = (context && context.deploy && context.deploy.context) || process.env.CONTEXT || "production";
+  STORE_NAME = ctx === "production" ? "shotlist" : "shotlist-" + String(ctx).replace(/[^a-z0-9-]/gi, "-");
   const url = new URL(req.url);
   const path = url.pathname;
   // Access: Netlify's site password protects every request, including these functions.
   // TEAM_KEY is an optional second key; when it isn't set, the site password is the only gate.
   const teamKey = process.env.TEAM_KEY || "";
-  if (path === "/api/ping") return json({ app: "shotlist-scheduler", ok: true, needsKey: !!teamKey });
+  if (path === "/api/ping") return json({ app: "shotlist-scheduler", ok: true, needsKey: !!teamKey, data: STORE_NAME === "shotlist" ? "live" : "preview" });
   if (teamKey && req.headers.get("x-team-key") !== teamKey) return json({ error: "That team key isn't right." }, 401);
 
   const st = store();

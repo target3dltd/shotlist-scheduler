@@ -6,7 +6,13 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Shotlist Scheduler</title>
 <style>
+@font-face{font-family:"Atkinson Hyperlegible";font-weight:400;font-display:swap;src:url("vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.3.0/files/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible";font-weight:700;font-display:swap;src:url("vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.3.0/files/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"Lexend";font-weight:400;font-display:swap;src:url("vendor/fonts/lexend-latin-400-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/lexend@5.3.0/files/lexend-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Lexend";font-weight:700;font-display:swap;src:url("vendor/fonts/lexend-latin-700-normal.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/@fontsource/lexend@5.3.0/files/lexend-latin-700-normal.woff2") format("woff2")}
 :root{
+  --lh:1.35; --ls:0; --fw:400; --zebra:rgba(0,0,0,.025);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ui:13px; --tbl:13px;
   --bg:#f6f5f2; --panel:#ffffff; --panel2:#fbfaf8; --field:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e2e0db; --line2:#bdb9b1;
   --accent:#c2412d; --accent-soft:#f6e3df; --setup:#c9c3b6; --shoot:#2f4858; --break:#d9a441;
@@ -17,18 +23,51 @@
   --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   color-scheme: light;
 }
+html[data-theme="warm"]{
+  --bg:#f3ecdf; --panel:#fbf6ec; --panel2:#f6efe2; --field:#fffaf0; --ink:#3b3229; --muted:#7c6f60; --line:#e3d8c5; --line2:#c9b99f;
+  --accent:#b5532e; --accent-soft:#f3dccd; --setup:#d2c4ad; --shoot:#5b6f63; --break:#d4a24c;
+  --ok:#4f7a46; --warn:#a85a1e; --bad:#a8382c; --done-bg:#e6ead5; --over-bg:#f6e1d6; --break-bg:#f4e7c9;
+  --info-bg:#ebe3d3; --info-ink:#5b4a35; --tab-bg:#ece3d2; --focus:#b59b74; --code-bg:#efe6d6; --shadow:rgba(60,40,10,.10);
+  --handle:#a8997f; --tick:#ebe2d1; --ref-bg:#f6efe2; --zebra:rgba(120,90,40,.035);
+  color-scheme: light;
+}
+html[data-theme="hc"]{
+  --bg:#ffffff; --panel:#ffffff; --panel2:#f2f2f2; --field:#ffffff; --ink:#000000; --muted:#333333; --line:#8a8a8a; --line2:#444444;
+  --accent:#a3000b; --accent-soft:#ffe1e1; --setup:#9a9a9a; --shoot:#003c78; --break:#a86a00;
+  --ok:#006b2b; --warn:#8a4500; --bad:#a3000b; --done-bg:#d9f2df; --over-bg:#ffdcdc; --break-bg:#fff0c8;
+  --info-bg:#e1ecf7; --info-ink:#002e5c; --tab-bg:#e6e6e6; --focus:#003c78; --code-bg:#ededed; --shadow:rgba(0,0,0,.2);
+  --handle:#333; --tick:#cccccc; --ref-bg:#f5f5f5; --zebra:rgba(0,0,0,.05);
+  color-scheme: light;
+}
+html[data-theme="dim"]{
+  --bg:#2a2c31; --panel:#32353b; --panel2:#373a41; --field:#3a3d44; --ink:#d9d6cf; --muted:#a5a29b; --line:#454850; --line2:#5c5f68;
+  --accent:#e0907a; --accent-soft:#4a3632; --setup:#7d786e; --shoot:#8fb0c2; --break:#c9a052;
+  --ok:#86c59c; --warn:#e3a173; --bad:#ec8d83; --done-bg:#33433a; --over-bg:#4a3434; --break-bg:#45412e;
+  --info-bg:#38434b; --info-ink:#b9cfdc; --tab-bg:#373a41; --focus:#7f9bb3; --code-bg:#3a3d44; --shadow:rgba(0,0,0,.4);
+  --handle:#8a8a8a; --tick:#3d4047; --overlay:rgba(0,0,0,.55); --ref-bg:#373a41; --zebra:rgba(255,255,255,.03);
+  color-scheme: dark;
+}
+html[data-theme="hcdark"]{
+  --bg:#000000; --panel:#0b0b0b; --panel2:#151515; --field:#111111; --ink:#ffffff; --muted:#d0d0d0; --line:#6e6e6e; --line2:#bdbdbd;
+  --accent:#ffb000; --accent-soft:#3d2c00; --setup:#8c8c8c; --shoot:#5cc8ff; --break:#ffcc33;
+  --ok:#5df08f; --warn:#ffb000; --bad:#ff6b6b; --done-bg:#0e2b17; --over-bg:#3a0e0e; --break-bg:#332700;
+  --info-bg:#0b2233; --info-ink:#9fd8ff; --tab-bg:#151515; --focus:#5cc8ff; --code-bg:#1a1a1a; --shadow:rgba(0,0,0,.7);
+  --handle:#bbbbbb; --tick:#222222; --overlay:rgba(0,0,0,.75); --ref-bg:#151515; --zebra:rgba(255,255,255,.06);
+  color-scheme: dark;
+}
 html[data-theme="dark"]{
   --bg:#141518; --panel:#1d1e22; --panel2:#222328; --field:#25262b; --ink:#ececec; --muted:#9c9ca6; --line:#33343a; --line2:#4b4c54;
   --accent:#ec7a5f; --accent-soft:#3b2420; --setup:#6e6a60; --shoot:#86b0c9; --break:#cf9b34;
   --ok:#62c38a; --warn:#e8935a; --bad:#f07367; --done-bg:#1d2c23; --over-bg:#3a2222; --break-bg:#33301f;
   --info-bg:#232f37; --info-ink:#a9c8db; --tab-bg:#25262b; --focus:#5d7d99; --code-bg:#2a2b30; --shadow:rgba(0,0,0,.5);
-  --handle:#777; --tick:#2a2b30; --overlay:rgba(0,0,0,.65); --ref-bg:#232428;
+  --handle:#777; --tick:#2a2b30; --overlay:rgba(0,0,0,.65); --ref-bg:#232428; --zebra:rgba(255,255,255,.025);
   color-scheme: dark;
 }
 *{box-sizing:border-box}
 html{font-size:var(--ui)}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
-body{font-size:1rem}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font)}
+body{font-size:1rem;line-height:var(--lh);letter-spacing:var(--ls);font-weight:var(--fw)}
+b,strong,h1,h2,h3,th{font-weight:max(700, var(--fw))}
 button,input,select,textarea{font:inherit;color:inherit}
 input,select,textarea{background:var(--field)}
 header.top{background:var(--bg);border-bottom:1px solid var(--line);padding:.9rem 1.4rem .8rem}
@@ -86,6 +125,10 @@ main{padding:.9rem 1.4rem 4.5rem}
 #grid{font-size:var(--tbl);border-collapse:separate;border-spacing:0;table-layout:fixed}
 #grid th,#grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:.46em;overflow:hidden}
 body.compact #grid th,body.compact #grid td{padding:.2em .35em}
+body.roomy #grid td{padding:.8em .6em}
+body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td{background:var(--zebra)}
+body.calm *,body.calm *::before{animation:none!important;transition:none!important}
+body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
 #grid th{position:sticky;top:0;background:var(--panel2);z-index:5;text-align:left;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
 #grid th .thl{display:flex;align-items:center;gap:.3em;min-height:1.2em;overflow:hidden}
 #grid th.sortable .thl{cursor:pointer;user-select:none}
@@ -110,7 +153,7 @@ td.num,th.num{text-align:center}
 .sorted .rowbtns .mv{display:none}
 .handle{cursor:grab;color:var(--handle);user-select:none;font-size:1.15em;line-height:1;padding:.15em}
 .ctl{display:flex;gap:.3em;align-items:center;white-space:nowrap}
-textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:1.35;overflow:hidden;min-height:1.9em;display:block}
+textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:var(--lh);overflow:hidden;min-height:1.9em;display:block}
 textarea.cell:hover,input.cell:hover,select.cell:hover{border-color:var(--line)}
 textarea.cell:focus,input.cell:focus,select.cell:focus{outline:none;border-color:var(--focus);background:var(--field)}
 input.cell,select.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;padding:.22em .3em}
@@ -186,13 +229,17 @@ table.plain input[type=checkbox]{width:auto}
 .act-list li{border-bottom:1px solid var(--line);padding:.45rem 0;font-size:.95rem}
 .act-list .meta{color:var(--muted);font-size:.85rem}
 .err{color:var(--bad);font-size:.92rem;min-height:1.2em}
+.updatebar{position:sticky;top:0;z-index:150;display:none;gap:.8rem;align-items:center;justify-content:center;flex-wrap:wrap;padding:.5rem 1rem;background:var(--info-bg);color:var(--info-ink);border-bottom:1px solid var(--line);font-size:.95rem}
+.updatebar.show{display:flex}
+.form label.inline{flex-direction:row;align-items:center;gap:.5rem;color:var(--ink)}
+.form label.inline input{width:auto}
 .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.55rem 1.1rem;border-radius:6px;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
 .toast.show{opacity:1}
 
 @media print{
   @page{size:A4 landscape;margin:8mm}
   html{--ui:9.5px;--tbl:9.5px}
-  html[data-theme="dark"]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
+  html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
   .noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
@@ -208,6 +255,7 @@ table.plain input[type=checkbox]{width:auto}
 </style>
 </head>
 <body>
+<div class="updatebar noprint" id="updateBar"><span id="updateText"></span><button class="btn small primary" id="updateGo">Refresh now</button><button class="btn small" id="updateLater">Later</button></div>
 <header class="top">
   <div class="titlebar">
     <h1><span id="projTitle" title="Project name - change it in Settings">Shotlist</span> <small>Shotlist Scheduler <span id="verLabel"></span></small></h1>
@@ -219,6 +267,8 @@ table.plain input[type=checkbox]{width:auto}
       <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
       <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
       <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
+      <button class="btn small" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
+      <button class="btn small" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
       <button class="btn small" id="csvBtn">Export CSV</button>
       <button class="btn small" id="printBtn">Print / PDF</button>
       <button class="btn small" id="actBtn" title="Who changed what">Activity</button>
@@ -284,6 +334,44 @@ table.plain input[type=checkbox]{width:auto}
   <textarea class="dit-list" id="ditOut" readonly placeholder="Names you copy appear here too, so you can select and copy them by hand."></textarea>
 </div></div>
 
+<!-- Import spreadsheet -->
+<div class="modal" id="impModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Import a spreadsheet</h2>
+  <p class="note">Choose where each column goes. Columns that match by name are filled in for you. The file is read in your browser. Only the shots you import are saved to the project.</p>
+  <div class="form" style="margin:.6rem 0">
+    <label>Sheet<select id="impSheet"></select></label>
+    <label>Header row<input id="impHeader" type="number" min="1"></label>
+    <label>Put the shots in<select id="impDest">
+      <option value="newday">a new day</option><option value="bydays">new days, one per Shoot Day value</option>
+      <option value="append">the open day (add to the end)</option><option value="replace">the open day (replace its shots)</option>
+      <option value="newproject">a new project</option></select></label>
+  </div>
+  <div class="form" style="grid-template-columns:1fr;gap:.4rem">
+    <label class="inline"><input type="checkbox" id="impGroup" checked> Group retakes: consecutive rows with the same Shot # and Action become one shot with a take count</label>
+    <label class="inline"><input type="checkbox" id="impTakes"> Rows are takes already recorded (set the take count and mark them shot). Leave off for a plan.</label>
+  </div>
+  <p class="note" id="impInfo" style="margin-top:.6rem"></p>
+  <div style="max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:6px">
+    <table class="plain"><thead><tr><th>Column in the file</th><th>First value</th><th>Goes to</th></tr></thead><tbody id="impMap"></tbody></table>
+  </div>
+  <div class="toolbar" style="margin-top:.8rem"><button class="btn primary" id="impGo">Import</button><button class="btn" data-close>Cancel</button></div>
+</div></div>
+
+<!-- Export xlsx -->
+<div class="modal" id="expModal"><div class="box narrow">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Export tracker (.xlsx)</h2>
+  <p class="note">The Shotlist Builder layout: a Project tab, then a Shotlist with one row per take and live Take # and Shot ID formulas. Retakes added in Sheets or Excel number themselves.</p>
+  <h3>Days</h3><div id="expDays" class="form" style="grid-template-columns:1fr;gap:.3rem"></div>
+  <h3>Include</h3>
+  <div class="form" style="grid-template-columns:1fr;gap:.3rem">
+    <label class="inline"><input type="checkbox" id="expTiming" checked> Timecode and frame columns (TC IN/OUT, frames, fps)</label>
+    <label class="inline"><input type="checkbox" id="expSchedule" checked> Schedule tab with each day's calculated times</label>
+  </div>
+  <div class="toolbar" style="margin-top:.8rem"><button class="btn primary" id="expGo">Download .xlsx</button></div>
+</div></div>
+
 <!-- Activity -->
 <div class="modal" id="actModal"><div class="box">
   <button class="btn small close" data-close>Close</button>
@@ -332,4 +420,5 @@ table.plain input[type=checkbox]{width:auto}
 <div class="modal lightbox" id="lightbox"><div class="box"><img id="lightImg" alt=""></div></div>
 <input type="file" id="imgInput" accept="image/*" hidden>
 <input type="file" id="fileInput" accept=".json,application/json" hidden>
+<input type="file" id="sheetInput" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden>
 <div class="toast" id="toast"></div>
