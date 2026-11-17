@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.5.1";
+const VERSION = "2.6.0";
 const CHANGELOG = [
+  ["2.6.0","2026-11-17","Days are archived instead of deleted: Archive day puts the tab away for everyone and the Archived tab restores it. The day settings and filters sit on a coloured banner that joins the open tab. Timeline and banner colours in Settings > Display (or the Timeline colours link under the timeline). Timeline hour labels no longer get cropped. Short text columns (Action, Performer(s), custom text columns such as Runner notes) now wrap. Optional highlight of the rows teammates are working in, in their badge colour, off by default. Wrapped day tabs sit in the right third of the tab bar, and tabs shrink to fit as more days are added (hover for the full name). Tablet and phone friendly: the shot number stays in view while swiping along a row, the day banner folds down to the filters (tap Day settings for the rest), extra toolbar buttons move under More, tabs and summary cards scroll sideways, bigger touch targets, and column widths can be dragged with a finger."],
   ["2.5.1","2026-11-17","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
   ["2.5.0","2026-11-17","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
   ["2.4.0","2026-11-17","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
@@ -50,8 +51,10 @@ const HIDDEN_DEFAULT={
   schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes"],
   capture:["duration","orig","script","camera","location"]
 };
-const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24"};
-const P=Object.assign({name:"",poll:3},DISPLAY_DEFAULTS,{
+const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24",band:"",bandMix:10};
+const BANDS=[["","Theme default (soft slate)"],["none","None (plain)"],["#2f6fb0","Blue"],["#1f7a7a","Teal"],["#2e7d4f","Green"],["#c8a052","Sand"],["#d0700f","Orange"],["#b3264e","Rose"],["#7a5ea8","Purple"],["custom","Pick my own..."]];
+function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;if(/^#[0-9a-f]{3}$/i.test(c))return "#"+c.slice(1).split("").map(x=>x+x).join("");const m=c.match(/\d+(\.\d+)?/g);if(m&&m.length>=3)return "#"+m.slice(0,3).map(x=>Math.round(+x).toString(16).padStart(2,"0")).join("");return "#888888"}
+const P=Object.assign({name:"",poll:3,peerRows:false,tl:{}},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
 if(!P.v22){ for(const k of Object.keys(P.hiddenBy||{})) P.hiddenBy[k]=(P.hiddenBy[k]||[]).filter(x=>x!=="priority"); P.v22=true; }
@@ -258,7 +261,7 @@ async function syncNow(){
     commit();
     const now=Date.now();
     for(const [k,t] of seenKeys) if(now-t>120000) seenKeys.delete(k);
-    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",since:cursor,seen:[...seenKeys.keys()]});
+    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",since:cursor,seen:[...seenKeys.keys()],row:focusRow||""});
     if(r.snapshot){
       base=base?mergeModels(base,r.snapshot.model):cloneModel(r.snapshot.model);
       if(r.snapshot.upto>cursor) cursor=r.snapshot.upto;
@@ -277,7 +280,7 @@ async function syncNow(){
     persistLocalState();
     const changed=rebuild(false);
     if(changed&&remote.length) flashRemote(remote);
-    renderPresence();
+    renderPresence(); applyPeerRows();
   }catch(e){
     netErr=e.message; if(e.status===401){syncing=false;return needKey(e.message)}
     backoff=Math.min(30000,(backoff||2000)*2);
@@ -285,10 +288,21 @@ async function syncNow(){
   const every=(document.hidden?15:Math.max(2,Number(P.poll)||3))*1000;
   scheduleSync(backoff||every);
 }
+let focusRow="";
+document.addEventListener("focusin",e=>{const tr=e.target.closest&&e.target.closest("#grid tbody tr");focusRow=tr?tr.dataset.id||"":""});
+function applyPeerRows(){
+  $$("#grid tr.peer").forEach(tr=>{tr.classList.remove("peer");tr.style.removeProperty("--peer");tr.removeAttribute("title");$$(".peerchip",tr).forEach(x=>x.remove())});
+  if(!P.peerRows||MODE!=="team") return;
+  for(const p of presence){ if(p.cid===P.cid||!p.row) continue;
+    const tr=$(`#grid tbody tr[data-id="${p.row}"]`); if(!tr) continue;
+    const col=colorFor(p.name||p.cid); tr.classList.add("peer"); tr.style.setProperty("--peer",col); tr.title=(p.name||"Someone")+" is working in this row";
+    const td=tr.firstElementChild; if(td) td.append(h("span",{class:"peerchip",style:`background:${col}`},initials(p.name)));
+  }
+}
 function flashRemote(batches){
-  const ids=new Set(); const names=new Set();
-  batches.forEach(b=>{names.add(b.by||"Someone");b.ops.forEach(o=>{if(o.e==="row")ids.add(o.id)})});
-  ids.forEach(id=>{const tr=$(`#grid tbody tr[data-id="${id}"]`);if(tr){tr.classList.remove("flash");void tr.offsetWidth;tr.classList.add("flash")}});
+  const ids=new Map(); const names=new Set();
+  batches.forEach(b=>{names.add(b.by||"Someone");b.ops.forEach(o=>{if(o.e==="row")ids.set(o.id,colorFor(b.by||b.cid))})});
+  if(P.peerRows) ids.forEach((col,id)=>{const tr=$(`#grid tbody tr[data-id="${id}"]`);if(tr){tr.style.setProperty("--flash",col);tr.classList.remove("flash");void tr.offsetWidth;tr.classList.add("flash")}});
   const a=$(".act-list"); if($("#actModal").classList.contains("open")) renderActivity();
   if(names.size) toast([...names].join(", ")+" updated the schedule");
 }
@@ -359,7 +373,8 @@ async function getSeed(){
 }
 
 /* ===================== document helpers ===================== */
-function D(){ if(!S) return null; const id=P.activeByProject[pid()]; return S.days.find(d=>d.id===id)||tabOrder().ready[0]||S.days[0]||null; }
+function live(){ return S?S.days.filter(d=>!d.archived):[]; }
+function D(){ if(!S) return null; const id=P.activeByProject[pid()]; const t=tabOrder(); return live().find(d=>d.id===id)||t.ready[0]||t.wrapped[0]||null; }
 /* day status: set by hand, or worked out - wrapped once the date has passed or every shot is ticked */
 function todayISO(){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); }
 function dayStatus(d){
@@ -372,7 +387,7 @@ function dayStatus(d){
 /* tab order: Ready to roll (soonest first, undated after), then Wrapped (most recent first); the days' own order is the tie-break */
 function tabOrder(){
   const idx=new Map(S.days.map((d,i)=>[d.id,i]));
-  const ready=S.days.filter(d=>dayStatus(d)==="ready"), wrapped=S.days.filter(d=>dayStatus(d)==="wrapped");
+  const L=live(); const ready=L.filter(d=>dayStatus(d)==="ready"), wrapped=L.filter(d=>dayStatus(d)==="wrapped");
   ready.sort((a,b)=>(a.date&&b.date?(a.date<b.date?-1:a.date>b.date?1:0):a.date?-1:b.date?1:0)||idx.get(a.id)-idx.get(b.id));
   wrapped.sort((a,b)=>(a.date&&b.date?(a.date>b.date?-1:a.date<b.date?1:0):a.date?-1:b.date?1:0)||idx.get(b.id)-idx.get(a.id));
   return {ready,wrapped};
@@ -523,6 +538,7 @@ function applySortAsOrder(){
   d.rows=[...shown,...rest]; P.sort=null; commit(); renderHead(); renderBody(); toast("Running order updated - Undo to go back");
 }
 function renderHead(){
+  $("#grid").style.setProperty("--stick-shot",(hidden().includes("handle")?0:colW("handle"))+"px");
   const cg=$("#cols"); cg.innerHTML="";
   for(const c of cols()) cg.append(h("col",{"data-col":c.key}));
   const thead=$("#grid thead"); thead.innerHTML="";
@@ -546,7 +562,7 @@ function renderHead(){
     if(sortable) lab.addEventListener("click",()=>setSort(c.key));
     th.append(lab);
     const grip=h("div",{class:"grip",title:"Drag to resize · double-click to reset"});
-    grip.addEventListener("mousedown",e=>startResize(e,c.key,grip));
+    grip.addEventListener("pointerdown",e=>startResize(e,c.key,grip));
     grip.addEventListener("dblclick",()=>{delete P.widths[c.key];applyWidths();reflow();savePrefs()});
     th.append(grip); tr.append(th);
     const fth=h("th",{class:hc.trim(),"data-col":c.key});
@@ -567,8 +583,8 @@ function startResize(e,key,grip){
   e.preventDefault(); e.stopPropagation();
   const x0=e.clientX, w0=colW(key); grip.classList.add("active"); document.body.style.cursor="col-resize";
   const mv=ev=>{P.widths[key]=Math.max(40,Math.round(w0+ev.clientX-x0));applyWidths()};
-  const up=()=>{document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);grip.classList.remove("active");document.body.style.cursor="";reflow();savePrefs()};
-  document.addEventListener("mousemove",mv); document.addEventListener("mouseup",up);
+  const up=()=>{document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);grip.classList.remove("active");document.body.style.cursor="";reflow();savePrefs()};
+  document.addEventListener("pointermove",mv); document.addEventListener("pointerup",up); document.addEventListener("pointercancel",up);
 }
 /* every editor looks its row up by id at the moment you type, so a refresh from a teammate never strands your edit */
 function R(id){ const f=findRow(id); return f?f.r:null; }
@@ -585,7 +601,18 @@ function minsCtl(r,key){
   wrap.append(box,h("div",{class:"eff","data-eff":key},""));
   return wrap;
 }
+const NAME_KEYS=["shot","action","performers","perfCount","genre","props","hero","shotType","location"];
 function textCell(r,key,multiline=true,extra={}){
+  if(!multiline&&!extra.type&&key!=="shot"){
+    // single-line text that still wraps to show everything: Enter moves on instead of adding a line
+    const t=h("textarea",{class:"cell oneline",rows:"1",spellcheck:"true","data-k":key});
+    t.value=r[key]??"";
+    t.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.altKey){e.preventDefault();t.blur()}});
+    t.addEventListener("input",()=>{const x=R(r.id);if(!x)return;if(/\n/.test(t.value))t.value=t.value.replace(/\s*\n+\s*/g," ");x[key]=t.value;autosize(t);if(NAME_KEYS.includes(key)||String(key).startsWith("c_"))refreshNames(r.id);softCommit()});
+    t.addEventListener("change",commit);
+    requestAnimationFrame(()=>autosize(t));
+    return t;
+  }
   if(!multiline){
     const i=h("input",Object.assign({class:"cell"+(key==="shot"?" shotno":"")+(extra.small?" small":""),value:r[key]??"",placeholder:extra.ph||"","data-k":key},extra.type?{type:extra.type}:{}));
     i.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[key]=extra.type==="number"?(i.value===""?"":Number(i.value)):i.value;if(["shot","action","performers","perfCount","genre","props","hero","shotType","location"].includes(key)||String(key).startsWith("c_"))refreshNames(r.id);if(key==="shot")renderTimeline(compute());softCommit()});
@@ -749,7 +776,7 @@ function renderBody(){
     tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
     tb.append(tr);
   });
-  recalc();
+  recalc(); applyPeerRows();
 }
 let dragId=null, colDrag=null;
 function recalc(){
@@ -798,7 +825,8 @@ function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
   const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,toMin(d.wrap||"18:00"))+15;
   const span=Math.max(60,end-start); const pct=m=>((m-start)/span*100)+"%";
-  for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick",style:"left:"+pct(hr)},fmt(hr)))}
+  const pxHr=(tl.clientWidth||800)/span*60, every=pxHr<26?180:pxHr<46?120:60;
+  for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){if(hr%every){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}));continue}const f=(hr-start)/span;tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick"+(f<0.04?" first":f>0.96?" last":""),style:"left:"+pct(hr)},fmt(hr)))}
   const wrapT=toMin(d.wrap||"18:00");
   for(const r of d.rows){
     const c=C.rows[r.id]; const name=r.type==="break"?(r.label||"Break"):("Shot "+(r.shot||r.action||"-"));
@@ -826,15 +854,38 @@ function renderDayTabs(){
   const {ready,wrapped}=tabOrder(); const cur=D();
   const tab=d=>{
     const st=dayStatus(d), auto=!d.status;
-    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
+    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.name||"Day"} · ${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
       h("span",{class:"kind "+(d.kind==="capture"?"mocap":"la")},d.kind==="capture"?"Mocap":"LA"), d.name||"Day", h("small",{},tabSub(d,compute(d))));
     b.onclick=()=>{if(cur&&cur.id===d.id)return;commit();P.activeByProject[pid()]=d.id;P.sort=null;savePrefs();renderAll()};
     return b;
   };
-  bar.append(h("span",{class:"tabgroup ready"},"Ready to roll"));
-  ready.forEach(d=>bar.append(tab(d)));
-  bar.append(h("button",{class:"daytab add",title:"Add an empty day",onclick:addDay},"+ Day"));
-  if(wrapped.length){ bar.append(h("span",{class:"tabgroup wrapped"},"Wrapped")); wrapped.forEach(d=>bar.append(tab(d))); }
+  // ready days fill the left two thirds, wrapped days sit in the right third; tabs shrink to fit as days are added
+  const gR=h("div",{class:"tg ready"}), gW=h("div",{class:"tg wrapped"});
+  gR.append(h("span",{class:"tabgroup ready"},"Ready to roll"));
+  ready.forEach(d=>gR.append(tab(d)));
+  gR.append(h("button",{class:"daytab add",title:"Add an empty day",onclick:addDay},"+ Day"));
+  bar.append(gR);
+  const arch=S.days.filter(d=>d.archived);
+  if(wrapped.length||arch.length){ bar.append(gW); gW.append(h("span",{class:"tabgroup wrapped"},"Wrapped")); wrapped.forEach(d=>gW.append(tab(d))); }
+  requestAnimationFrame(fitTabs);
+  if(arch.length) gW.append(h("button",{class:"daytab arch",title:"Days put away. Restore them from here",onclick:openArchived},"Archived ("+arch.length+")"));
+}
+function fitTabs(){
+  if(innerWidth<=760){$$("#dayTabs .tg").forEach(g=>g.classList.remove("t1","t2","t3"));const on=$("#dayTabs .daytab.on");if(on)on.scrollIntoView({block:"nearest",inline:"nearest"});return}
+  // squeeze in steps so names stay readable: drop the wrap/shot note, then the kind chip, then shrink further, then scroll
+  for(const g of $$("#dayTabs .tg")){
+    g.classList.remove("t1","t2","t3");
+    const tight=()=>g.scrollWidth>g.clientWidth+1||$$(".daytab",g).some(t=>t.scrollWidth>t.clientWidth+1);
+    for(const c of ["t1","t2","t3"]){ if(!tight()) break; g.classList.add(c); }
+  }
+}
+window.addEventListener("resize",()=>{clearTimeout(fitTabs._t);fitTabs._t=setTimeout(()=>{fitTabs();if(S&&D())renderTimeline(compute())},120)});
+function openArchived(){renderArchived();$("#archModal").classList.add("open")}
+function renderArchived(){
+  const l=$("#archList"); l.innerHTML=""; const arch=S.days.filter(d=>d.archived);
+  if(!arch.length){l.append(h("p",{class:"note"},"Nothing archived."));return}
+  for(const d of arch) l.append(h("div",{class:"toolbar"},h("span",{},h("b",{},d.name||"Day")," ",h("span",{class:"note"},`${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups`)),
+    h("button",{class:"btn small primary",onclick:()=>{d.archived=null;P.activeByProject[pid()]=d.id;commit();savePrefs();renderAll();renderArchived();if(!S.days.some(x=>x.archived))$("#archModal").classList.remove("open");toast("Restored "+d.name)}},"Restore")));
 }
 function renderSettingsRow(){
   const d=D(); $("#dayControls").style.display=d?"":"none"; if(!d) return;
@@ -842,6 +893,7 @@ function renderSettingsRow(){
   set("dayName",d.name); set("dayKind",d.kind||"schedule"); set("dayStatus",d.status||"");
   { const o=$("#dayStatus option[value='']"); if(o) o.textContent="Auto ("+(dayStatus(Object.assign({},d,{status:""}))==="wrapped"?"Wrapped":"Ready to roll")+")"; } set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
   set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all"); renderPrioFilter();
+  $("#bandSummary").textContent=`${d.name||"Day"} · call ${fmt(toMin(d.call||"09:00"))} · wrap ${fmt(toMin(d.wrap||"18:00"))}`;
   $("#projTitle").textContent=S.project.name||"Untitled project"; document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
 }
 function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); }
@@ -1030,7 +1082,22 @@ function renderSetTab(){
     sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
     tog("Stripe alternate rows (easier to follow a row across)","zebra");
     tog("Reduce motion (no flashing or fades)","calm");
-    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[]});invalidateCols();savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
+    tog("Highlight rows the team are working in, in each person's badge colour","peerRows");
+    const f2=h("div",{class:"form",id:"colourForm"});
+    const pick=(label,key,cssVar)=>{const cur=()=>(P.tl||{})[key]||getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()||"#888888";
+      const i=h("input",{type:"color",value:toHex(cur())});const def=h("button",{class:"btn small",title:"Back to the theme's colour"},"Theme default");
+      i.addEventListener("input",()=>{P.tl=Object.assign({},P.tl,{[key]:i.value});applyDisplay()});i.addEventListener("change",savePrefs);
+      def.onclick=()=>{P.tl=Object.assign({},P.tl,{[key]:""});savePrefs();applyDisplay();i.value=toHex(cur())};
+      f2.append(h("label",{},label,h("span",{class:"toolbar"},i,def)))};
+    pick("Timeline: setup","setup","--setup"); pick("Timeline: shooting","shoot","--shoot"); pick("Timeline: break / move","break","--break"); pick("Timeline: target wrap line","wrap","--bad");
+    const bandSel=h("select",{});for(const [v,l] of BANDS)bandSel.append(h("option",{value:v},l));bandSel.value=BANDS.some(x=>x[0]===P.band)?P.band:"custom";
+    const bandPick=h("input",{type:"color",value:/^#/.test(P.band||"")?P.band:"#2f4858"});
+    const showPick=()=>{bandPick.style.display=bandSel.value==="custom"?"":"none"};showPick();
+    bandSel.addEventListener("change",()=>{P.band=bandSel.value==="custom"?bandPick.value:bandSel.value;showPick();savePrefs();applyDisplay()});
+    bandPick.addEventListener("input",()=>{P.band=bandPick.value;applyDisplay()});bandPick.addEventListener("change",savePrefs);
+    f2.append(h("label",{},"Day banner colour (behind the day settings and filters)",h("span",{class:"toolbar"},bandSel,bandPick)));
+    { const out=h("span",{},Math.round(P.bandMix)+"%");const i=h("input",{type:"range",min:"4",max:"40",step:"1",value:String(P.bandMix)});i.addEventListener("input",()=>{P.bandMix=Number(i.value);out.textContent=i.value+"%";applyDisplay()});i.addEventListener("change",savePrefs);f2.append(h("label",{},h("span",{},"Banner strength ",out),i)); }
+    b.append(f,h("h3",{style:"margin-top:1.2rem"},"Timeline and banner colours"),h("p",{class:"note"},"Also just for you. They follow your colour theme until you pick your own."),f2,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[],tl:{}});invalidateCols();savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
   }
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
@@ -1092,7 +1159,7 @@ function exportCSV(){
   const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)"];
   const customs=cols().filter(c=>c.custom); head.push(...customs.map(c=>c.label));
   const lines=[head.map(csvEsc).join(",")];
-  for(const d of S.days){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
+  for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
     lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?"Break/Move":"Shot",br?(r.label||"Break"):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
       br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
@@ -1197,6 +1264,11 @@ function applyDisplay(){
   document.body.classList.toggle("roomy",P.density==="roomy");
   document.body.classList.toggle("zebra",!!P.zebra);
   document.body.classList.toggle("calm",!!P.calm);
+  const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
+  const mix=Math.max(4,Math.min(40,Number(P.bandMix)||10));
+  if(P.band==="none"){root.style.setProperty("--band","var(--bg)");root.style.setProperty("--band-line","var(--line)")}
+  else{const hue=P.band||"var(--shoot)";const m=dark?Math.round(mix*1.5):mix;root.style.setProperty("--band",`color-mix(in srgb, ${hue} ${m}%, var(--bg))`);root.style.setProperty("--band-line",`color-mix(in srgb, ${hue} ${Math.min(60,m*2+6)}%, var(--line))`)}
+  try{applyPeerRows()}catch(e){}
   $("#themeBtn").textContent=dark?"☀":"☾"; $("#themeBtn").title=dark?"Switch to a light theme":"Switch to a dark theme";
 }
 if(mq&&mq.addEventListener) mq.addEventListener("change",applyDisplay);
@@ -1260,7 +1332,12 @@ bindDay("setupPct","setupPct",true);bindDay("shootPct","shootPct",true);bindDay(
 $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();renderBody()});
 $("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});
 $("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
-$("#delDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Delete "+d.name+"?","Its shots go with it. Undo straight afterwards brings it all back.","Delete day")))return;const i=S.days.indexOf(d);S.days.splice(i,1);const nx=S.days[Math.max(0,i-1)];P.activeByProject[pid()]=nx&&nx.id;commit();renderAll();toast("Deleted "+d.name+" - Undo to restore")};
+$("#tlColours").onclick=e=>{e.preventDefault();openSettings("display");setTimeout(()=>{const f=$("#colourForm");if(f)f.scrollIntoView({block:"start"})},50)};
+$("#moreBtn").onclick=()=>{const t=$("header.top");const o=t.classList.toggle("more-open");$("#moreBtn").setAttribute("aria-expanded",o);$("#moreBtn").textContent=o?"Less ▴":"More ▾"};
+$("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.toggle("open");$("#bandToggle").setAttribute("aria-expanded",o);$("#bandArrow").textContent=o?"▴":"▾"};
+// iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
+if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
+$("#archDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Archive "+d.name+"?","The tab is put away for everyone. Nothing is deleted: restore it any time from the Archived tab at the end of the day tabs.","Archive day")))return;d.archived=true;P.activeByProject[pid()]=null;commit();savePrefs();renderAll();toast("Archived "+d.name+" - restore it from Archived")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}
   if(!(await ask("Reset "+d.name+"?","Puts this day back exactly as it was imported"+(MODE==="team"?", for everyone":"")+". Undo straight afterwards brings your version back.","Reset")))return;
   const n=normDoc({days:[o]}).days[0];n.id=d.id;S.days[S.days.indexOf(d)]=n;commit();renderAll();toast("Reset "+d.name+" - Undo to go back")};

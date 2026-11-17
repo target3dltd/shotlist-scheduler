@@ -262,7 +262,7 @@ async function runImport(){
   }
   if(dest==="bydays"&&has("shootDay")){
     const made={};
-    for(const g of groups){const key=g.day||"?";if(!made[key]){const no=Number(key);const ex=S.days.find(d=>Number(d.dayNo)===no&&!isNaN(no)&&!d.rows.length);made[key]=ex||mkDay("Day "+key,isNaN(no)?S.days.length+1:no);if(!ex)S.days.push(made[key])}made[key].rows.push(groupToRow(g,recorded,capture))}
+    for(const g of groups){const key=g.day||"?";if(!made[key]){const no=Number(key);const ex=S.days.find(d=>!d.archived&&Number(d.dayNo)===no&&!isNaN(no)&&!d.rows.length);made[key]=ex||mkDay("Day "+key,isNaN(no)?S.days.length+1:no);if(!ex)S.days.push(made[key])}made[key].rows.push(groupToRow(g,recorded,capture))}
     target=Object.values(made)[0];
   }else if(dest==="newday"||!D()){
     target=mkDay(IMP.file.replace(/\.[^.]+$/,""),S.days.length+1); S.days.push(target);
@@ -279,7 +279,7 @@ async function runImport(){
 /* ---------- export: tracker workbook in the Shotlist Builder format ---------- */
 function openExport(){
   const box=$("#expDays"); box.innerHTML="";
-  S.days.forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>r.type!=="break").length} shots)`)))});
+  S.days.filter(d=>!d.archived).forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>r.type!=="break").length} shots)`)))});
   $("#expModal").classList.add("open");
 }
 const XC={ink:"FF1D1D1F",paper:"FFF6F5F2",muted:"FF6B6B70",rule:"FFE2E0DB",stage:"FFE9EEF2",accent:"FFC2412D",soft:"FFF6E3DF",signal:"FF2F4858",white:"FFFFFFFF",note:"FFF2F6EE",done:"FFE8F1EA",break:"FFFBF3E2"};

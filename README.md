@@ -1,4 +1,4 @@
-# Shotlist Scheduler v2.5.1
+# Shotlist Scheduler v2.6.0
 
 Shoot scheduler and DIT shot-naming tool. Projects with cast and crew, schedule and capture days,
 timings that cascade, shot names with take numbers, and live team editing.

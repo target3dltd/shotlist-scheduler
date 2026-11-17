@@ -15,8 +15,9 @@
     <li><b>Kind</b>: <i>Live Action</i> days (tagged <span class="chip">LA</span>) focus on setups and timings. <i>Mocap</i> days (tagged <span class="chip">Mocap</span>) also show Takes, Action, Performer(s), # Perf., Genre, Body / Face / Glove, Hero and Safety. Every column is available on both kinds: switch any on or off under <b>Columns</b>. Your choice is remembered separately for each kind.</li>
     <li>The tabs are grouped. <b>Ready to roll</b> comes first, soonest date first, with undated days after the dated ones. <b>Wrapped</b> sits to the right, most recent first. The page opens on the next day that's ready to roll.</li>
     <li><b>Status</b> decides the group. <i>Auto</i> treats a day as wrapped once its date has passed or every shot on it is ticked. Choose <i>Ready to roll</i> or <i>Wrapped</i> to set it by hand, for example to reopen a wrapped day for pickups. Status is shared with the team.</li>
+    <li>Ready to roll days fill the left two thirds of the tab bar and Wrapped days the right third. As days are added the tabs shrink to fit, shortening their names; hover over a tab for its full name, date and setup count. The day you're on always shows in full. When tabs are squeezed, Mocap days keep a slate line along the top of the tab.</li>
     <li><b>Day #</b> is used in shot names (for example <code>d4</code>).</li>
-    <li><b>+ Day</b> adds a day. <b>Copy day</b> duplicates the current day with the ticks and takes cleared, which is handy for planning a pickup day. <b>Delete day</b> removes it, and Undo brings it back. <b>Reset day</b> puts an imported day back as it was imported.</li>
+    <li><b>+ Day</b> adds a day. <b>Copy day</b> duplicates the current day with the ticks and takes cleared, which is handy for planning a pickup day. <b>Archive day</b> puts the day away for everyone instead of deleting it: nothing is lost, and the <b>Archived (n)</b> tab at the end of the day tabs lists archived days with a <b>Restore</b> button. Archived days are left out of the CSV and .xlsx exports. Days can't be deleted, so a stray click never loses a day's work. <b>Reset day</b> puts an imported day back as it was imported.</li>
   </ul>
 
   <h3>Editing</h3>
@@ -35,7 +36,7 @@
 
   <h3>Columns and priority</h3>
   <ul>
-    <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>
+    <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Text cells wrap to show everything you type; Enter moves on rather than adding a line (long text keeps its line breaks). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>
     <li>Tick <b>In shot name</b> to add a column to the generated names, then set its prefix and position in Settings → Shot names. A tick-box column adds its prefix (or its name) when ticked.</li>
     <li><b>Rename built-in columns</b> for the whole team, e.g. Hero to Hero code. Clear the box to go back to the original name.</li>
     <li><b>Priority</b> is on every day, colour-coded in its dropdown and down the row's left edge. Sorting by Priority puts the highest first. In Settings → Columns you can change the options and pick a colour for each one (shared with the team). The default is the highlight colour for the first option, then amber and grey. Text on the colour turns dark or light automatically so it stays readable.</li>
@@ -80,12 +81,23 @@
         <li><b>Font</b>: System, Atkinson Hyperlegible (designed for low-vision readability), Lexend (wider, calmer letterforms), serif, rounded or monospace. The team site serves the fonts itself.</li>
         <li><b>Text weight</b>, <b>interface</b> and <b>table text size</b>, <b>line spacing</b>, <b>letter spacing</b> and <b>row spacing</b> (compact, comfortable, roomy).</li>
         <li><b>Stripe alternate rows</b> to help follow a row across a wide table, <b>reduce motion</b> to stop the highlight flashes, and a 12 or 24-hour <b>clock</b>.</li>
+        <li><b>Highlight rows the team are working in</b> (off by default): on the team site, a row a teammate is in gets an outline and their initials, in the same colour as their badge in the header. Rows they change flash in that colour too. With it off you still get a note when someone updates the schedule.</li>
+        <li><b>Timeline and banner colours</b>: pick your own colours for setup, shooting, break / move and the target wrap line on the timeline (the <b>Timeline colours</b> link under the timeline jumps here), and the colour and strength of the day banner behind the day settings and filters. <b>Theme default</b> goes back to your theme's colour.</li>
       </ul></li>
+  </ul>
+
+  <h3>Tablets and phones</h3>
+  <ul>
+    <li>The tool works on iPads and other tablets, and on phones for quick checks and ticking shots off. Add it to your home screen (Share → Add to Home Screen) and it opens like an app.</li>
+    <li>On narrower screens the <b>Shot #</b> column stays put while you swipe sideways along a row, so you always know which shot you're in.</li>
+    <li>The day banner folds down to the <b>Show</b> and <b>Priority</b> filters. Tap <b>Day settings</b> to open the name, status, times and buffers.</li>
+    <li>Import, export, print and Activity move under <b>More ▾</b>. Day tabs and the summary cards scroll sideways.</li>
+    <li>Buttons and the − / + steppers get bigger on touch screens. Drag a column's right edge with your finger to resize it. To move a row, use the ↑ ↓ buttons in the row's last column if dragging the ⠿ handle is fiddly.</li>
   </ul>
 
   <h3>Working as a team</h3>
   <ul>
-    <li>On the team site, everyone with the team key edits the same live schedule. The coloured initials show who's online. The dot next to them shows the connection: <b>Live</b>, <b>Saving…</b> or <b>Offline</b>. Teammates' changes appear within a few seconds, and changed rows flash briefly.</li>
+    <li>On the team site, everyone with the team key edits the same live schedule. The coloured initials show who's online. The dot next to them shows the connection: <b>Live</b>, <b>Saving…</b> or <b>Offline</b>. Teammates' changes appear within a few seconds. Turn on <b>Highlight rows the team are working in</b> (Settings > Display) to see which row each person is in, and their changes flash, in their badge colour.</li>
     <li><b>No lost work when two people edit at once.</b> Every change is saved as its own small edit (this field on this row) and never overwrites the whole schedule. Different fields, even on the same row, simply combine. If two people change the same field at the same moment, the later save is what everyone sees, and both changes are listed in <b>Activity</b>.</li>
     <li>Moving rows uses positions, not row numbers, so reordering while someone else adds or edits rows merges cleanly.</li>
     <li>Deleting keeps the data behind the scenes, so Undo, or a teammate's later edit, never resurrects a half-deleted row.</li>

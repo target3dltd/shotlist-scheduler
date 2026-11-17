@@ -94,6 +94,25 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .who{display:flex;gap:.25rem;align-items:center}
 .who span{width:1.7rem;height:1.7rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;border:2px solid var(--bg)}
 .controls{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-end;margin-top:.8rem}
+/* the day's banner: settings and filters sit on a tinted band that joins the open tab */
+:root{--band:color-mix(in srgb, var(--shoot) 9%, var(--bg));--band-line:color-mix(in srgb, var(--shoot) 22%, var(--line))}
+#dayControls.controls{margin-top:0;background:var(--band);border:1px solid var(--band-line);border-top:none;border-radius:0 0 10px 10px;padding:.75rem 1rem .85rem}
+#dayControls .field label{color:color-mix(in srgb, var(--ink) 72%, var(--band))}
+.daytabs{display:flex;gap:.3rem;margin-top:.8rem;border-bottom:1px solid var(--band-line);align-items:flex-end}
+.daytabs .tg{display:flex;gap:.3rem;align-items:flex-end;min-width:0}
+.daytabs .tg.ready{flex:2 1 0}
+.daytabs .tg.wrapped{flex:1 1 0;border-left:1px solid var(--line2);padding-left:.6rem;margin-left:.3rem}
+.daytabs .tg .daytab{flex:0 1 auto;min-width:4.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daytabs .tg .daytab.on,.daytabs .tg .daytab.add,.daytabs .tg .daytab.arch{flex-shrink:0}
+.daytabs .tg .daytab.on{min-width:auto}
+.daytabs .tg.t1 .daytab small{display:none}
+.daytabs .tg.t1 .daytab:not(.on) .kind{display:none}
+.daytabs .tg.t1 .daytab:not(.on):has(.kind.mocap){box-shadow:inset 0 3px 0 var(--shoot)}
+.daytabs .tg.t2 .daytab:not(.on){padding:.45rem .5rem}
+.daytabs .tg.t3 .daytab:not(.on){min-width:2.6rem;padding:.45rem .4rem}
+.daytabs .tg.t3 .tabgroup{display:none}
+.daytabs .tg.t3{overflow-x:auto;scrollbar-width:thin}
+
 .field{display:flex;flex-direction:column;gap:.25rem}
 .field label,.flabel{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .field input,.field select{border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;min-width:0}
@@ -110,9 +129,12 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .warnings{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap}
 .pill{font-size:.92rem;border-radius:999px;padding:.2rem .75rem;background:var(--accent-soft);color:var(--bad)}
 .pill.info{background:var(--info-bg);color:var(--info-ink)}
-.daytabs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.8rem;border-bottom:1px solid var(--line)}
 .daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
-.daytab.on{background:var(--panel);font-weight:600;border-color:var(--line2)}
+.daytab.on{background:var(--band);font-weight:600;border-color:var(--band-line)}
+.daytab.arch{background:transparent;border-style:dashed;color:var(--muted);margin-left:auto}
+.daytabs .tabgroup{flex-shrink:0}
+.archlist{display:flex;flex-direction:column;gap:.5rem}
+.archlist .toolbar{justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:.45rem .6rem}
 .daytab small{color:var(--muted);font-weight:400;margin-left:.45rem}
 .daytab .kind{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:4px;padding:0 .25rem;margin-right:.4rem;color:var(--muted)}
 .daytab .kind.mocap{border-color:var(--shoot);color:var(--shoot)}
@@ -122,18 +144,19 @@ select.cell.prio{font-weight:700;border-radius:4px}
 .swatch{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.35rem;border:1px solid var(--line2)}
 .daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
 .tabgroup{align-self:flex-end;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:0 .35rem .5rem;white-space:nowrap}
-.tabgroup.wrapped{margin-left:1rem;border-left:1px solid var(--line2);padding-left:1rem}
+.tabgroup.wrapped{margin-left:0}
 .daytab.wrapped{opacity:.82}
 .daytab.wrapped.on{opacity:1}
 .daytab .stat-dot{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;margin-right:.35rem;background:var(--ok);vertical-align:1px}
 .daytab.wrapped .stat-dot{background:var(--muted)}
-.timeline{margin-top:.8rem;position:relative;height:2.6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.timeline{margin-top:.8rem;position:relative;height:calc(2.05rem + 1.35em);background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
 .timeline .seg.setup{background:var(--setup)} .timeline .seg.shoot{background:var(--shoot)} .timeline .seg.break{background:var(--break)}
 .timeline .seg.over{outline:1px solid var(--bad)}
-.timeline .tick{position:absolute;top:1.65rem;font-size:.73rem;color:var(--muted);transform:translateX(-50%)}
-.timeline .tickline{position:absolute;top:0;bottom:.9rem;width:1px;background:var(--tick)}
-.timeline .wrapline{position:absolute;top:0;bottom:0;width:2px;background:var(--bad)}
+.timeline .tick{position:absolute;top:1.75rem;font-size:.78rem;line-height:1.25;color:var(--muted);transform:translateX(-50%);white-space:nowrap;padding:0 .2rem}
+.timeline .tick.first{transform:none} .timeline .tick.last{transform:translateX(-100%)}
+.timeline .tickline{position:absolute;top:0;height:1.7rem;width:1px;background:var(--tick)}
+.timeline .wrapline{position:absolute;top:0;bottom:0;width:2px;background:var(--wrapc,var(--bad))}
 .legend{display:flex;gap:.9rem;font-size:.85rem;color:var(--muted);margin-top:.3rem}
 .legend i{display:inline-block;width:.75rem;height:.75rem;border-radius:2px;margin-right:.3rem;vertical-align:-1px}
 
@@ -145,7 +168,7 @@ body.compact #grid th,body.compact #grid td{padding:.2em .35em}
 body.roomy #grid td{padding:.8em .6em}
 body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td{background:var(--zebra)}
 body.calm *,body.calm *::before{animation:none!important;transition:none!important}
-body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
+body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--flash,var(--warn))}
 #grid th{position:sticky;top:0;background:var(--panel2);z-index:5;text-align:left;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
 #grid th .thl{display:flex;align-items:center;gap:.3em;min-height:1.2em;overflow:hidden}
 #grid th.sortable .thl{cursor:pointer;user-select:none}
@@ -155,7 +178,8 @@ body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
 #grid th.coldrop-l{box-shadow:inset 3px 0 0 var(--accent)}
 #grid th.coldrop-r{box-shadow:inset -3px 0 0 var(--accent)}
 #grid th .arrow{font-size:.8em;color:var(--accent)}
-#grid th .grip{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:7}
+#grid th .grip{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:7;touch-action:none}
+@media (pointer:coarse){#grid th .grip{width:18px;right:-9px}}
 #grid th .grip:hover,#grid th .grip.active{background:linear-gradient(90deg,transparent 3px,var(--focus) 3px,var(--focus) 5px,transparent 5px)}
 #grid tr.filters th{top:var(--headH,30px);padding:.22em .3em;text-transform:none;letter-spacing:0}
 #grid tr.filters input{width:100%;border:1px solid var(--line);border-radius:4px;padding:.15em .4em;font-size:.9em;font-weight:400;color:var(--ink)}
@@ -167,14 +191,18 @@ td.num,th.num{text-align:center}
 #grid tr.dragging{opacity:.4}
 #grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
 #grid tr.flash td{animation:flash 1.6s ease-out}
-@keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--warn)}100%{box-shadow:inset 0 0 0 2px transparent}}
+@keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--flash,var(--warn))}100%{box-shadow:inset 0 0 0 2px transparent}}
+/* a teammate is working in this row: outline and their initials, in their badge colour */
+#grid tr.peer{outline:2px solid var(--peer);outline-offset:-2px}
+#grid tr.peer td:first-child{position:relative}
+.peerchip{position:absolute;left:2px;top:2px;font-size:.62rem;font-weight:700;color:#fff;border-radius:999px;padding:0 .3rem;line-height:1.35;pointer-events:none;z-index:2}
 .viewbar{display:none;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem;padding:.45rem .75rem;border-radius:6px;background:var(--info-bg);color:var(--info-ink);font-size:.92rem}
 .viewbar.show{display:flex}
 .sorted .handle{visibility:hidden}
 .sorted .rowbtns .mv{display:none}
 .handle{cursor:grab;color:var(--handle);user-select:none;font-size:1.15em;line-height:1;padding:.15em}
 .ctl{display:flex;gap:.3em;align-items:center;white-space:nowrap}
-textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:var(--lh);overflow:hidden;min-height:1.9em;display:block}
+textarea.cell{width:100%;overflow-wrap:anywhere;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:var(--lh);overflow:hidden;min-height:1.9em;display:block}
 textarea.cell:hover,input.cell:hover,select.cell:hover{border-color:var(--line)}
 textarea.cell:focus,input.cell:focus,select.cell:focus{outline:none;border-color:var(--focus);background:var(--field)}
 input.cell,select.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;padding:.22em .3em}
@@ -257,6 +285,53 @@ table.plain input[type=checkbox]{width:auto}
 .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.55rem 1.1rem;border-radius:6px;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
 .toast.show{opacity:1}
 
+
+/* ===== tablets and phones ===== */
+#moreBtn,#bandToggle{display:none}
+@media (max-width:1100px){
+  /* keep the shot number in view while swiping along a row */
+  #grid th[data-col=handle],#grid td[data-col=handle]{position:sticky;left:0;z-index:3;background-color:var(--panel)}
+  #grid th[data-col=shot],#grid td[data-col=shot]{position:sticky;left:var(--stick-shot,92px);z-index:3;background-color:var(--panel);box-shadow:inset -1px 0 0 var(--line2)}
+  #grid th[data-col=handle],#grid th[data-col=shot]{z-index:6;background-color:var(--panel2)}
+  body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td[data-col=handle],
+  body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td[data-col=shot]{background:linear-gradient(var(--zebra),var(--zebra)),var(--panel)}
+  #grid tr.over td[data-col=handle],#grid tr.over td[data-col=shot]{background:var(--over-bg)}
+  #grid tr.done td[data-col=handle],#grid tr.done td[data-col=shot]{background:var(--done-bg)}
+  #grid tr.break td[data-col=handle],#grid tr.break td[data-col=shot]{background:var(--break-bg)}
+}
+@media (max-width:900px){
+  header.top{padding:.7rem .8rem .6rem}
+  #moreBtn{display:inline-block}
+  header.top:not(.more-open) .toolbar .opt{display:none}
+  /* the day banner folds to the filters; Day settings opens the rest */
+  #bandToggle{display:inline-flex;align-items:center;gap:.4rem;flex-basis:100%;justify-content:space-between;border:none;background:none;padding:0;color:var(--ink);font-weight:600;cursor:pointer;text-align:left}
+  #bandToggle small{font-weight:400;color:var(--muted)}
+  #dayControls:not(.open) .field:not(.keep),#dayControls:not(.open) .daybtns{display:none}
+  #dayControls.controls{gap:.7rem 1rem;padding:.6rem .8rem .7rem}
+  .stats{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.2rem;scrollbar-width:thin}
+  .stat{min-width:auto;flex:0 0 auto}
+  .modal{padding:.6rem}
+  .modal .box{padding:1rem 1rem;max-height:94vh}
+}
+@media (max-width:760px){
+  /* tabs scroll sideways instead of squeezing */
+  .daytabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .daytabs::-webkit-scrollbar{display:none}
+  .daytabs .tg{flex:0 0 auto}
+  .daytabs .tg .daytab{flex:0 0 auto;min-width:auto}
+  .titlebar h1 small{display:none}
+  .legend{flex-wrap:wrap;gap:.4rem .9rem}
+}
+/* fingers: bigger targets on touch screens */
+@media (pointer:coarse){
+  .btn{padding:.5rem .85rem;min-height:2.4rem}
+  .btn.small{padding:.42rem .7rem;min-height:2.2rem}
+  .mins button{width:2.2em;height:2.2em}
+  .rowbtns button{padding:5px 9px}
+  .daytab{padding:.6rem .95rem}
+  .field input,.field select{min-height:2.3rem}
+  .handle{font-size:1.25em}
+}
 @media print{
   @page{size:A4 landscape;margin:8mm}
   html{--ui:9.5px;--tbl:9.5px}
@@ -288,11 +363,12 @@ table.plain input[type=checkbox]{width:auto}
       <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
       <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
       <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
-      <button class="btn small" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
-      <button class="btn small" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
-      <button class="btn small" id="csvBtn">Export CSV</button>
-      <button class="btn small" id="printBtn">Print / PDF</button>
-      <button class="btn small" id="actBtn" title="Who changed what">Activity</button>
+      <button class="btn small opt" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
+      <button class="btn small opt" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
+      <button class="btn small opt" id="csvBtn">Export CSV</button>
+      <button class="btn small opt" id="printBtn">Print / PDF</button>
+      <button class="btn small" id="moreBtn" aria-expanded="false" title="Import, export, print and activity">More ▾</button>
+      <button class="btn small opt" id="actBtn" title="Who changed what">Activity</button>
       <button class="btn small icon" id="themeBtn" title="Switch light / dark">◐</button>
       <button class="btn small" id="setBtn">Settings</button>
       <button class="btn small primary" id="helpBtn">Help</button>
@@ -300,6 +376,7 @@ table.plain input[type=checkbox]{width:auto}
   </div>
   <div class="daytabs" id="dayTabs"></div>
   <div class="controls noprint" id="dayControls">
+    <button id="bandToggle" type="button" aria-expanded="false"><span>Day settings <small id="bandSummary"></small></span><span id="bandArrow">▾</span></button>
     <div class="field"><label>Day name</label><input type="text" id="dayName" style="width:11rem"></div>
     <div class="field"><label>Status</label><select id="dayStatus"><option value="">Auto</option><option value="ready">Ready to roll</option><option value="wrapped">Wrapped</option></select></div>
     <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Live Action</option><option value="capture">Mocap</option></select></div>
@@ -310,18 +387,18 @@ table.plain input[type=checkbox]{width:auto}
     <div class="field"><label title="Scales every setup time">Setup buffer %</label><input type="number" id="setupPct" min="50" max="400" step="5"></div>
     <div class="field"><label title="Scales every shoot time">Shoot buffer %</label><input type="number" id="shootPct" min="50" max="400" step="5"></div>
     <div class="field"><label>Min setup (min)</label><input type="number" id="minSetup" min="0" max="120" step="5"></div>
-    <div class="field"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
-    <div class="field"><label>Priority</label><select id="prioFilter"></select></div>
+    <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
+    <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
       <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
-      <button class="btn small" id="delDayBtn" title="Delete this day">Delete day</button>
+      <button class="btn small" id="archDayBtn" title="Put this day away. Nothing is deleted: restore it from the Archived tab">Archive day</button>
       <button class="btn small" id="resetBtn" title="Restore this day as originally imported">Reset day</button>
     </div>
   </div>
   <div class="stats" id="stats"></div>
   <div class="warnings" id="warnings"></div>
   <div class="timeline noprint" id="timeline"></div>
-  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--bad)"></i>Target wrap</span></div>
+  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
 </header>
 
 <main>
@@ -416,6 +493,13 @@ table.plain input[type=checkbox]{width:auto}
 </div></div>
 
 <!-- Confirm -->
+<div class="modal" id="archModal"><div class="box narrow">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Archived days</h2>
+  <p class="note">Archived days are put away, not deleted. Their shots, takes and notes are all kept. Restore a day to bring its tab back for everyone.</p>
+  <div class="archlist" id="archList"></div>
+</div></div>
+
 <div class="modal" id="askModal"><div class="box narrow">
   <h2 id="askTitle"></h2><p id="askText"></p>
   <div class="toolbar"><button class="btn primary" id="askYes">OK</button><button class="btn" id="askNo">Cancel</button></div>
@@ -452,8 +536,9 @@ table.plain input[type=checkbox]{width:auto}
     <li><b>Kind</b>: <i>Live Action</i> days (tagged <span class="chip">LA</span>) focus on setups and timings. <i>Mocap</i> days (tagged <span class="chip">Mocap</span>) also show Takes, Action, Performer(s), # Perf., Genre, Body / Face / Glove, Hero and Safety. Every column is available on both kinds: switch any on or off under <b>Columns</b>. Your choice is remembered separately for each kind.</li>
     <li>The tabs are grouped. <b>Ready to roll</b> comes first, soonest date first, with undated days after the dated ones. <b>Wrapped</b> sits to the right, most recent first. The page opens on the next day that's ready to roll.</li>
     <li><b>Status</b> decides the group. <i>Auto</i> treats a day as wrapped once its date has passed or every shot on it is ticked. Choose <i>Ready to roll</i> or <i>Wrapped</i> to set it by hand, for example to reopen a wrapped day for pickups. Status is shared with the team.</li>
+    <li>Ready to roll days fill the left two thirds of the tab bar and Wrapped days the right third. As days are added the tabs shrink to fit, shortening their names; hover over a tab for its full name, date and setup count. The day you're on always shows in full. When tabs are squeezed, Mocap days keep a slate line along the top of the tab.</li>
     <li><b>Day #</b> is used in shot names (for example <code>d4</code>).</li>
-    <li><b>+ Day</b> adds a day. <b>Copy day</b> duplicates the current day with the ticks and takes cleared, which is handy for planning a pickup day. <b>Delete day</b> removes it, and Undo brings it back. <b>Reset day</b> puts an imported day back as it was imported.</li>
+    <li><b>+ Day</b> adds a day. <b>Copy day</b> duplicates the current day with the ticks and takes cleared, which is handy for planning a pickup day. <b>Archive day</b> puts the day away for everyone instead of deleting it: nothing is lost, and the <b>Archived (n)</b> tab at the end of the day tabs lists archived days with a <b>Restore</b> button. Archived days are left out of the CSV and .xlsx exports. Days can't be deleted, so a stray click never loses a day's work. <b>Reset day</b> puts an imported day back as it was imported.</li>
   </ul>
 
   <h3>Editing</h3>
@@ -472,7 +557,7 @@ table.plain input[type=checkbox]{width:auto}
 
   <h3>Columns and priority</h3>
   <ul>
-    <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>
+    <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Text cells wrap to show everything you type; Enter moves on rather than adding a line (long text keeps its line breaks). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>
     <li>Tick <b>In shot name</b> to add a column to the generated names, then set its prefix and position in Settings → Shot names. A tick-box column adds its prefix (or its name) when ticked.</li>
     <li><b>Rename built-in columns</b> for the whole team, e.g. Hero to Hero code. Clear the box to go back to the original name.</li>
     <li><b>Priority</b> is on every day, colour-coded in its dropdown and down the row's left edge. Sorting by Priority puts the highest first. In Settings → Columns you can change the options and pick a colour for each one (shared with the team). The default is the highlight colour for the first option, then amber and grey. Text on the colour turns dark or light automatically so it stays readable.</li>
@@ -517,12 +602,23 @@ table.plain input[type=checkbox]{width:auto}
         <li><b>Font</b>: System, Atkinson Hyperlegible (designed for low-vision readability), Lexend (wider, calmer letterforms), serif, rounded or monospace. The team site serves the fonts itself.</li>
         <li><b>Text weight</b>, <b>interface</b> and <b>table text size</b>, <b>line spacing</b>, <b>letter spacing</b> and <b>row spacing</b> (compact, comfortable, roomy).</li>
         <li><b>Stripe alternate rows</b> to help follow a row across a wide table, <b>reduce motion</b> to stop the highlight flashes, and a 12 or 24-hour <b>clock</b>.</li>
+        <li><b>Highlight rows the team are working in</b> (off by default): on the team site, a row a teammate is in gets an outline and their initials, in the same colour as their badge in the header. Rows they change flash in that colour too. With it off you still get a note when someone updates the schedule.</li>
+        <li><b>Timeline and banner colours</b>: pick your own colours for setup, shooting, break / move and the target wrap line on the timeline (the <b>Timeline colours</b> link under the timeline jumps here), and the colour and strength of the day banner behind the day settings and filters. <b>Theme default</b> goes back to your theme's colour.</li>
       </ul></li>
+  </ul>
+
+  <h3>Tablets and phones</h3>
+  <ul>
+    <li>The tool works on iPads and other tablets, and on phones for quick checks and ticking shots off. Add it to your home screen (Share → Add to Home Screen) and it opens like an app.</li>
+    <li>On narrower screens the <b>Shot #</b> column stays put while you swipe sideways along a row, so you always know which shot you're in.</li>
+    <li>The day banner folds down to the <b>Show</b> and <b>Priority</b> filters. Tap <b>Day settings</b> to open the name, status, times and buffers.</li>
+    <li>Import, export, print and Activity move under <b>More ▾</b>. Day tabs and the summary cards scroll sideways.</li>
+    <li>Buttons and the − / + steppers get bigger on touch screens. Drag a column's right edge with your finger to resize it. To move a row, use the ↑ ↓ buttons in the row's last column if dragging the ⠿ handle is fiddly.</li>
   </ul>
 
   <h3>Working as a team</h3>
   <ul>
-    <li>On the team site, everyone with the team key edits the same live schedule. The coloured initials show who's online. The dot next to them shows the connection: <b>Live</b>, <b>Saving…</b> or <b>Offline</b>. Teammates' changes appear within a few seconds, and changed rows flash briefly.</li>
+    <li>On the team site, everyone with the team key edits the same live schedule. The coloured initials show who's online. The dot next to them shows the connection: <b>Live</b>, <b>Saving…</b> or <b>Offline</b>. Teammates' changes appear within a few seconds. Turn on <b>Highlight rows the team are working in</b> (Settings > Display) to see which row each person is in, and their changes flash, in their badge colour.</li>
     <li><b>No lost work when two people edit at once.</b> Every change is saved as its own small edit (this field on this row) and never overwrites the whole schedule. Different fields, even on the same row, simply combine. If two people change the same field at the same moment, the later save is what everyone sees, and both changes are listed in <b>Activity</b>.</li>
     <li>Moving rows uses positions, not row numbers, so reordering while someone else adds or edits rows merges cleanly.</li>
     <li>Deleting keeps the data behind the scenes, so Undo, or a teammate's later edit, never resurrects a half-deleted row.</li>
@@ -570,8 +666,9 @@ table.plain input[type=checkbox]{width:auto}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.5.1";
+const VERSION = "2.6.0";
 const CHANGELOG = [
+  ["2.6.0","2026-11-17","Days are archived instead of deleted: Archive day puts the tab away for everyone and the Archived tab restores it. The day settings and filters sit on a coloured banner that joins the open tab. Timeline and banner colours in Settings > Display (or the Timeline colours link under the timeline). Timeline hour labels no longer get cropped. Short text columns (Action, Performer(s), custom text columns such as Runner notes) now wrap. Optional highlight of the rows teammates are working in, in their badge colour, off by default. Wrapped day tabs sit in the right third of the tab bar, and tabs shrink to fit as more days are added (hover for the full name). Tablet and phone friendly: the shot number stays in view while swiping along a row, the day banner folds down to the filters (tap Day settings for the rest), extra toolbar buttons move under More, tabs and summary cards scroll sideways, bigger touch targets, and column widths can be dragged with a finger."],
   ["2.5.1","2026-11-17","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
   ["2.5.0","2026-11-17","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
   ["2.4.0","2026-11-17","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
@@ -603,7 +700,7 @@ const SEED = null;
    half-deleted row. Order uses a fractional "pos" per row/day, so a move
    only touches the moved row and concurrent moves/inserts merge. */
 
-const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status"];
+const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","done",
   "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog"];
@@ -891,8 +988,10 @@ const HIDDEN_DEFAULT={
   schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes"],
   capture:["duration","orig","script","camera","location"]
 };
-const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24"};
-const P=Object.assign({name:"",poll:3},DISPLAY_DEFAULTS,{
+const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24",band:"",bandMix:10};
+const BANDS=[["","Theme default (soft slate)"],["none","None (plain)"],["#2f6fb0","Blue"],["#1f7a7a","Teal"],["#2e7d4f","Green"],["#c8a052","Sand"],["#d0700f","Orange"],["#b3264e","Rose"],["#7a5ea8","Purple"],["custom","Pick my own..."]];
+function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;if(/^#[0-9a-f]{3}$/i.test(c))return "#"+c.slice(1).split("").map(x=>x+x).join("");const m=c.match(/\d+(\.\d+)?/g);if(m&&m.length>=3)return "#"+m.slice(0,3).map(x=>Math.round(+x).toString(16).padStart(2,"0")).join("");return "#888888"}
+const P=Object.assign({name:"",poll:3,peerRows:false,tl:{}},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
 if(!P.v22){ for(const k of Object.keys(P.hiddenBy||{})) P.hiddenBy[k]=(P.hiddenBy[k]||[]).filter(x=>x!=="priority"); P.v22=true; }
@@ -1099,7 +1198,7 @@ async function syncNow(){
     commit();
     const now=Date.now();
     for(const [k,t] of seenKeys) if(now-t>120000) seenKeys.delete(k);
-    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",since:cursor,seen:[...seenKeys.keys()]});
+    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",since:cursor,seen:[...seenKeys.keys()],row:focusRow||""});
     if(r.snapshot){
       base=base?mergeModels(base,r.snapshot.model):cloneModel(r.snapshot.model);
       if(r.snapshot.upto>cursor) cursor=r.snapshot.upto;
@@ -1118,7 +1217,7 @@ async function syncNow(){
     persistLocalState();
     const changed=rebuild(false);
     if(changed&&remote.length) flashRemote(remote);
-    renderPresence();
+    renderPresence(); applyPeerRows();
   }catch(e){
     netErr=e.message; if(e.status===401){syncing=false;return needKey(e.message)}
     backoff=Math.min(30000,(backoff||2000)*2);
@@ -1126,10 +1225,21 @@ async function syncNow(){
   const every=(document.hidden?15:Math.max(2,Number(P.poll)||3))*1000;
   scheduleSync(backoff||every);
 }
+let focusRow="";
+document.addEventListener("focusin",e=>{const tr=e.target.closest&&e.target.closest("#grid tbody tr");focusRow=tr?tr.dataset.id||"":""});
+function applyPeerRows(){
+  $$("#grid tr.peer").forEach(tr=>{tr.classList.remove("peer");tr.style.removeProperty("--peer");tr.removeAttribute("title");$$(".peerchip",tr).forEach(x=>x.remove())});
+  if(!P.peerRows||MODE!=="team") return;
+  for(const p of presence){ if(p.cid===P.cid||!p.row) continue;
+    const tr=$(`#grid tbody tr[data-id="${p.row}"]`); if(!tr) continue;
+    const col=colorFor(p.name||p.cid); tr.classList.add("peer"); tr.style.setProperty("--peer",col); tr.title=(p.name||"Someone")+" is working in this row";
+    const td=tr.firstElementChild; if(td) td.append(h("span",{class:"peerchip",style:`background:${col}`},initials(p.name)));
+  }
+}
 function flashRemote(batches){
-  const ids=new Set(); const names=new Set();
-  batches.forEach(b=>{names.add(b.by||"Someone");b.ops.forEach(o=>{if(o.e==="row")ids.add(o.id)})});
-  ids.forEach(id=>{const tr=$(`#grid tbody tr[data-id="${id}"]`);if(tr){tr.classList.remove("flash");void tr.offsetWidth;tr.classList.add("flash")}});
+  const ids=new Map(); const names=new Set();
+  batches.forEach(b=>{names.add(b.by||"Someone");b.ops.forEach(o=>{if(o.e==="row")ids.set(o.id,colorFor(b.by||b.cid))})});
+  if(P.peerRows) ids.forEach((col,id)=>{const tr=$(`#grid tbody tr[data-id="${id}"]`);if(tr){tr.style.setProperty("--flash",col);tr.classList.remove("flash");void tr.offsetWidth;tr.classList.add("flash")}});
   const a=$(".act-list"); if($("#actModal").classList.contains("open")) renderActivity();
   if(names.size) toast([...names].join(", ")+" updated the schedule");
 }
@@ -1200,7 +1310,8 @@ async function getSeed(){
 }
 
 /* ===================== document helpers ===================== */
-function D(){ if(!S) return null; const id=P.activeByProject[pid()]; return S.days.find(d=>d.id===id)||tabOrder().ready[0]||S.days[0]||null; }
+function live(){ return S?S.days.filter(d=>!d.archived):[]; }
+function D(){ if(!S) return null; const id=P.activeByProject[pid()]; const t=tabOrder(); return live().find(d=>d.id===id)||t.ready[0]||t.wrapped[0]||null; }
 /* day status: set by hand, or worked out - wrapped once the date has passed or every shot is ticked */
 function todayISO(){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); }
 function dayStatus(d){
@@ -1213,7 +1324,7 @@ function dayStatus(d){
 /* tab order: Ready to roll (soonest first, undated after), then Wrapped (most recent first); the days' own order is the tie-break */
 function tabOrder(){
   const idx=new Map(S.days.map((d,i)=>[d.id,i]));
-  const ready=S.days.filter(d=>dayStatus(d)==="ready"), wrapped=S.days.filter(d=>dayStatus(d)==="wrapped");
+  const L=live(); const ready=L.filter(d=>dayStatus(d)==="ready"), wrapped=L.filter(d=>dayStatus(d)==="wrapped");
   ready.sort((a,b)=>(a.date&&b.date?(a.date<b.date?-1:a.date>b.date?1:0):a.date?-1:b.date?1:0)||idx.get(a.id)-idx.get(b.id));
   wrapped.sort((a,b)=>(a.date&&b.date?(a.date>b.date?-1:a.date<b.date?1:0):a.date?-1:b.date?1:0)||idx.get(b.id)-idx.get(a.id));
   return {ready,wrapped};
@@ -1364,6 +1475,7 @@ function applySortAsOrder(){
   d.rows=[...shown,...rest]; P.sort=null; commit(); renderHead(); renderBody(); toast("Running order updated - Undo to go back");
 }
 function renderHead(){
+  $("#grid").style.setProperty("--stick-shot",(hidden().includes("handle")?0:colW("handle"))+"px");
   const cg=$("#cols"); cg.innerHTML="";
   for(const c of cols()) cg.append(h("col",{"data-col":c.key}));
   const thead=$("#grid thead"); thead.innerHTML="";
@@ -1387,7 +1499,7 @@ function renderHead(){
     if(sortable) lab.addEventListener("click",()=>setSort(c.key));
     th.append(lab);
     const grip=h("div",{class:"grip",title:"Drag to resize · double-click to reset"});
-    grip.addEventListener("mousedown",e=>startResize(e,c.key,grip));
+    grip.addEventListener("pointerdown",e=>startResize(e,c.key,grip));
     grip.addEventListener("dblclick",()=>{delete P.widths[c.key];applyWidths();reflow();savePrefs()});
     th.append(grip); tr.append(th);
     const fth=h("th",{class:hc.trim(),"data-col":c.key});
@@ -1408,8 +1520,8 @@ function startResize(e,key,grip){
   e.preventDefault(); e.stopPropagation();
   const x0=e.clientX, w0=colW(key); grip.classList.add("active"); document.body.style.cursor="col-resize";
   const mv=ev=>{P.widths[key]=Math.max(40,Math.round(w0+ev.clientX-x0));applyWidths()};
-  const up=()=>{document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);grip.classList.remove("active");document.body.style.cursor="";reflow();savePrefs()};
-  document.addEventListener("mousemove",mv); document.addEventListener("mouseup",up);
+  const up=()=>{document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);grip.classList.remove("active");document.body.style.cursor="";reflow();savePrefs()};
+  document.addEventListener("pointermove",mv); document.addEventListener("pointerup",up); document.addEventListener("pointercancel",up);
 }
 /* every editor looks its row up by id at the moment you type, so a refresh from a teammate never strands your edit */
 function R(id){ const f=findRow(id); return f?f.r:null; }
@@ -1426,7 +1538,18 @@ function minsCtl(r,key){
   wrap.append(box,h("div",{class:"eff","data-eff":key},""));
   return wrap;
 }
+const NAME_KEYS=["shot","action","performers","perfCount","genre","props","hero","shotType","location"];
 function textCell(r,key,multiline=true,extra={}){
+  if(!multiline&&!extra.type&&key!=="shot"){
+    // single-line text that still wraps to show everything: Enter moves on instead of adding a line
+    const t=h("textarea",{class:"cell oneline",rows:"1",spellcheck:"true","data-k":key});
+    t.value=r[key]??"";
+    t.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.altKey){e.preventDefault();t.blur()}});
+    t.addEventListener("input",()=>{const x=R(r.id);if(!x)return;if(/\n/.test(t.value))t.value=t.value.replace(/\s*\n+\s*/g," ");x[key]=t.value;autosize(t);if(NAME_KEYS.includes(key)||String(key).startsWith("c_"))refreshNames(r.id);softCommit()});
+    t.addEventListener("change",commit);
+    requestAnimationFrame(()=>autosize(t));
+    return t;
+  }
   if(!multiline){
     const i=h("input",Object.assign({class:"cell"+(key==="shot"?" shotno":"")+(extra.small?" small":""),value:r[key]??"",placeholder:extra.ph||"","data-k":key},extra.type?{type:extra.type}:{}));
     i.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[key]=extra.type==="number"?(i.value===""?"":Number(i.value)):i.value;if(["shot","action","performers","perfCount","genre","props","hero","shotType","location"].includes(key)||String(key).startsWith("c_"))refreshNames(r.id);if(key==="shot")renderTimeline(compute());softCommit()});
@@ -1590,7 +1713,7 @@ function renderBody(){
     tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
     tb.append(tr);
   });
-  recalc();
+  recalc(); applyPeerRows();
 }
 let dragId=null, colDrag=null;
 function recalc(){
@@ -1639,7 +1762,8 @@ function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
   const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,toMin(d.wrap||"18:00"))+15;
   const span=Math.max(60,end-start); const pct=m=>((m-start)/span*100)+"%";
-  for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick",style:"left:"+pct(hr)},fmt(hr)))}
+  const pxHr=(tl.clientWidth||800)/span*60, every=pxHr<26?180:pxHr<46?120:60;
+  for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){if(hr%every){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}));continue}const f=(hr-start)/span;tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick"+(f<0.04?" first":f>0.96?" last":""),style:"left:"+pct(hr)},fmt(hr)))}
   const wrapT=toMin(d.wrap||"18:00");
   for(const r of d.rows){
     const c=C.rows[r.id]; const name=r.type==="break"?(r.label||"Break"):("Shot "+(r.shot||r.action||"-"));
@@ -1667,15 +1791,38 @@ function renderDayTabs(){
   const {ready,wrapped}=tabOrder(); const cur=D();
   const tab=d=>{
     const st=dayStatus(d), auto=!d.status;
-    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
+    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.name||"Day"} · ${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
       h("span",{class:"kind "+(d.kind==="capture"?"mocap":"la")},d.kind==="capture"?"Mocap":"LA"), d.name||"Day", h("small",{},tabSub(d,compute(d))));
     b.onclick=()=>{if(cur&&cur.id===d.id)return;commit();P.activeByProject[pid()]=d.id;P.sort=null;savePrefs();renderAll()};
     return b;
   };
-  bar.append(h("span",{class:"tabgroup ready"},"Ready to roll"));
-  ready.forEach(d=>bar.append(tab(d)));
-  bar.append(h("button",{class:"daytab add",title:"Add an empty day",onclick:addDay},"+ Day"));
-  if(wrapped.length){ bar.append(h("span",{class:"tabgroup wrapped"},"Wrapped")); wrapped.forEach(d=>bar.append(tab(d))); }
+  // ready days fill the left two thirds, wrapped days sit in the right third; tabs shrink to fit as days are added
+  const gR=h("div",{class:"tg ready"}), gW=h("div",{class:"tg wrapped"});
+  gR.append(h("span",{class:"tabgroup ready"},"Ready to roll"));
+  ready.forEach(d=>gR.append(tab(d)));
+  gR.append(h("button",{class:"daytab add",title:"Add an empty day",onclick:addDay},"+ Day"));
+  bar.append(gR);
+  const arch=S.days.filter(d=>d.archived);
+  if(wrapped.length||arch.length){ bar.append(gW); gW.append(h("span",{class:"tabgroup wrapped"},"Wrapped")); wrapped.forEach(d=>gW.append(tab(d))); }
+  requestAnimationFrame(fitTabs);
+  if(arch.length) gW.append(h("button",{class:"daytab arch",title:"Days put away. Restore them from here",onclick:openArchived},"Archived ("+arch.length+")"));
+}
+function fitTabs(){
+  if(innerWidth<=760){$$("#dayTabs .tg").forEach(g=>g.classList.remove("t1","t2","t3"));const on=$("#dayTabs .daytab.on");if(on)on.scrollIntoView({block:"nearest",inline:"nearest"});return}
+  // squeeze in steps so names stay readable: drop the wrap/shot note, then the kind chip, then shrink further, then scroll
+  for(const g of $$("#dayTabs .tg")){
+    g.classList.remove("t1","t2","t3");
+    const tight=()=>g.scrollWidth>g.clientWidth+1||$$(".daytab",g).some(t=>t.scrollWidth>t.clientWidth+1);
+    for(const c of ["t1","t2","t3"]){ if(!tight()) break; g.classList.add(c); }
+  }
+}
+window.addEventListener("resize",()=>{clearTimeout(fitTabs._t);fitTabs._t=setTimeout(()=>{fitTabs();if(S&&D())renderTimeline(compute())},120)});
+function openArchived(){renderArchived();$("#archModal").classList.add("open")}
+function renderArchived(){
+  const l=$("#archList"); l.innerHTML=""; const arch=S.days.filter(d=>d.archived);
+  if(!arch.length){l.append(h("p",{class:"note"},"Nothing archived."));return}
+  for(const d of arch) l.append(h("div",{class:"toolbar"},h("span",{},h("b",{},d.name||"Day")," ",h("span",{class:"note"},`${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups`)),
+    h("button",{class:"btn small primary",onclick:()=>{d.archived=null;P.activeByProject[pid()]=d.id;commit();savePrefs();renderAll();renderArchived();if(!S.days.some(x=>x.archived))$("#archModal").classList.remove("open");toast("Restored "+d.name)}},"Restore")));
 }
 function renderSettingsRow(){
   const d=D(); $("#dayControls").style.display=d?"":"none"; if(!d) return;
@@ -1683,6 +1830,7 @@ function renderSettingsRow(){
   set("dayName",d.name); set("dayKind",d.kind||"schedule"); set("dayStatus",d.status||"");
   { const o=$("#dayStatus option[value='']"); if(o) o.textContent="Auto ("+(dayStatus(Object.assign({},d,{status:""}))==="wrapped"?"Wrapped":"Ready to roll")+")"; } set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
   set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all"); renderPrioFilter();
+  $("#bandSummary").textContent=`${d.name||"Day"} · call ${fmt(toMin(d.call||"09:00"))} · wrap ${fmt(toMin(d.wrap||"18:00"))}`;
   $("#projTitle").textContent=S.project.name||"Untitled project"; document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
 }
 function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); }
@@ -1871,7 +2019,22 @@ function renderSetTab(){
     sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
     tog("Stripe alternate rows (easier to follow a row across)","zebra");
     tog("Reduce motion (no flashing or fades)","calm");
-    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[]});invalidateCols();savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
+    tog("Highlight rows the team are working in, in each person's badge colour","peerRows");
+    const f2=h("div",{class:"form",id:"colourForm"});
+    const pick=(label,key,cssVar)=>{const cur=()=>(P.tl||{})[key]||getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()||"#888888";
+      const i=h("input",{type:"color",value:toHex(cur())});const def=h("button",{class:"btn small",title:"Back to the theme's colour"},"Theme default");
+      i.addEventListener("input",()=>{P.tl=Object.assign({},P.tl,{[key]:i.value});applyDisplay()});i.addEventListener("change",savePrefs);
+      def.onclick=()=>{P.tl=Object.assign({},P.tl,{[key]:""});savePrefs();applyDisplay();i.value=toHex(cur())};
+      f2.append(h("label",{},label,h("span",{class:"toolbar"},i,def)))};
+    pick("Timeline: setup","setup","--setup"); pick("Timeline: shooting","shoot","--shoot"); pick("Timeline: break / move","break","--break"); pick("Timeline: target wrap line","wrap","--bad");
+    const bandSel=h("select",{});for(const [v,l] of BANDS)bandSel.append(h("option",{value:v},l));bandSel.value=BANDS.some(x=>x[0]===P.band)?P.band:"custom";
+    const bandPick=h("input",{type:"color",value:/^#/.test(P.band||"")?P.band:"#2f4858"});
+    const showPick=()=>{bandPick.style.display=bandSel.value==="custom"?"":"none"};showPick();
+    bandSel.addEventListener("change",()=>{P.band=bandSel.value==="custom"?bandPick.value:bandSel.value;showPick();savePrefs();applyDisplay()});
+    bandPick.addEventListener("input",()=>{P.band=bandPick.value;applyDisplay()});bandPick.addEventListener("change",savePrefs);
+    f2.append(h("label",{},"Day banner colour (behind the day settings and filters)",h("span",{class:"toolbar"},bandSel,bandPick)));
+    { const out=h("span",{},Math.round(P.bandMix)+"%");const i=h("input",{type:"range",min:"4",max:"40",step:"1",value:String(P.bandMix)});i.addEventListener("input",()=>{P.bandMix=Number(i.value);out.textContent=i.value+"%";applyDisplay()});i.addEventListener("change",savePrefs);f2.append(h("label",{},h("span",{},"Banner strength ",out),i)); }
+    b.append(f,h("h3",{style:"margin-top:1.2rem"},"Timeline and banner colours"),h("p",{class:"note"},"Also just for you. They follow your colour theme until you pick your own."),f2,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[],tl:{}});invalidateCols();savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
   }
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
@@ -1933,7 +2096,7 @@ function exportCSV(){
   const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)"];
   const customs=cols().filter(c=>c.custom); head.push(...customs.map(c=>c.label));
   const lines=[head.map(csvEsc).join(",")];
-  for(const d of S.days){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
+  for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
     lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?"Break/Move":"Shot",br?(r.label||"Break"):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
       br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
@@ -2038,6 +2201,11 @@ function applyDisplay(){
   document.body.classList.toggle("roomy",P.density==="roomy");
   document.body.classList.toggle("zebra",!!P.zebra);
   document.body.classList.toggle("calm",!!P.calm);
+  const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
+  const mix=Math.max(4,Math.min(40,Number(P.bandMix)||10));
+  if(P.band==="none"){root.style.setProperty("--band","var(--bg)");root.style.setProperty("--band-line","var(--line)")}
+  else{const hue=P.band||"var(--shoot)";const m=dark?Math.round(mix*1.5):mix;root.style.setProperty("--band",`color-mix(in srgb, ${hue} ${m}%, var(--bg))`);root.style.setProperty("--band-line",`color-mix(in srgb, ${hue} ${Math.min(60,m*2+6)}%, var(--line))`)}
+  try{applyPeerRows()}catch(e){}
   $("#themeBtn").textContent=dark?"☀":"☾"; $("#themeBtn").title=dark?"Switch to a light theme":"Switch to a dark theme";
 }
 if(mq&&mq.addEventListener) mq.addEventListener("change",applyDisplay);
@@ -2306,7 +2474,7 @@ async function runImport(){
   }
   if(dest==="bydays"&&has("shootDay")){
     const made={};
-    for(const g of groups){const key=g.day||"?";if(!made[key]){const no=Number(key);const ex=S.days.find(d=>Number(d.dayNo)===no&&!isNaN(no)&&!d.rows.length);made[key]=ex||mkDay("Day "+key,isNaN(no)?S.days.length+1:no);if(!ex)S.days.push(made[key])}made[key].rows.push(groupToRow(g,recorded,capture))}
+    for(const g of groups){const key=g.day||"?";if(!made[key]){const no=Number(key);const ex=S.days.find(d=>!d.archived&&Number(d.dayNo)===no&&!isNaN(no)&&!d.rows.length);made[key]=ex||mkDay("Day "+key,isNaN(no)?S.days.length+1:no);if(!ex)S.days.push(made[key])}made[key].rows.push(groupToRow(g,recorded,capture))}
     target=Object.values(made)[0];
   }else if(dest==="newday"||!D()){
     target=mkDay(IMP.file.replace(/\.[^.]+$/,""),S.days.length+1); S.days.push(target);
@@ -2323,7 +2491,7 @@ async function runImport(){
 /* ---------- export: tracker workbook in the Shotlist Builder format ---------- */
 function openExport(){
   const box=$("#expDays"); box.innerHTML="";
-  S.days.forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>r.type!=="break").length} shots)`)))});
+  S.days.filter(d=>!d.archived).forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>r.type!=="break").length} shots)`)))});
   $("#expModal").classList.add("open");
 }
 const XC={ink:"FF1D1D1F",paper:"FFF6F5F2",muted:"FF6B6B70",rule:"FFE2E0DB",stage:"FFE9EEF2",accent:"FFC2412D",soft:"FFF6E3DF",signal:"FF2F4858",white:"FFFFFFFF",note:"FFF2F6EE",done:"FFE8F1EA",break:"FFFBF3E2"};
@@ -2574,7 +2742,12 @@ bindDay("setupPct","setupPct",true);bindDay("shootPct","shootPct",true);bindDay(
 $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();renderBody()});
 $("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});
 $("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
-$("#delDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Delete "+d.name+"?","Its shots go with it. Undo straight afterwards brings it all back.","Delete day")))return;const i=S.days.indexOf(d);S.days.splice(i,1);const nx=S.days[Math.max(0,i-1)];P.activeByProject[pid()]=nx&&nx.id;commit();renderAll();toast("Deleted "+d.name+" - Undo to restore")};
+$("#tlColours").onclick=e=>{e.preventDefault();openSettings("display");setTimeout(()=>{const f=$("#colourForm");if(f)f.scrollIntoView({block:"start"})},50)};
+$("#moreBtn").onclick=()=>{const t=$("header.top");const o=t.classList.toggle("more-open");$("#moreBtn").setAttribute("aria-expanded",o);$("#moreBtn").textContent=o?"Less ▴":"More ▾"};
+$("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.toggle("open");$("#bandToggle").setAttribute("aria-expanded",o);$("#bandArrow").textContent=o?"▴":"▾"};
+// iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
+if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
+$("#archDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Archive "+d.name+"?","The tab is put away for everyone. Nothing is deleted: restore it any time from the Archived tab at the end of the day tabs.","Archive day")))return;d.archived=true;P.activeByProject[pid()]=null;commit();savePrefs();renderAll();toast("Archived "+d.name+" - restore it from Archived")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}
   if(!(await ask("Reset "+d.name+"?","Puts this day back exactly as it was imported"+(MODE==="team"?", for everyone":"")+". Undo straight afterwards brings your version back.","Reset")))return;
   const n=normDoc({days:[o]}).days[0];n.id=d.id;S.days[S.days.indexOf(d)]=n;commit();renderAll();toast("Reset "+d.name+" - Undo to go back")};

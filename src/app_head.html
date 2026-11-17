@@ -94,6 +94,25 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .who{display:flex;gap:.25rem;align-items:center}
 .who span{width:1.7rem;height:1.7rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;border:2px solid var(--bg)}
 .controls{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-end;margin-top:.8rem}
+/* the day's banner: settings and filters sit on a tinted band that joins the open tab */
+:root{--band:color-mix(in srgb, var(--shoot) 9%, var(--bg));--band-line:color-mix(in srgb, var(--shoot) 22%, var(--line))}
+#dayControls.controls{margin-top:0;background:var(--band);border:1px solid var(--band-line);border-top:none;border-radius:0 0 10px 10px;padding:.75rem 1rem .85rem}
+#dayControls .field label{color:color-mix(in srgb, var(--ink) 72%, var(--band))}
+.daytabs{display:flex;gap:.3rem;margin-top:.8rem;border-bottom:1px solid var(--band-line);align-items:flex-end}
+.daytabs .tg{display:flex;gap:.3rem;align-items:flex-end;min-width:0}
+.daytabs .tg.ready{flex:2 1 0}
+.daytabs .tg.wrapped{flex:1 1 0;border-left:1px solid var(--line2);padding-left:.6rem;margin-left:.3rem}
+.daytabs .tg .daytab{flex:0 1 auto;min-width:4.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daytabs .tg .daytab.on,.daytabs .tg .daytab.add,.daytabs .tg .daytab.arch{flex-shrink:0}
+.daytabs .tg .daytab.on{min-width:auto}
+.daytabs .tg.t1 .daytab small{display:none}
+.daytabs .tg.t1 .daytab:not(.on) .kind{display:none}
+.daytabs .tg.t1 .daytab:not(.on):has(.kind.mocap){box-shadow:inset 0 3px 0 var(--shoot)}
+.daytabs .tg.t2 .daytab:not(.on){padding:.45rem .5rem}
+.daytabs .tg.t3 .daytab:not(.on){min-width:2.6rem;padding:.45rem .4rem}
+.daytabs .tg.t3 .tabgroup{display:none}
+.daytabs .tg.t3{overflow-x:auto;scrollbar-width:thin}
+
 .field{display:flex;flex-direction:column;gap:.25rem}
 .field label,.flabel{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .field input,.field select{border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;min-width:0}
@@ -110,9 +129,12 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .warnings{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap}
 .pill{font-size:.92rem;border-radius:999px;padding:.2rem .75rem;background:var(--accent-soft);color:var(--bad)}
 .pill.info{background:var(--info-bg);color:var(--info-ink)}
-.daytabs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.8rem;border-bottom:1px solid var(--line)}
 .daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
-.daytab.on{background:var(--panel);font-weight:600;border-color:var(--line2)}
+.daytab.on{background:var(--band);font-weight:600;border-color:var(--band-line)}
+.daytab.arch{background:transparent;border-style:dashed;color:var(--muted);margin-left:auto}
+.daytabs .tabgroup{flex-shrink:0}
+.archlist{display:flex;flex-direction:column;gap:.5rem}
+.archlist .toolbar{justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:.45rem .6rem}
 .daytab small{color:var(--muted);font-weight:400;margin-left:.45rem}
 .daytab .kind{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:4px;padding:0 .25rem;margin-right:.4rem;color:var(--muted)}
 .daytab .kind.mocap{border-color:var(--shoot);color:var(--shoot)}
@@ -122,18 +144,19 @@ select.cell.prio{font-weight:700;border-radius:4px}
 .swatch{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.35rem;border:1px solid var(--line2)}
 .daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
 .tabgroup{align-self:flex-end;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:0 .35rem .5rem;white-space:nowrap}
-.tabgroup.wrapped{margin-left:1rem;border-left:1px solid var(--line2);padding-left:1rem}
+.tabgroup.wrapped{margin-left:0}
 .daytab.wrapped{opacity:.82}
 .daytab.wrapped.on{opacity:1}
 .daytab .stat-dot{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;margin-right:.35rem;background:var(--ok);vertical-align:1px}
 .daytab.wrapped .stat-dot{background:var(--muted)}
-.timeline{margin-top:.8rem;position:relative;height:2.6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.timeline{margin-top:.8rem;position:relative;height:calc(2.05rem + 1.35em);background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
 .timeline .seg.setup{background:var(--setup)} .timeline .seg.shoot{background:var(--shoot)} .timeline .seg.break{background:var(--break)}
 .timeline .seg.over{outline:1px solid var(--bad)}
-.timeline .tick{position:absolute;top:1.65rem;font-size:.73rem;color:var(--muted);transform:translateX(-50%)}
-.timeline .tickline{position:absolute;top:0;bottom:.9rem;width:1px;background:var(--tick)}
-.timeline .wrapline{position:absolute;top:0;bottom:0;width:2px;background:var(--bad)}
+.timeline .tick{position:absolute;top:1.75rem;font-size:.78rem;line-height:1.25;color:var(--muted);transform:translateX(-50%);white-space:nowrap;padding:0 .2rem}
+.timeline .tick.first{transform:none} .timeline .tick.last{transform:translateX(-100%)}
+.timeline .tickline{position:absolute;top:0;height:1.7rem;width:1px;background:var(--tick)}
+.timeline .wrapline{position:absolute;top:0;bottom:0;width:2px;background:var(--wrapc,var(--bad))}
 .legend{display:flex;gap:.9rem;font-size:.85rem;color:var(--muted);margin-top:.3rem}
 .legend i{display:inline-block;width:.75rem;height:.75rem;border-radius:2px;margin-right:.3rem;vertical-align:-1px}
 
@@ -145,7 +168,7 @@ body.compact #grid th,body.compact #grid td{padding:.2em .35em}
 body.roomy #grid td{padding:.8em .6em}
 body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td{background:var(--zebra)}
 body.calm *,body.calm *::before{animation:none!important;transition:none!important}
-body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
+body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--flash,var(--warn))}
 #grid th{position:sticky;top:0;background:var(--panel2);z-index:5;text-align:left;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
 #grid th .thl{display:flex;align-items:center;gap:.3em;min-height:1.2em;overflow:hidden}
 #grid th.sortable .thl{cursor:pointer;user-select:none}
@@ -155,7 +178,8 @@ body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
 #grid th.coldrop-l{box-shadow:inset 3px 0 0 var(--accent)}
 #grid th.coldrop-r{box-shadow:inset -3px 0 0 var(--accent)}
 #grid th .arrow{font-size:.8em;color:var(--accent)}
-#grid th .grip{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:7}
+#grid th .grip{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:7;touch-action:none}
+@media (pointer:coarse){#grid th .grip{width:18px;right:-9px}}
 #grid th .grip:hover,#grid th .grip.active{background:linear-gradient(90deg,transparent 3px,var(--focus) 3px,var(--focus) 5px,transparent 5px)}
 #grid tr.filters th{top:var(--headH,30px);padding:.22em .3em;text-transform:none;letter-spacing:0}
 #grid tr.filters input{width:100%;border:1px solid var(--line);border-radius:4px;padding:.15em .4em;font-size:.9em;font-weight:400;color:var(--ink)}
@@ -167,14 +191,18 @@ td.num,th.num{text-align:center}
 #grid tr.dragging{opacity:.4}
 #grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
 #grid tr.flash td{animation:flash 1.6s ease-out}
-@keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--warn)}100%{box-shadow:inset 0 0 0 2px transparent}}
+@keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--flash,var(--warn))}100%{box-shadow:inset 0 0 0 2px transparent}}
+/* a teammate is working in this row: outline and their initials, in their badge colour */
+#grid tr.peer{outline:2px solid var(--peer);outline-offset:-2px}
+#grid tr.peer td:first-child{position:relative}
+.peerchip{position:absolute;left:2px;top:2px;font-size:.62rem;font-weight:700;color:#fff;border-radius:999px;padding:0 .3rem;line-height:1.35;pointer-events:none;z-index:2}
 .viewbar{display:none;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem;padding:.45rem .75rem;border-radius:6px;background:var(--info-bg);color:var(--info-ink);font-size:.92rem}
 .viewbar.show{display:flex}
 .sorted .handle{visibility:hidden}
 .sorted .rowbtns .mv{display:none}
 .handle{cursor:grab;color:var(--handle);user-select:none;font-size:1.15em;line-height:1;padding:.15em}
 .ctl{display:flex;gap:.3em;align-items:center;white-space:nowrap}
-textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:var(--lh);overflow:hidden;min-height:1.9em;display:block}
+textarea.cell{width:100%;overflow-wrap:anywhere;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:var(--lh);overflow:hidden;min-height:1.9em;display:block}
 textarea.cell:hover,input.cell:hover,select.cell:hover{border-color:var(--line)}
 textarea.cell:focus,input.cell:focus,select.cell:focus{outline:none;border-color:var(--focus);background:var(--field)}
 input.cell,select.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;padding:.22em .3em}
@@ -257,6 +285,53 @@ table.plain input[type=checkbox]{width:auto}
 .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.55rem 1.1rem;border-radius:6px;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
 .toast.show{opacity:1}
 
+
+/* ===== tablets and phones ===== */
+#moreBtn,#bandToggle{display:none}
+@media (max-width:1100px){
+  /* keep the shot number in view while swiping along a row */
+  #grid th[data-col=handle],#grid td[data-col=handle]{position:sticky;left:0;z-index:3;background-color:var(--panel)}
+  #grid th[data-col=shot],#grid td[data-col=shot]{position:sticky;left:var(--stick-shot,92px);z-index:3;background-color:var(--panel);box-shadow:inset -1px 0 0 var(--line2)}
+  #grid th[data-col=handle],#grid th[data-col=shot]{z-index:6;background-color:var(--panel2)}
+  body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td[data-col=handle],
+  body.zebra #grid tbody tr:nth-child(even):not(.done):not(.over):not(.break) td[data-col=shot]{background:linear-gradient(var(--zebra),var(--zebra)),var(--panel)}
+  #grid tr.over td[data-col=handle],#grid tr.over td[data-col=shot]{background:var(--over-bg)}
+  #grid tr.done td[data-col=handle],#grid tr.done td[data-col=shot]{background:var(--done-bg)}
+  #grid tr.break td[data-col=handle],#grid tr.break td[data-col=shot]{background:var(--break-bg)}
+}
+@media (max-width:900px){
+  header.top{padding:.7rem .8rem .6rem}
+  #moreBtn{display:inline-block}
+  header.top:not(.more-open) .toolbar .opt{display:none}
+  /* the day banner folds to the filters; Day settings opens the rest */
+  #bandToggle{display:inline-flex;align-items:center;gap:.4rem;flex-basis:100%;justify-content:space-between;border:none;background:none;padding:0;color:var(--ink);font-weight:600;cursor:pointer;text-align:left}
+  #bandToggle small{font-weight:400;color:var(--muted)}
+  #dayControls:not(.open) .field:not(.keep),#dayControls:not(.open) .daybtns{display:none}
+  #dayControls.controls{gap:.7rem 1rem;padding:.6rem .8rem .7rem}
+  .stats{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.2rem;scrollbar-width:thin}
+  .stat{min-width:auto;flex:0 0 auto}
+  .modal{padding:.6rem}
+  .modal .box{padding:1rem 1rem;max-height:94vh}
+}
+@media (max-width:760px){
+  /* tabs scroll sideways instead of squeezing */
+  .daytabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .daytabs::-webkit-scrollbar{display:none}
+  .daytabs .tg{flex:0 0 auto}
+  .daytabs .tg .daytab{flex:0 0 auto;min-width:auto}
+  .titlebar h1 small{display:none}
+  .legend{flex-wrap:wrap;gap:.4rem .9rem}
+}
+/* fingers: bigger targets on touch screens */
+@media (pointer:coarse){
+  .btn{padding:.5rem .85rem;min-height:2.4rem}
+  .btn.small{padding:.42rem .7rem;min-height:2.2rem}
+  .mins button{width:2.2em;height:2.2em}
+  .rowbtns button{padding:5px 9px}
+  .daytab{padding:.6rem .95rem}
+  .field input,.field select{min-height:2.3rem}
+  .handle{font-size:1.25em}
+}
 @media print{
   @page{size:A4 landscape;margin:8mm}
   html{--ui:9.5px;--tbl:9.5px}
@@ -288,11 +363,12 @@ table.plain input[type=checkbox]{width:auto}
       <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
       <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
       <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
-      <button class="btn small" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
-      <button class="btn small" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
-      <button class="btn small" id="csvBtn">Export CSV</button>
-      <button class="btn small" id="printBtn">Print / PDF</button>
-      <button class="btn small" id="actBtn" title="Who changed what">Activity</button>
+      <button class="btn small opt" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
+      <button class="btn small opt" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
+      <button class="btn small opt" id="csvBtn">Export CSV</button>
+      <button class="btn small opt" id="printBtn">Print / PDF</button>
+      <button class="btn small" id="moreBtn" aria-expanded="false" title="Import, export, print and activity">More ▾</button>
+      <button class="btn small opt" id="actBtn" title="Who changed what">Activity</button>
       <button class="btn small icon" id="themeBtn" title="Switch light / dark">◐</button>
       <button class="btn small" id="setBtn">Settings</button>
       <button class="btn small primary" id="helpBtn">Help</button>
@@ -300,6 +376,7 @@ table.plain input[type=checkbox]{width:auto}
   </div>
   <div class="daytabs" id="dayTabs"></div>
   <div class="controls noprint" id="dayControls">
+    <button id="bandToggle" type="button" aria-expanded="false"><span>Day settings <small id="bandSummary"></small></span><span id="bandArrow">▾</span></button>
     <div class="field"><label>Day name</label><input type="text" id="dayName" style="width:11rem"></div>
     <div class="field"><label>Status</label><select id="dayStatus"><option value="">Auto</option><option value="ready">Ready to roll</option><option value="wrapped">Wrapped</option></select></div>
     <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Live Action</option><option value="capture">Mocap</option></select></div>
@@ -310,18 +387,18 @@ table.plain input[type=checkbox]{width:auto}
     <div class="field"><label title="Scales every setup time">Setup buffer %</label><input type="number" id="setupPct" min="50" max="400" step="5"></div>
     <div class="field"><label title="Scales every shoot time">Shoot buffer %</label><input type="number" id="shootPct" min="50" max="400" step="5"></div>
     <div class="field"><label>Min setup (min)</label><input type="number" id="minSetup" min="0" max="120" step="5"></div>
-    <div class="field"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
-    <div class="field"><label>Priority</label><select id="prioFilter"></select></div>
+    <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
+    <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
       <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
-      <button class="btn small" id="delDayBtn" title="Delete this day">Delete day</button>
+      <button class="btn small" id="archDayBtn" title="Put this day away. Nothing is deleted: restore it from the Archived tab">Archive day</button>
       <button class="btn small" id="resetBtn" title="Restore this day as originally imported">Reset day</button>
     </div>
   </div>
   <div class="stats" id="stats"></div>
   <div class="warnings" id="warnings"></div>
   <div class="timeline noprint" id="timeline"></div>
-  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--bad)"></i>Target wrap</span></div>
+  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
 </header>
 
 <main>
@@ -416,6 +493,13 @@ table.plain input[type=checkbox]{width:auto}
 </div></div>
 
 <!-- Confirm -->
+<div class="modal" id="archModal"><div class="box narrow">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Archived days</h2>
+  <p class="note">Archived days are put away, not deleted. Their shots, takes and notes are all kept. Restore a day to bring its tab back for everyone.</p>
+  <div class="archlist" id="archList"></div>
+</div></div>
+
 <div class="modal" id="askModal"><div class="box narrow">
   <h2 id="askTitle"></h2><p id="askText"></p>
   <div class="toolbar"><button class="btn primary" id="askYes">OK</button><button class="btn" id="askNo">Cancel</button></div>

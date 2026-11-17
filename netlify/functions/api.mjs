@@ -141,7 +141,7 @@ export default async (req, context) => {
       let presence = [];
       if (cid){
         const pbase = `p/${pid}/presence/`;
-        await st.setJSON(pbase + cid, { cid, name: String(body.name || "").slice(0, 40), day: String(body.day || "").slice(0, 60), at: Date.now() });
+        await st.setJSON(pbase + cid, { cid, name: String(body.name || "").slice(0, 40), day: String(body.day || "").slice(0, 60), row: String(body.row || "").slice(0, 40), at: Date.now() });
         const ps = (await Promise.all((await listKeys(st, pbase)).map(k => st.get(k, { type: "json" })))).filter(Boolean);
         presence = ps.filter(p => Date.now() - p.at < PRESENCE_TTL_MS);
         const stale = ps.filter(p => Date.now() - p.at > 86_400_000);
