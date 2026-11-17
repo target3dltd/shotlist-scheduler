@@ -1,23 +1,24 @@
 "use strict";
-const VERSION = "2.8.0";
+const VERSION = "2.9.0";
 const CHANGELOG = [
+  ["2.9.0","2026-11-17","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
   ["2.8.0","2026-11-17","Running delta: on the shoot day a Running card shows how far ahead (-) or behind (+) you are, from when shots were ticked off and the time now, with the projected wrap and a now line on the timeline. Recovery plan panel with amber and red gates (set in Settings > Team defaults): suggests shots to cut, ranked by setup and shooting time against priority and screen time, and wins such as moving a shot next to others at the same location to skip a setup. Cut takes a shot out of the timings without deleting it, and Restore brings it back."],
-  ["2.7.1","2026-11-17","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
-  ["2.7.0","2026-11-17","Spreadsheet round trip: an exported .xlsx imported back restores the days exactly (name, Mocap / Live Action, date, times, script, refs, your own columns and their types), while still taking any edits made in the sheet. Before, a re-imported Live Action day came back as a Mocap day with a different set of columns. Also fixed: exporting failed when a project had a dropdown column, and importing into a new project now gives it its own new columns instead of adding them to the current project."],
-  ["2.6.2","2026-11-17","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
-  ["2.6.1","2026-11-17","Print / PDF squeezes the columns to fit an A4 landscape page (notes columns give way first; your on-screen widths are untouched). The − / + buttons on Setup and Shoot can be switched off in Settings > Display if you prefer to type."],
-  ["2.6.0","2026-11-17","Days are archived instead of deleted: Archive day puts the tab away for everyone and the Archived tab restores it. The day settings and filters sit on a coloured banner that joins the open tab. Timeline and banner colours in Settings > Display (or the Timeline colours link under the timeline). Timeline hour labels no longer get cropped. Short text columns (Action, Performer(s), custom text columns such as Runner notes) now wrap. Optional highlight of the rows teammates are working in, in their badge colour, off by default. Wrapped day tabs sit in the right third of the tab bar, and tabs shrink to fit as more days are added (hover for the full name). Tablet and phone friendly: the shot number stays in view while swiping along a row, the day banner folds down to the filters (tap Day settings for the rest), extra toolbar buttons move under More, tabs and summary cards scroll sideways, bigger touch targets, and column widths can be dragged with a finger."],
-  ["2.5.1","2026-11-17","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
-  ["2.5.0","2026-11-17","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
-  ["2.4.0","2026-11-17","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
-  ["2.3.0","2026-11-17","Priority filter next to Show (one priority, a priority and higher, or not set; just for you). Priority colours can be set for every option in Settings > Columns, shared with the team, with readable text picked automatically; the .xlsx export uses the same colours."],
-  ["2.2.0","2026-11-17","Your own columns: Settings > Columns adds text, long text, number, tick box or dropdown columns to every day for the whole team, reorders and deletes them (Undo restores the data), and can include any of them in shot names. Built-in columns can be renamed for the team. Priority is on every day, colour-coded in its dropdown and down the row's left edge, sorts highest first, and its options are editable. Day kinds are now called Mocap and Live Action. Import can create new columns from unmatched headings; exports carry your columns and renamed headings."],
-  ["2.1.0","2026-11-17","Spreadsheet import and export. Import sheet brings in .xlsx or .csv (Google Sheets, Excel, Numbers, the Shotlist Builder or the Shotlist tracker): pick the sheet and header row, map each column, group retakes into take counts, and send them to a new day, one day per Shoot Day, the open day or a new project. Export .xlsx writes the Shotlist Builder tracker: Project tab with cast and crew, Shotlist with one row per take and live Take # and Shot ID formulas driven by an ID Settings tab, optional timecode and frame columns, a Schedule tab and Instructions. Drop a file anywhere to import it. Easier on the eyes: Settings > Display now has colour themes (warm paper, dim, high contrast light and dark, plus light and dark), a highlight colour, readable fonts (Atkinson Hyperlegible, Lexend, serif, rounded, mono), text weight, line and letter spacing, roomy rows, striped rows, reduce motion, and one-click presets. The ◐ button flips between your chosen light and dark themes. Safer updates: open copies show a 'new version' bar and save before refreshing, and test deploys use separate data so they can't touch the live schedule."],
-  ["2.0.0","2026-11-17","Team edition and project settings. Runs on Netlify so the whole team edits one live schedule: every change saves as its own small edit and merges field by field, so people working at the same time don't overwrite each other; offline changes queue and send when you reconnect. Activity log and who's-online. Projects you can save, switch, copy and import, with project details, cast and crew in Settings. Capture (mocap / volcap) days with the Shotlist Builder columns and Shot ID builder, plus a DIT names panel that copies shot names with take numbers. Dark mode, text size, row spacing, 12/24h clock and team defaults in Settings. Paste a list of actions. Hyphens instead of dashes throughout. Day 4 - Mocap added."],
-  ["1.2.1","2026-11-17","Move handle sits to the left of the Shot tick box."],
-  ["1.2.0","2026-11-17","Multi-day tabs for Day 1 and Day 2 VolCap alongside the LV day. Add, copy, rename and delete days. CSV exports every day."],
-  ["1.1.0","2026-11-17","Resizable columns, click-to-sort headers, per-column filters, Make this the running order."],
-  ["1.0.0","2026-11-17","First version from the LV Timings PDF: live recalculation, buffers, minimum setup, breaks, reorder, done ticks, timeline, undo, CSV/JSON export, print."]
+  ["2.7.1","","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
+  ["2.7.0","","Spreadsheet round trip: an exported .xlsx imported back restores the days exactly (name, Mocap / Live Action, date, times, script, refs, your own columns and their types), while still taking any edits made in the sheet. Before, a re-imported Live Action day came back as a Mocap day with a different set of columns. Also fixed: exporting failed when a project had a dropdown column, and importing into a new project now gives it its own new columns instead of adding them to the current project."],
+  ["2.6.2","","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
+  ["2.6.1","","Print / PDF squeezes the columns to fit an A4 landscape page (notes columns give way first; your on-screen widths are untouched). The − / + buttons on Setup and Shoot can be switched off in Settings > Display if you prefer to type."],
+  ["2.6.0","","Days are archived instead of deleted: Archive day puts the tab away for everyone and the Archived tab restores it. The day settings and filters sit on a coloured banner that joins the open tab. Timeline and banner colours in Settings > Display (or the Timeline colours link under the timeline). Timeline hour labels no longer get cropped. Short text columns (Action, Performer(s), custom text columns such as Runner notes) now wrap. Optional highlight of the rows teammates are working in, in their badge colour, off by default. Wrapped day tabs sit in the right third of the tab bar, and tabs shrink to fit as more days are added (hover for the full name). Tablet and phone friendly: the shot number stays in view while swiping along a row, the day banner folds down to the filters (tap Day settings for the rest), extra toolbar buttons move under More, tabs and summary cards scroll sideways, bigger touch targets, and column widths can be dragged with a finger."],
+  ["2.5.1","","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
+  ["2.5.0","","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
+  ["2.4.0","","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
+  ["2.3.0","","Priority filter next to Show (one priority, a priority and higher, or not set; just for you). Priority colours can be set for every option in Settings > Columns, shared with the team, with readable text picked automatically; the .xlsx export uses the same colours."],
+  ["2.2.0","","Your own columns: Settings > Columns adds text, long text, number, tick box or dropdown columns to every day for the whole team, reorders and deletes them (Undo restores the data), and can include any of them in shot names. Built-in columns can be renamed for the team. Priority is on every day, colour-coded in its dropdown and down the row's left edge, sorts highest first, and its options are editable. Day kinds are now called Mocap and Live Action. Import can create new columns from unmatched headings; exports carry your columns and renamed headings."],
+  ["2.1.0","","Spreadsheet import and export. Import sheet brings in .xlsx or .csv (Google Sheets, Excel, Numbers, the Shotlist Builder or the Shotlist tracker): pick the sheet and header row, map each column, group retakes into take counts, and send them to a new day, one day per Shoot Day, the open day or a new project. Export .xlsx writes the Shotlist Builder tracker: Project tab with cast and crew, Shotlist with one row per take and live Take # and Shot ID formulas driven by an ID Settings tab, optional timecode and frame columns, a Schedule tab and Instructions. Drop a file anywhere to import it. Easier on the eyes: Settings > Display now has colour themes (warm paper, dim, high contrast light and dark, plus light and dark), a highlight colour, readable fonts (Atkinson Hyperlegible, Lexend, serif, rounded, mono), text weight, line and letter spacing, roomy rows, striped rows, reduce motion, and one-click presets. The ◐ button flips between your chosen light and dark themes. Safer updates: open copies show a 'new version' bar and save before refreshing, and test deploys use separate data so they can't touch the live schedule."],
+  ["2.0.0","","Team edition and project settings. Runs on Netlify so the whole team edits one live schedule: every change saves as its own small edit and merges field by field, so people working at the same time don't overwrite each other; offline changes queue and send when you reconnect. Activity log and who's-online. Projects you can save, switch, copy and import, with project details, cast and crew in Settings. Capture (mocap / volcap) days with the Shotlist Builder columns and Shot ID builder, plus a DIT names panel that copies shot names with take numbers. Dark mode, text size, row spacing, 12/24h clock and team defaults in Settings. Paste a list of actions. Hyphens instead of dashes throughout."],
+  ["1.2.1","","Move handle sits to the left of the Shot tick box."],
+  ["1.2.0","","Multi-day tabs: add, copy, rename and delete days. CSV exports every day."],
+  ["1.1.0","","Resizable columns, click-to-sort headers, per-column filters, Make this the running order."],
+  ["1.0.0","","First version, built from a PDF shooting schedule: live recalculation, buffers, minimum setup, breaks, reorder, done ticks, timeline, undo, CSV/JSON export, print."]
 ];
 const SEED = /*__SEED__*/null;
 
@@ -53,7 +54,7 @@ function initials(s){return String(s||"?").trim().split(/\s+/).map(w=>w[0]).slic
 /* ===================== personal prefs (this device only) ===================== */
 const PREF_KEY="shotlist2-prefs";
 const HIDDEN_DEFAULT={
-  schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes"],
+  schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes","heroUrl","safetyUrl"],
   capture:["duration","orig","script","camera","location"]
 };
 const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24",band:"",bandMix:10};
@@ -62,6 +63,7 @@ function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;i
 const P=Object.assign({name:"",poll:3,peerRows:false,tl:{},steppers:true},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
+if(!P.v28){ if(P.hiddenBy&&P.hiddenBy.schedule&&!P.hiddenBy.schedule.includes("heroUrl")) P.hiddenBy.schedule.push("heroUrl","safetyUrl"); P.v28=true; }
 if(!P.v22){ for(const k of Object.keys(P.hiddenBy||{})) P.hiddenBy[k]=(P.hiddenBy[k]||[]).filter(x=>x!=="priority"); P.v22=true; }
 function savePrefs(){lsSet(PREF_KEY,P)}
 
@@ -87,6 +89,8 @@ const BASE_COLS=[
   {key:"glove",label:"Glove",type:"flag"},
   {key:"hero",label:"Hero",type:"text"},
   {key:"safety",label:"Safety",type:"text"},
+  {key:"heroUrl",label:"Hero link",type:"url"},
+  {key:"safetyUrl",label:"Safety link",type:"url"},
   {key:"location",label:"Location / Setup",type:"note"},
   {key:"description",label:"Description",type:"note"},
   {key:"script",label:"Script / Dialogue",type:"note"},
@@ -461,7 +465,7 @@ function compute(d){
 /* ===================== grid rendering ===================== */
 function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k])return DEFAULT_WIDTHS[k];const c=colMap()[k]||{};return c.type==="note"?200:c.type==="flag"?70:c.type==="number"?80:130}
 // print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
-const PRINT_W={handle:18,shot:32,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
+const PRINT_W={handle:20,shot:32,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
 function printWidths(){
   if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
   const w={}, flex=[];
@@ -694,6 +698,16 @@ function renderPrioFilter(){
   if(P.prioFilter&&![...s.options].some(o=>o.value===P.prioFilter)) P.prioFilter="";
   s.value=P.prioFilter||""; s.classList.toggle("on",!!P.prioFilter);
 }
+function isUrl(v){return /^https?:\/\/\S+\.\S+/i.test(String(v||"").trim())}
+function urlCell(r,key){
+  const w=h("div",{class:"urlcell"});
+  const i=h("input",{class:"cell",type:"url",placeholder:"Paste a link",value:r[key]||"","data-k":key,spellcheck:"false"});
+  const a=h("a",{class:"urlopen",target:"_blank",rel:"noopener noreferrer",title:"Open the link"},"↗");
+  const upd=()=>{const v=i.value.trim();a.href=isUrl(v)?v:"#";a.style.visibility=isUrl(v)?"visible":"hidden";i.classList.toggle("bad",!!v&&!isUrl(v))};
+  i.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[key]=i.value.trim();upd();softCommit()});
+  i.addEventListener("change",()=>{commit();renderLinks();renderStats(compute())});
+  upd(); w.append(i,a); return w;
+}
 function listCell(r,key){
   const opts=[...((colMap()[key]||{}).options||[""])]; const cur=r[key]||""; if(cur&&!opts.includes(cur)) opts.push(cur);
   const s=h("select",{class:"cell","data-k":key}); for(const o of opts) s.append(h("option",{value:o},o));
@@ -793,6 +807,7 @@ function renderBody(){
         if(t==="flag") td.append(flagCell(r,k));
         else if(t==="list") td.append(listCell(r,k));
         else if(t==="number"){ td.className+=" num"; td.append(textCell(r,k,false,{type:"number",small:true})); }
+        else if(t==="url") td.append(urlCell(r,k));
         else if(t==="text") td.append(textCell(r,k,false));
         else if(t==="note") td.append(textCell(r,k,true));
       }
@@ -821,7 +836,7 @@ function recalc(){
     const sh=$('.eff[data-eff="shoot"]',tr); if(sh) sh.textContent=(r.type!=="break"&&Math.round(c.sh)!==Number(r.shoot))?"= "+Math.round(c.sh)+" min":"";
     tr.classList.toggle("over",c.end>wrapT&&!r.done);
   }
-  renderStats(C); renderTimeline(C); renderPlan(C); refreshTabLabel(C);
+  renderStats(C); renderTimeline(C); renderPlan(C); renderLinks(); refreshTabLabel(C);
 }
 function tabSub(d,C){const shots=d.rows.filter(r=>r.type!=="break");const done=shots.filter(r=>r.done).length;
   if(C.shootT>0) return "wrap "+fmt(C.wrap); if(!shots.length) return "empty"; return done===shots.length?"shot":shots.length+" setups";}
@@ -843,8 +858,9 @@ function renderStats(C){
     card("Shooting total",dur(C.shootT)), card("Breaks / moves",dur(C.breakT)),
     card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")));
   if(takes||d.kind==="capture") st.append(card("Takes",String(takes),"logged on this day"));
-  if(d.origWrap) st.append(card("Original PDF wrap",fmt(toMin(d.origWrap)),"as planned"));
+  if(d.origWrap) st.append(card("Original wrap",fmt(toMin(d.origWrap)),"as planned"));
   if(C.shootT>0&&!d.rows.some(r=>r.type==="break"&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
+  if(dayStatus(d)==="wrapped"){const miss=linkNeeds(d).filter(n=>!isUrl(n.r[n.k])).length;if(miss)w.append(h("span",{class:"pill",style:"cursor:pointer",onclick:()=>{P.linksOpen=true;renderLinks();$("#links").scrollIntoView({behavior:"smooth",block:"center"})}},`${miss} hero / safety link${miss>1?"s":""} still needed`))}
   const zero=shots.filter(r=>effSetup(r,d)===0).length;
   if(C.shootT===0&&shots.length) w.append(h("span",{class:"pill info"},"No timings logged for this day yet - fill in Setup / Shoot minutes"));
   else if(zero) w.append(h("span",{class:"pill info"},zero+" shot"+(zero>1?"s have":" has")+" 0 min setup"));
@@ -949,7 +965,59 @@ function renderPlan(C){
   }
   if(p.L) body.append(h("p",{class:"note"},"Running "+(p.L.slip>0?dur(p.L.slip)+" behind":p.L.slip<0?dur(-p.L.slip)+" ahead":"on time")+": "+p.L.basis+". Projected wrap "+fmt(p.L.proj)+"."));
 }
+/* ===================== hero / safety links on wrapped days ===================== */
+function isHero(r){return r.type!=="break"&&!r.cut&&(String(r.hero||"").trim()!==""||/\bhero\s*:\s*t?\d/i.test(String(r.director||"")))}
+function isSafety(r){return r.type!=="break"&&!r.cut&&(String(r.safety||"").trim()!==""||/\bsafety\s*:\s*t?\d/i.test(String(r.director||"")))}
+function linkNeeds(d){const out=[];for(const r of d.rows){if(isHero(r))out.push({r,k:"heroUrl",what:"Hero"});if(isSafety(r))out.push({r,k:"safetyUrl",what:"Safety"})}return out}
+function takeNote(r,what){const f=String(r[what.toLowerCase()]||"").trim();if(f&&!/^x$/i.test(f))return f;const m=String(r.director||"").match(new RegExp(what+"\\s*:\\s*([^.\\n]+)","i"));return m?m[1].trim():""}
+const linkAsked=new Set();
+function renderLinks(){
+  const box=$("#links"); if(!box) return; box.innerHTML=""; box.className="plan noprint"; const d=D();
+  if(!d||dayStatus(d)!=="wrapped") return;
+  const needs=linkNeeds(d); if(!needs.length) return;
+  const missing=needs.filter(n=>!isUrl(n.r[n.k]));
+  box.classList.add(missing.length?"gate-amber":"gate-green");
+  if(missing.length&&!linkAsked.has(d.id)){linkAsked.add(d.id);toast(`${d.name} is wrapped: add links for ${missing.length} hero / safety take${missing.length>1?"s":""} (below the summary)`)}
+  const open=P.linksOpen!==false;
+  box.append(h("button",{class:"planhead",onclick:()=>{P.linksOpen=!open;savePrefs();renderLinks()}},
+    h("b",{},"Hero / safety links · "+(missing.length?`${missing.length} of ${needs.length} still needed`:`all ${needs.length} added`)),
+    h("span",{class:"note"},"Wrapped day: paste a link to the file for each hero and safety take (Google Drive or similar)."),h("span",{},open?"▴":"▾")));
+  if(!open) return;
+  const body=h("div",{class:"planbody"}); const t=h("table",{class:"plain linktable"});
+  t.append(h("thead",{},h("tr",{},h("th",{},"Shot"),h("th",{},"Take"),h("th",{},"Link"))));
+  const tb=h("tbody",{});
+  for(const n of needs){
+    const i=h("input",{type:"url",placeholder:"https://drive.google.com/...",value:n.r[n.k]||"",spellcheck:"false"});
+    const a=h("a",{target:"_blank",rel:"noopener noreferrer",class:"urlopen",title:"Open the link"},"↗");
+    const upd=()=>{const v=i.value.trim();a.href=isUrl(v)?v:"#";a.style.visibility=isUrl(v)?"visible":"hidden";i.classList.toggle("bad",!!v&&!isUrl(v))};upd();
+    i.addEventListener("input",()=>{const x=R(n.r.id);if(!x)return;x[n.k]=i.value.trim();upd();softCommit()});
+    i.addEventListener("change",()=>{commit();renderStats(compute());const el=$(`#grid tbody tr[data-id="${n.r.id}"] [data-k="${n.k}"]`);if(el&&document.activeElement!==el)el.value=n.r[n.k]||"";setTimeout(renderLinks,0)});
+    const tk=takeNote(n.r,n.what);
+    tb.append(h("tr",{class:isUrl(n.r[n.k])?"":"need"},h("td",{},h("a",{href:"#",onclick:e=>{e.preventDefault();jump(n.r.id)}},rowLabel(n.r))),h("td",{},h("b",{},n.what),tk?" "+tk:""),h("td",{},h("div",{class:"urlcell"},i,a))));
+  }
+  t.append(tb); body.append(t,h("p",{class:"note"},"Shared with the team. The links also show in the Hero link and Safety link columns, and go into the CSV and .xlsx exports. A shot counts as hero or safety when its Hero or Safety column is filled in, or its notes say e.g. \"Hero: T3\"."));
+  box.append(body);
+}
 setInterval(()=>{ if(!S||document.hidden) return; const d=D(); if(d&&dayClock(d)!=null){const C=compute();renderStats(C);renderTimeline(C);renderPlan(C)} },30000);
+/* ===================== help: contents and search ===================== */
+function buildHelpNav(){
+  const body=$("#helpBody"), toc=$("#helpToc"); if(!body||!toc||body.dataset.built) return; body.dataset.built="1";
+  const slug=t=>"help-"+t.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  for(const h3 of $$("h3",body)){ if(h3.closest("section")) continue;
+    const sec=h("section",{id:slug(h3.textContent)}); h3.before(sec); let n=h3; const move=[];
+    while(n&&!(n!==h3&&n.tagName==="H3")){move.push(n);n=n.nextElementSibling}
+    move.forEach(x=>sec.append(x)); }
+  for(const sec of $$("section",body)){ const t=$("h3",sec).textContent;
+    toc.append(h("a",{href:"#"+sec.id,onclick:e=>{e.preventDefault();$("#helpSearch").value="";filterHelp("");sec.scrollIntoView({behavior:"smooth",block:"start"})}},t)); }
+  $("#helpSearch").addEventListener("input",e=>filterHelp(e.target.value));
+}
+function filterHelp(q){
+  const words=q.toLowerCase().split(/\s+/).filter(Boolean); let shown=0;
+  for(const sec of $$("#helpBody section")){ const hit=!words.length||words.every(w=>sec.textContent.toLowerCase().includes(w)); sec.style.display=hit?"":"none"; if(hit)shown++;
+    const a=$(`#helpToc a[href="#${sec.id}"]`); if(a) a.classList.toggle("dim",!hit); }
+  if(words.length) $("#changelog").classList.add("all");
+  $("#helpNone").style.display=shown?"none":"";
+}
 function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
   const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,wrapMin(d))+15;
@@ -1291,13 +1359,13 @@ function saveFile(){commit();download(fileBase()+".shotlist.json",JSON.stringify
 function csvEsc(v){v=v==null?"":String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function exportCSV(){
   commit();
-  const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)","Cut"];
+  const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)","Cut","Hero link","Safety link"];
   const customs=cols().filter(c=>c.custom); head.push(...customs.map(c=>c.label));
   const lines=[head.map(csvEsc).join(",")];
   for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
     lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?"Break/Move":"Shot",br?(r.label||"Break"):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
-      br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
+      br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),br?"":(r.heroUrl||""),br?"":(r.safetyUrl||""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
@@ -1453,7 +1521,8 @@ async function startLocal(){
 async function boot(){
   applyDisplay();
   $("#verLabel").textContent="v"+VERSION; $("#helpVer").textContent="Version v"+VERSION;
-  $("#changelog").append(...CHANGELOG.map(([v,d,t])=>h("li",{},h("b",{},"v"+v)," ("+d+") - "+t)));
+  $("#changelog").append(...CHANGELOG.map(([v,d,t],i)=>h("li",{class:i>=4?"older":""},h("b",{},"v"+v),(d?" ("+d+")":"")+" - "+t)),h("li",{class:"more"},h("button",{class:"btn small",onclick:e=>{$("#changelog").classList.add("all");e.target.parentElement.remove()}},"Show all versions")));
+  buildHelpNav();
   setTimeout(checkVersion,5000); setInterval(checkVersion,60000);
   if(/[?&]team\b/.test(location.search)&&P.mode==="local-forced"){P.mode=null;savePrefs()}
   if(P.mode==="local-forced"){

@@ -60,7 +60,7 @@ const BASE_IMPORT_TARGETS=[
   ["action","Action"],["description","Description"],["performers","Performer(s)"],["perfCount","# Of performers"],["props","Prop / set notes"],
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
   ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
-  ["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera & lighting"],["vfx","VFX notes"],["director","Director notes"],
+  ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera & lighting"],["vfx","VFX notes"],["director","Director notes"],
   ["label","Break name"],["rowType","Row type (Shot / Break)"]
 ];
 function importTargets(){
@@ -79,7 +79,7 @@ const IMPORT_SYN={
   performers:["performer(s)","performers","performer","actor","actors","talent","cast"],
   perfCount:["# of performers","# performers","no. of performers","performer count","num performers"],
   props:["prop","props","prop / set design notes","prop / set notes","set notes"],
-  genre:["genre"],body:["body"],face:["face"],glove:["glove","gloves"],hero:["hero"],safety:["safety"],priority:["priority","pri"],
+  genre:["genre"],body:["body"],face:["face"],glove:["glove","gloves"],hero:["hero"],safety:["safety"],heroUrl:["hero link","hero url","hero file"],safetyUrl:["safety link","safety url","safety file"],priority:["priority","pri"],
   done:["shot?","done","shot (done)","complete","completed"],
   setup:["time to setup","setup","setup (min)","setup mins"],shoot:["time to shoot","shoot","shoot (min)","shoot mins"],
   origStart:["start shooting","start","start time","planned start","original start"],duration:["duration","screen dur.","screen duration"],
@@ -395,7 +395,7 @@ async function buildTracker(days,opt){
   const tcols=[{k:"shot",h:"Shot #",w:9},{k:"take",h:"Take #",w:8},{k:"sid",h:"Shot ID",w:44},{k:"app",h:"Shot name (app)",w:44},{k:"prod",h:"Shoot/Production ID",w:12},
     {k:"day",h:"Shoot Day",w:8},{k:"priority",h:"Priority",w:9},{k:"perfCount",h:"# Of Performers",w:10},{k:"props",h:"Prop",w:16},{k:"performers",h:"Performer(s)",w:16},
     {k:"genre",h:"Genre",w:12},{k:"action",h:"Action",w:30},{k:"done",h:"Shot?",w:7},{k:"body",h:"Body",w:7},{k:"face",h:"Face",w:7},{k:"glove",h:"Glove",w:7},
-    {k:"hero",h:"Hero",w:8},{k:"safety",h:"Safety",w:8},{k:"description",h:"Description",w:30},{k:"location",h:"Location / Setup",w:18},{k:"shotType",h:"Shot type",w:14},
+    {k:"hero",h:"Hero",w:8},{k:"safety",h:"Safety",w:8},{k:"heroUrl",h:"Hero link",w:24},{k:"safetyUrl",h:"Safety link",w:24},{k:"description",h:"Description",w:30},{k:"location",h:"Location / Setup",w:18},{k:"shotType",h:"Shot type",w:14},
     {k:"camera",h:"Technical Notes",w:28},{k:"vfx",h:"Capture Notes",w:24},{k:"director",h:"Notes",w:30},
     ...cols().filter(x=>x.custom).map(x=>({k:x.key,h:x.label,w:x.type==="note"?28:x.type==="flag"?8:14,custom:x.type})),
     {k:"setup",h:"Setup (min)",w:9},{k:"shoot",h:"Shoot (min)",w:9},{k:"start",h:"Planned start",w:10}];
@@ -456,6 +456,7 @@ async function buildTracker(days,opt){
       const pid_=String(S.project.prodId||"").trim(); put("prod",pid_===""?null:(isNaN(Number(pid_))?pid_:Number(pid_)));
       put("day",d.dayNo||dayIndex(d)+1);
       for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
+      for(const k of ["heroUrl","safetyUrl"]){const v=String(r[k]||"").trim();if(v)put(k,isUrl(v)?{text:v,hyperlink:v}:v)}
       for(const col of tcols.filter(y=>y.custom)){const v=r[col.k];if(col.custom==="flag")put(col.k,isOn(v)?1:0);else if(v!=null&&String(v).trim()!=="")put(col.k,col.custom==="number"&&!isNaN(Number(v))?Number(v):String(v))}
       if(r.perfCount!==""&&r.perfCount!=null) put("perfCount",isNaN(Number(r.perfCount))?r.perfCount:Number(r.perfCount));
       put("done",x.logged||r.done?1:0); flagCols.forEach(k=>put(k,isOn(r[k])?1:0));

@@ -34,7 +34,7 @@
     <li>Undo / Redo: the buttons or Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. Undo only reverses <i>your</i> changes. A teammate's edits made in the meantime stay.</li>
   </ul>
 
-  <h3>On the day: ahead / behind and the recovery plan</h3>
+  <h3>On the day: ahead / behind</h3>
   <ul>
     <li><b>Running card</b>: on the day itself (the day's Shoot date is today) a card shows how far ahead (<b>-</b>, green) or behind (<b>+</b>) you are. It uses the time each shot was ticked as shot, against when the schedule had it finishing. If the shot you're on runs past its planned finish, the delta keeps growing until you tick it. Hover the card to see what it's based on. The card also shows the projected wrap, and a blue line marks now on the timeline. It updates every 30 seconds.</li>
     <li>Tick shots as they finish, so the delta is accurate. Shots ticked before this version, or on another day, have no time recorded, so the delta falls back to the clock.</li>
@@ -42,6 +42,13 @@
     <li><b>Shots to consider cutting</b> are ranked by the minutes they take (setup plus shooting, with buffers) against their priority and screen duration: low priority, long setups and short screen time go first. The list stops once it covers the time you need. Top priority shots only appear as a last resort. The shot you're on is never suggested.</li>
     <li><b>Cut</b> takes a shot out of the timings without deleting it: the row greys out, it's left off the DIT names, the tracker .xlsx and print, and the CSV marks it Cut. <b>Restore</b> (in the row or the plan) puts it back, and the plan says when a cut shot would fit in the time you have in hand. Undo works too.</li>
     <li><b>Possible wins</b> spot a shot that goes back to a location you've already set up earlier. <b>Move it</b> puts it straight after that shot and drops its setup to the day's minimum.</li>
+  </ul>
+
+  <h3>Hero / safety links</h3>
+  <ul>
+    <li>When a day is <b>Wrapped</b>, a <b>Hero / safety links</b> panel lists every shot marked hero or safety and asks for a link to its file, for example a Google Drive link. A shot counts when its Hero or Safety column is filled in, or its notes say e.g. "Hero: T3". Cut shots are left out.</li>
+    <li>A reminder shows under the summary cards, and when you open the day, until every link is in. Paste a link and the ↗ opens it. Anything that doesn't look like a web link is outlined in red.</li>
+    <li>Links are shared with the team. They also live in the <b>Hero link</b> and <b>Safety link</b> columns (shown on Mocap days, hidden on Live Action days until you switch them on in Columns), and go into the CSV and .xlsx exports.</li>
   </ul>
 
   <h3>Columns and priority</h3>
@@ -57,9 +64,9 @@
   <h3>Shot names and DIT</h3>
   <ul>
     <li>The <b>Shot name</b> column shows the name the <i>next</i> take will get. <b>Copy</b> puts it on the clipboard.</li>
-    <li><b>DIT names</b> lists every shot on the day. <b>Next take → copy</b> logs the take and copies its name, e.g. <code>012_T4_10357_d4_a1_Victoria_walk_cycle_yB</code>. Use − if a take didn't happen. <b>Copy all</b> copies every take name for a shot, one per line. <b>Copy every take name</b> does the whole day.</li>
+    <li><b>DIT names</b> lists every shot on the day. <b>Next take → copy</b> logs the take and copies its name, e.g. <code>012_T4_1001_d4_a1_Alex_walk_cycle_yB</code>. Use − if a take didn't happen. <b>Copy all</b> copies every take name for a shot, one per line. <b>Copy every take name</b> does the whole day.</li>
     <li>Settings → <b>Shot names</b> decides what goes into the name and in what order, with prefixes and tags, the separator, what happens to spaces, and how many digits shot and take numbers get. These settings are shared with the whole team, so everyone generates the same names.</li>
-    <li>Blank parts and <code>-</code> are skipped, so there are never double separators. Characters that break file names (<code>/ \ : * ? " &lt; &gt; |</code>, commas and brackets) are removed. A slash between names becomes <code>+</code>, e.g. <code>Victoria+Leo</code>.</li>
+    <li>Blank parts and <code>-</code> are skipped, so there are never double separators. Characters that break file names (<code>/ \ : * ? " &lt; &gt; |</code>, commas and brackets) are removed. A slash between names becomes <code>+</code>, e.g. <code>Alex+Sam</code>.</li>
   </ul>
 
   <h3>Projects, cast and crew</h3>
@@ -98,7 +105,7 @@
       </ul></li>
   </ul>
 
-  <h3>Working offline and rejoining</h3>
+  <h3>Offline and rejoining</h3>
   <ul>
     <li><b>Work offline instead</b> on the join screen opens a separate copy saved only in this browser; it doesn't sync. Your team schedule is untouched.</li>
     <li>To get back, click <b>Rejoin team project</b> next to the status in the header, or in Settings &gt; Team &amp; sync. Adding <code>?team</code> to the end of the site address does the same.</li>
@@ -125,11 +132,11 @@
     <li>Settings → <b>Team &amp; sync</b>: your display name, how often to check for changes, Sync now, and Forget team key.</li>
   </ul>
 
-  <h3>Saving and moving it elsewhere</h3>
+  <h3>Saving and backups</h3>
   <ul>
     <li>On your own, everything saves in this browser automatically. For a backup, or to move a project, use Settings → Projects → <b>Export project file</b>.</li>
     <li><b>Export CSV</b> gives one row per shot for every day, with Day, Kind and Date columns, calculated times, takes and the last take's name. It opens in Numbers, Excel or Google Sheets, and most shotlist apps can import it.</li>
-    <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Text prints small (about 6.5pt, tight line spacing) whatever your on-screen text size, and columns are squeezed to fit the page width, with the notes columns giving way first; your on-screen widths aren't changed. Hide columns you don't need on paper with the <b>Columns</b> menu first for roomier notes. Dark mode prints light.</li>
+    <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Only the tab being printed is shown. Rows stay whole on a page, so every page ends on a cell line; only a row taller than a whole page is split. Text prints small (about 6.5pt, tight line spacing) whatever your on-screen text size, and columns are squeezed to fit the page width, with the notes columns giving way first; your on-screen widths aren't changed. Hide columns you don't need on paper with the <b>Columns</b> menu first for roomier notes. Dark mode prints light.</li>
   </ul>
 
   <h3>Updates</h3>
@@ -139,16 +146,9 @@
     <li>Test versions (deploy previews and branch deploys) use separate storage, so trying something out can't change the live schedule.</li>
   </ul>
 
-  <h3>Setting up the team site (Netlify)</h3>
+  <h3>Netlify setup</h3>
   <ul>
     <li>The team version needs the site deployed from GitHub (or the Netlify CLI), not drag-and-drop, because only those deploys run the small server part that stores the shared schedule (Netlify Functions and Netlify Blobs).</li>
     <li>Access is controlled by the Netlify site password, which covers the page and the data. If you ever want a second lock, set the environment variable <code>TEAM_KEY</code> and everyone will also be asked for that key. Without either, anyone with the link could open the schedule.</li>
     <li>Data lives in the site's Netlify Blobs store. Nothing is sent to any other service.</li>
-  </ul>
-
-  <h3>About the This Is Me data</h3>
-  <ul>
-    <li><b>Day 1 - 14 Oct</b> and <b>Day 2 - 21 Oct</b> (VolCap) were rebuilt from the Shotlist tracker. Each row is one setup in the order it was shot, with its takes, performers, prop and action. Hero, Safety and NG takes are in Director notes, and the GS process is in VFX notes. No timings were logged for those days.</li>
-    <li><b>Day 3 - LV</b> comes from the LV Timings PDF. The four unnumbered lobby shots are labelled 06c to 06f, and a 45 min lunch was added before Shot 12 as a placeholder.</li>
-    <li><b>Day 4 - Mocap</b> is an empty Mocap day, ready to plan.</li>
   </ul>

@@ -142,12 +142,21 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .planh{font-weight:600;margin:.5rem 0 .25rem}
 .planbody ul{margin:0;padding-left:1.1rem} .planbody li{margin:.2rem 0}
 .planbody li .btn{margin-left:.5rem;padding:.1rem .5rem}
+.urlcell{display:flex;align-items:center;gap:.25rem}
+.urlcell input{flex:1;min-width:0}
+.urlcell input.bad{border-color:var(--bad)!important;background:var(--over-bg)}
+.urlopen{text-decoration:none;font-weight:700;padding:0 .2rem}
+.linktable{width:100%;margin-top:.3rem} .linktable td{vertical-align:middle}
+.linktable input{width:100%;border:1px solid var(--line);border-radius:4px;padding:.25rem .4rem}
+.linktable tr.need td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
 #grid tr.cut td{opacity:.5}
 #grid tr.cut td[data-col=shot],#grid tr.cut td[data-col=shotId]{text-decoration:line-through}
 #grid tr.cut td[data-col=actions]{opacity:1}
-.daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
+.daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:0;box-shadow:inset 0 -4px 5px -4px rgba(0,0,0,.12)}
+/* only the open tab comes forward and joins the banner; the others sit behind its top edge */
+.daytab.on{top:1px;z-index:2;box-shadow:none}
 .daytab.on{background:var(--band);font-weight:600;border-color:var(--band-line)}
-.daytab.arch{background:transparent;border-style:dashed;color:var(--muted);margin-left:auto}
+.daytab.arch{background:transparent;border-style:dashed;border-bottom:none;color:var(--muted);margin-left:auto;box-shadow:none}
 .daytabs .tabgroup{flex-shrink:0}
 .archlist{display:flex;flex-direction:column;gap:.5rem}
 .archlist .toolbar{justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:.45rem .6rem}
@@ -158,7 +167,7 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 select.cell.prio{font-weight:700;border-radius:4px}
 #grid tr.prio td:first-child{box-shadow:inset 5px 0 0 var(--prio)}
 .swatch{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.35rem;border:1px solid var(--line2)}
-.daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
+.daytab.add{background:transparent;border-style:dashed;border-bottom:none;color:var(--muted);box-shadow:none}
 .tabgroup{align-self:flex-end;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:0 .35rem .5rem;white-space:nowrap}
 .tabgroup.wrapped{margin-left:0}
 .daytab.wrapped{opacity:.82}
@@ -270,6 +279,16 @@ input.shotno{font-weight:700;font-size:1.08em}
 .box p,.box li{line-height:1.5}
 .box code{font-family:var(--mono);background:var(--code-bg);padding:0 4px;border-radius:3px}
 .box .ver{font-family:var(--mono);color:var(--muted)}
+/* help: search and contents stay at the top while you scroll */
+.helpnav{position:sticky;top:-1.4rem;z-index:3;background:var(--panel);padding:.6rem 0 .5rem;margin-bottom:.4rem;border-bottom:1px solid var(--line)}
+.helpnav input{width:100%;border:1px solid var(--line);border-radius:6px;padding:.45rem .6rem;margin-bottom:.45rem}
+#helpToc{display:flex;flex-wrap:wrap;gap:.3rem .35rem}
+#helpToc a{font-size:.85rem;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:.12rem .6rem;color:var(--ink);background:var(--panel2);white-space:nowrap}
+#helpToc a:hover{border-color:var(--accent)}
+#helpToc a.dim{opacity:.35}
+#helpBody section{scroll-margin-top:8.5rem}
+#changelog li.older{display:none} #changelog.all li.older{display:list-item} #changelog.all li.more{display:none}
+#changelog li.more{list-style:none;margin-top:.4rem}
 .tabs{display:flex;gap:.3rem;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:.8rem 0 1rem}
 .tabs button{border:1px solid transparent;border-bottom:none;background:transparent;padding:.45rem .8rem;border-radius:6px 6px 0 0;cursor:pointer;color:var(--muted)}
 .tabs button.on{border-color:var(--line);background:var(--panel2);color:var(--ink);font-weight:600;position:relative;top:1px}
@@ -361,6 +380,18 @@ body.nosteps .mins.timing input{width:4.5em}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
   #grid tr.cut{display:none}
+  /* only the tab being printed */
+  .daytabs .tabgroup,.daytabs .tg:not(:has(.daytab.on)){display:none!important}
+  .daytabs .tg.wrapped{border-left:none;padding-left:0;margin-left:0}
+  /* first column: just the tick box, fully visible */
+  #grid td[data-col=handle] .chk{font-size:0;gap:0}
+  #grid td[data-col=handle] input[type=checkbox]{width:11px;height:11px;margin:1px 0 0;display:inline-block}
+  #grid td[data-col=handle]{padding:.25em .2em!important;overflow:visible}
+  /* keep rows whole on a page (a row taller than a page still splits), with a cell line at every page edge */
+  #grid tbody tr{break-inside:avoid;page-break-inside:avoid}
+  #grid td{-webkit-box-decoration-break:clone;box-decoration-break:clone}
+  #grid{border-top:1px solid #ccc}
+  .urlopen{display:none}
   .toast,.noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
   .tablewrap{border:none;overflow:visible;max-height:none}
   #grid tr.filters,.grip,.viewbar{display:none!important}
@@ -376,7 +407,6 @@ body.nosteps .mins.timing input{width:4.5em}
   #grid tbody textarea.cell,#grid tbody input.cell,#grid tbody .mins input,#grid tbody select.cell{display:none!important}
   #grid .pv{display:block!important;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2}
   #grid .pv.shotno{font-weight:700}
-  tr{break-inside:auto}
   #grid td{vertical-align:top}
   .time{font-size:.92em}
   .sid{word-break:break-all}
@@ -431,6 +461,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="stats" id="stats"></div>
   <div class="warnings" id="warnings"></div>
   <div class="plan noprint" id="plan"></div>
+  <div class="plan noprint" id="links"></div>
   <div class="timeline noprint" id="timeline"></div>
   <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
 </header>
@@ -553,9 +584,16 @@ body.nosteps .mins.timing input{width:4.5em}
   <button class="btn small close" data-close>Close</button>
   <h2>Help</h2>
   <div class="ver" id="helpVer"></div>
+  <div class="helpnav">
+    <input type="search" id="helpSearch" placeholder="Search help, e.g. print, cut, links, offline" aria-label="Search help">
+    <nav id="helpToc" aria-label="Help contents"></nav>
+  </div>
+  <div id="helpBody">
+  <p class="note" id="helpNone" style="display:none">Nothing matches that. Try a different word.</p>
   /*__HELP__*/
   <h3>Version history</h3>
   <ul id="changelog"></ul>
+  </div>
 </div></div>
 
 <div class="modal lightbox" id="lightbox"><div class="box"><img id="lightImg" alt=""></div></div>
