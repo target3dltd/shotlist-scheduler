@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.9.0";
+const VERSION = "2.10.0";
 const CHANGELOG = [
+  ["2.10.0","2026-11-17","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
   ["2.9.0","2026-11-17","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
   ["2.8.0","2026-11-17","Running delta: on the shoot day a Running card shows how far ahead (-) or behind (+) you are, from when shots were ticked off and the time now, with the projected wrap and a now line on the timeline. Recovery plan panel with amber and red gates (set in Settings > Team defaults): suggests shots to cut, ranked by setup and shooting time against priority and screen time, and wins such as moving a shot next to others at the same location to skip a setup. Cut takes a shot out of the timings without deleting it, and Restore brings it back."],
   ["2.7.1","","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
@@ -1018,6 +1019,52 @@ function filterHelp(q){
   if(words.length) $("#changelog").classList.add("all");
   $("#helpNone").style.display=shown?"none":"";
 }
+/* ===================== share / invite ===================== */
+function projectLink(){return location.origin+location.pathname+"?p="+encodeURIComponent(pid())}
+function openShare(){
+  const b=$("#shareBody"); b.innerHTML="";
+  if(MODE!=="team"){
+    b.append(h("p",{},"This copy is only saved in this browser, so there's no shared link to send."),
+      h("p",{class:"note"},"To work with someone: open the team site and invite them from there. Or send them a copy: Settings > Projects > Export project file, which they can import."),
+      h("div",{class:"toolbar"},h("button",{class:"btn",onclick:()=>{$("#shareModal").classList.remove("open");openSettings("projects")}},"Go to Projects")));
+    $("#shareModal").classList.add("open"); return;
+  }
+  const f=h("div",{class:"form"});
+  const who=h("input",{placeholder:"e.g. Sam"}), role=h("input",{placeholder:"e.g. DIT"}), email=h("input",{type:"email",placeholder:"name@example.com"});
+  const pw=h("input",{type:"password",placeholder:"Only if you choose to include it",autocomplete:"off"});
+  const incPw=h("input",{type:"checkbox"}), incKey=h("input",{type:"checkbox"}), addCrew=h("input",{type:"checkbox"});
+  const link=h("input",{readonly:true,value:projectLink()});
+  const msg=h("textarea",{});
+  const pwRow=h("label",{},"Site password (not saved anywhere)",pw); pwRow.style.display="none";
+  const build=()=>{
+    const name=who.value.trim(), proj=S.project.name||"our shoot";
+    const lines=[`Hi${name?" "+name:""},`,"",`You're invited to the ${proj} shot list and schedule. Everyone on the team edits the same live version.`,"",`Open it here: ${projectLink()}`,""];
+    lines.push(incPw.checked&&pw.value?`Site password: ${pw.value}`:"The site is password protected. I'll send you the password separately.");
+    if(NEEDS_KEY) lines.push(incKey.checked&&P.teamKey?`Team key (asked for when you join): ${P.teamKey}`:"It also asks for a team key when you join. I'll send that separately too.");
+    lines.push("","When it opens, add your name so the team can see who's editing. On a phone or tablet, Share > Add to Home Screen makes it open like an app.","",`Thanks${S.project.lead?", "+S.project.lead:""}`);
+    msg.value=lines.join("\n");
+    pwRow.style.display=incPw.checked?"":"none";
+  };
+  [who,pw].forEach(x=>x.addEventListener("input",build)); [incPw,incKey].forEach(x=>x.addEventListener("change",build));
+  f.append(h("label",{},"Link to this project",h("div",{class:"sharelink"},link,h("button",{class:"btn small",onclick:async()=>{toast(await copyText(projectLink())?"Link copied":"Select the link and copy it")}},"Copy link"))),
+    h("label",{},"Their name (for the message)",who));
+  b.append(f,
+    h("div",{class:"safety"},h("b",{},"Safest: "),"send the link and the password in different ways, e.g. the link by email and the password by text or in person. If one message holds both, anyone who sees it (a forward, a shared screen, a hacked inbox) can get in. If you include them, send it only to that person directly, and change the Netlify password when people leave the production."),
+    h("div",{class:"form"},h("label",{class:"inline"},incPw,"Include the site password in the message"),pwRow,
+      NEEDS_KEY?h("label",{class:"inline"},incKey,"Include the team key in the message"):h("span",{}),
+      h("label",{class:"inline"},addCrew,"Also add them to Cast & crew"),
+      h("div",{class:"form",style:"display:none",id:"shareCrew"},h("label",{},"Role",role),h("label",{},"Email",email)),
+      h("label",{},"Message",msg)));
+  addCrew.addEventListener("change",()=>{$("#shareCrew").style.display=addCrew.checked?"":"none"});
+  const addPerson=()=>{if(!addCrew.checked||!who.value.trim())return;if(S.people.some(p=>p.name.trim().toLowerCase()===who.value.trim().toLowerCase()))return;S.people.push({id:uid("p"),group:"Crew",name:who.value.trim(),role:role.value.trim(),phone:"",email:email.value.trim(),notes:"Invited "+todayISO()});commit();toast("Added "+who.value.trim()+" to Cast & crew")};
+  const subject=()=>`Invite: ${S.project.name||"shot list"} schedule`;
+  const tb=h("div",{class:"toolbar"},
+    h("button",{class:"btn primary",onclick:async()=>{addPerson();toast(await copyText(msg.value)?"Invite copied - paste it into an email or message":"Select the message and copy it")}},"Copy invite"),
+    h("button",{class:"btn",onclick:()=>{addPerson();location.href=`mailto:${encodeURIComponent(email.value.trim())}?subject=${encodeURIComponent(subject())}&body=${encodeURIComponent(msg.value)}`}},"Email"));
+  if(navigator.share) tb.append(h("button",{class:"btn",onclick:async()=>{addPerson();try{await navigator.share({title:subject(),text:msg.value})}catch(e){}}},"Share…"));
+  b.append(tb,h("p",{class:"note"},"The link opens this project. They'll need the site password, and their own name when they join. Nothing here changes who can get in: that's the Netlify password (and the team key, if you set one)."));
+  build(); $("#shareModal").classList.add("open"); setTimeout(()=>who.focus(),50);
+}
 function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
   const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,wrapMin(d))+15;
@@ -1531,6 +1578,7 @@ async function boot(){
     detectTeam().then(w=>{if(w==="team"){teamAvailable=true;showRejoin()}}).catch(()=>{});
     return;
   }
+  { const q=new URLSearchParams(location.search), pq=q.get("p"); if(pq){P.projectId=pq;savePrefs();q.delete("p");history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:""))} }
   const where=await detectTeam();
   if(where==="unreachable"&&P.projectId){
     // used the team site on this device before: start from the saved copy and keep retrying
@@ -1557,6 +1605,7 @@ $("#moreBtn").onclick=()=>{const t=$("header.top");const o=t.classList.toggle("m
 $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.toggle("open");$("#bandToggle").setAttribute("aria-expanded",o);$("#bandArrow").textContent=o?"▴":"▾"};
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
+$("#shareBtn").onclick=openShare;
 $("#archDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Archive "+d.name+"?","The tab is put away for everyone. Nothing is deleted: restore it any time from the Archived tab at the end of the day tabs.","Archive day")))return;d.archived=true;P.activeByProject[pid()]=null;commit();savePrefs();renderAll();toast("Archived "+d.name+" - restore it from Archived")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}
   if(!(await ask("Reset "+d.name+"?","Puts this day back exactly as it was imported"+(MODE==="team"?", for everyone":"")+". Undo straight afterwards brings your version back.","Reset")))return;
