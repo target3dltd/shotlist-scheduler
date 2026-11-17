@@ -94,6 +94,7 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .field input,.field select{border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;min-width:0}
 .field input[type=time]{width:8.6rem}
 .field input[type=number]{width:5.4rem}
+.field select.on{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
 .daybtns{display:flex;gap:.35rem;align-items:flex-end}
 .stats{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.45rem .75rem;min-width:7.4rem}
@@ -111,12 +112,9 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .daytab .kind{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:4px;padding:0 .25rem;margin-right:.4rem;color:var(--muted)}
 .daytab .kind.mocap{border-color:var(--shoot);color:var(--shoot)}
 /* priority colour code: dropdown and a bar down the row's left edge */
-select.cell.p-0{background:var(--accent);color:#fff;font-weight:700;border-radius:4px}
-select.cell.p-1{background:#d9a441;color:#1d1d1f;font-weight:700;border-radius:4px}
-select.cell.p-2{background:var(--info-bg);color:var(--muted);font-weight:700;border-radius:4px}
-#grid tr.prio0 td:first-child{box-shadow:inset 5px 0 0 var(--accent)}
-#grid tr.prio1 td:first-child{box-shadow:inset 5px 0 0 #d9a441}
-#grid tr.prio2 td:first-child{box-shadow:inset 5px 0 0 var(--line2)}
+select.cell.prio{font-weight:700;border-radius:4px}
+#grid tr.prio td:first-child{box-shadow:inset 5px 0 0 var(--prio)}
+.swatch{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.35rem;border:1px solid var(--line2)}
 .daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
 .timeline{margin-top:.8rem;position:relative;height:2.6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
@@ -297,6 +295,7 @@ table.plain input[type=checkbox]{width:auto}
     <div class="field"><label title="Scales every shoot time">Shoot buffer %</label><input type="number" id="shootPct" min="50" max="400" step="5"></div>
     <div class="field"><label>Min setup (min)</label><input type="number" id="minSetup" min="0" max="120" step="5"></div>
     <div class="field"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
+    <div class="field"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
       <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
       <button class="btn small" id="delDayBtn" title="Delete this day">Delete day</button>

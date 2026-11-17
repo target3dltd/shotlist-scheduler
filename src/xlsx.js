@@ -410,7 +410,8 @@ async function buildTracker(days,opt){
   const last=total+2; const rng=k=>`${L(k)}3:${L(k)}${last}`; let pri=1;
   const popts=priorityOptions(); const plist=popts.join(",").replace(/"/g,"");
   if(plist&&plist.length<=250) sl.dataValidations.add(rng("priority"),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${plist}"`]});
-  sl.addConditionalFormatting({ref:rng("priority"),rules:[[XC.accent,XC.white],["FFD9A441",XC.ink],[XC.stage,XC.muted]].slice(0,popts.length).map(([bg,fc],i)=>({type:"cellIs",operator:"equal",formulae:[`"${popts[i].replace(/"/g,"")}"`],style:st(bg,fc,1),priority:pri++}))});
+  const prules=popts.map(o=>{const hx=prioHex(o);if(!hx)return null;const argb="FF"+hx.slice(1).toUpperCase();return {type:"cellIs",operator:"equal",formulae:[`"${o.replace(/"/g,"")}"`],style:st(argb,inkOn(hx)==="#fff"?XC.white:XC.ink,1),priority:pri++}}).filter(Boolean);
+  if(prules.length) sl.addConditionalFormatting({ref:rng("priority"),rules:prules});
   for(const col of tcols.filter(y=>y.custom==="list")){const o=optList((S.tcols.find(x=>"c_"+x.id===col.k)||{}).options).join(",").replace(/"/g,"");if(o&&o.length<=250)sl.dataValidations.add(rng(col.k),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${o}"`]})}
   sl.addConditionalFormatting({ref:`A3:${colLetter(tcols.length)}${last}`,rules:[{type:"expression",formulae:[`N($${L("done")}3)=1`],style:st(XC.done),priority:pri++}]});
   ["done","body","face","glove"].forEach(k=>sl.addConditionalFormatting({ref:rng(k),rules:[{type:"expression",formulae:[`AND($${aL}3<>"",N(${L(k)}3)=0)`],style:st(XC.soft,XC.accent),priority:pri++}]}));

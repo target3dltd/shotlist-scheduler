@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.2.0";
+const VERSION = "2.3.0";
 const CHANGELOG = [
+  ["2.3.0","2026-11-17","Priority filter next to Show (one priority, a priority and higher, or not set; just for you). Priority colours can be set for every option in Settings > Columns, shared with the team, with readable text picked automatically; the .xlsx export uses the same colours."],
   ["2.2.0","2026-11-17","Your own columns: Settings > Columns adds text, long text, number, tick box or dropdown columns to every day for the whole team, reorders and deletes them (Undo restores the data), and can include any of them in shot names. Built-in columns can be renamed for the team. Priority is on every day, colour-coded in its dropdown and down the row's left edge, sorts highest first, and its options are editable. Day kinds are now called Mocap and Live Action. Import can create new columns from unmatched headings; exports carry your columns and renamed headings."],
   ["2.1.0","2026-11-17","Spreadsheet import and export. Import sheet brings in .xlsx or .csv (Google Sheets, Excel, Numbers, the Shotlist Builder or the Shotlist tracker): pick the sheet and header row, map each column, group retakes into take counts, and send them to a new day, one day per Shoot Day, the open day or a new project. Export .xlsx writes the Shotlist Builder tracker: Project tab with cast and crew, Shotlist with one row per take and live Take # and Shot ID formulas driven by an ID Settings tab, optional timecode and frame columns, a Schedule tab and Instructions. Drop a file anywhere to import it. Easier on the eyes: Settings > Display now has colour themes (warm paper, dim, high contrast light and dark, plus light and dark), a highlight colour, readable fonts (Atkinson Hyperlegible, Lexend, serif, rounded, mono), text weight, line and letter spacing, roomy rows, striped rows, reduce motion, and one-click presets. The ◐ button flips between your chosen light and dark themes. Safer updates: open copies show a 'new version' bar and save before refreshing, and test deploys use separate data so they can't touch the live schedule."],
   ["2.0.0","2026-11-17","Team edition and project settings. Runs on Netlify so the whole team edits one live schedule: every change saves as its own small edit and merges field by field, so people working at the same time don't overwrite each other; offline changes queue and send when you reconnect. Activity log and who's-online. Projects you can save, switch, copy and import, with project details, cast and crew in Settings. Capture (mocap / volcap) days with the Shotlist Builder columns and Shot ID builder, plus a DIT names panel that copies shot names with take numbers. Dark mode, text size, row spacing, 12/24h clock and team defaults in Settings. Paste a list of actions. Hyphens instead of dashes throughout. Day 4 - Mocap added."],
@@ -430,6 +431,7 @@ function visibleRows(C){
   const f=P.filters||{}; const hid=hidden(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
   let list=d.rows.filter(r=>{
     if(P.view==="todo"&&r.done) return false;
+    if(!prioFilterOk(r)) return false;
     return keys.every(k=>{
       const q=f[k].trim().toLowerCase(); const txt=filterText(r,k,C).toLowerCase();
       const m=q.match(/^([<>]=?)\s*(.+)$/);
@@ -462,7 +464,7 @@ function renderViewbar(shown){
   const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hidden().includes(k)).length;
   const sorted=!!(P.sort&&P.sort.key);
   $("#grid").classList.toggle("sorted",sorted);
-  if(!d||(!sorted&&!fcount&&P.view!=="todo")){vb.classList.remove("show");return}
+  if(!d||(!sorted&&!fcount&&P.view!=="todo"&&!P.prioFilter)){vb.classList.remove("show");return}
   vb.classList.add("show");
   vb.append(h("span",{},`Showing ${shown} of ${d.rows.length} rows`));
   if(sorted){
@@ -471,6 +473,7 @@ function renderViewbar(shown){
     vb.append(h("button",{class:"btn small",onclick:()=>{P.sort=null;savePrefs();renderHead();renderBody()}},"Clear sort"));
     vb.append(h("button",{class:"btn small",title:"Reorder the actual schedule to match this sort (filtered-out rows go to the end)",onclick:applySortAsOrder},"Make this the running order"));
   }
+  if(P.prioFilter){ const s=$("#prioFilter"); const lab=s&&s.selectedOptions[0]?s.selectedOptions[0].textContent:""; vb.append(h("span",{},"· priority: "+lab),h("button",{class:"btn small",onclick:()=>{P.prioFilter="";savePrefs();renderPrioFilter();renderBody()}},"Show all priorities")); }
   if(fcount) vb.append(h("button",{class:"btn small",onclick:()=>{P.filters={};savePrefs();renderHead();renderBody()}},`Clear ${fcount} filter${fcount>1?"s":""}`));
 }
 function applySortAsOrder(){
@@ -549,13 +552,48 @@ function flagCell(r,key){
   cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x[key]=cb.checked;refreshNames(r.id);commit()});
   return h("div",{class:"flagcell"},cb);
 }
-function prioClass(v){ const i=priorityOptions().indexOf(v); return i>=0&&i<3?" p-"+i:""; }
+/* priority colours: the team's choices from Settings > Columns, else red / amber / grey for the first three */
+const PRIO_DEFAULTS=["","#d9a441","#9aa3ab"];   // "" = the highlight colour
+function prioColor(v){
+  if(!v) return null;
+  const set=(cfg().priorityColors||{})[v];
+  if(set==="none") return null;
+  if(set) return set;
+  const i=priorityOptions().indexOf(v);
+  if(i===0) return "var(--accent)";
+  return i>0&&i<3?PRIO_DEFAULTS[i]:null;
+}
+function prioHex(v){ const c=prioColor(v); if(!c) return null; if(c.startsWith("var(")){const x=getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();return /^#/.test(x)?x:"#c2412d"} return c; }
+function inkOn(hex){ if(!hex||!/^#[0-9a-f]{6}$/i.test(hex)) return "#fff"; const n=parseInt(hex.slice(1),16); const r=n>>16,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?"#1d1d1f":"#fff"; }
+function paintPrio(sel,tr,v){
+  const col=prioColor(v);
+  if(sel){ if(col){sel.classList.add("prio");sel.style.background=col;sel.style.color=inkOn(prioHex(v))} else {sel.classList.remove("prio");sel.style.background="";sel.style.color=""} }
+  if(tr){ if(col){tr.classList.add("prio");tr.style.setProperty("--prio",col)} else {tr.classList.remove("prio");tr.style.removeProperty("--prio")} }
+}
+/* the Priority filter in the day controls (just for you): "" all, "=X" only X, ">=X" X and higher, "none" not set */
+function prioFilterOk(r){
+  const f=P.prioFilter||""; if(!f) return true;
+  if(r.type==="break") return false;
+  const opts=priorityOptions(), v=r.priority||"";
+  if(f==="none") return !v||!opts.includes(v);
+  if(f.startsWith(">=")){ const lim=opts.indexOf(f.slice(2)), i=opts.indexOf(v); return lim>=0&&i>=0&&i<=lim; }
+  if(f.startsWith("=")) return v===f.slice(1);
+  return true;
+}
+function renderPrioFilter(){
+  const s=$("#prioFilter"); if(!s) return; const opts=priorityOptions(); s.innerHTML="";
+  s.append(h("option",{value:""},"All priorities"));
+  opts.forEach((o,i)=>{ s.append(h("option",{value:"="+o},o+" only")); if(i>0) s.append(h("option",{value:">="+o},i===opts.length-1?"Any priority set":o+" and higher")); });
+  s.append(h("option",{value:"none"},"No priority set"));
+  if(P.prioFilter&&![...s.options].some(o=>o.value===P.prioFilter)) P.prioFilter="";
+  s.value=P.prioFilter||""; s.classList.toggle("on",!!P.prioFilter);
+}
 function listCell(r,key){
   const opts=[...((colMap()[key]||{}).options||[""])]; const cur=r[key]||""; if(cur&&!opts.includes(cur)) opts.push(cur);
-  const s=h("select",{class:"cell"+(key==="priority"?prioClass(cur):""),"data-k":key}); for(const o of opts) s.append(h("option",{value:o},o));
-  s.value=cur;
+  const s=h("select",{class:"cell","data-k":key}); for(const o of opts) s.append(h("option",{value:o},o));
+  s.value=cur; if(key==="priority") paintPrio(s,null,cur);
   s.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x[key]=s.value;
-    if(key==="priority"){s.className="cell"+prioClass(s.value);const tr=s.closest("tr");if(tr){tr.classList.remove("prio0","prio1","prio2");const pc=prioClass(s.value).trim();if(pc)tr.classList.add(pc.replace("p-","prio"))}}
+    if(key==="priority"){paintPrio(s,s.closest("tr"),s.value);renderTimeline(compute())}
     commit()});
   return s;
 }
@@ -654,7 +692,7 @@ function renderBody(){
       tr.append(td);
     }
     if(r.done) tr.classList.add("done");
-    { const pc=prioClass(r.priority).trim(); if(pc&&r.type!=="break") tr.classList.add(pc.replace("p-","prio")); }
+    if(r.type!=="break") paintPrio(null,tr,r.priority);
     tr.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"));tr.classList.add("dropbefore")});
     tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
     tb.append(tr);
@@ -743,7 +781,7 @@ function renderSettingsRow(){
   const d=D(); $("#dayControls").style.display=d?"":"none"; if(!d) return;
   const set=(id,v)=>{const el=$("#"+id);if(document.activeElement!==el)el.value=v??""};
   set("dayName",d.name); set("dayKind",d.kind||"schedule"); set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
-  set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all");
+  set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all"); renderPrioFilter();
   $("#projTitle").textContent=S.project.name||"Untitled project"; document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
 }
 function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); }
@@ -849,8 +887,24 @@ function renderSetTab(){
     t2.append(tb2); b.append(t2);
     b.append(h("div",{class:"toolbar",style:"margin-top:.5rem"},h("button",{class:"btn small primary",id:"addColBtn",onclick:()=>{const id=uid("k").replace(/[^a-z0-9]/gi,"");S.cols.push({id,label:"New column",type:"text",options:""});commit();renderAll();renderSetTab();const ins=$$("#setBody table.plain")[0];const last=ins&&$$("tbody tr",ins).pop();if(last){const i=$("input",last);i.focus();i.select()}}},"+ Add column")));
     b.append(h("h3",{},"Priority"));
-    const po=h("input",{value:S.cfg.priorityOptions||"HIGH,MID,LOW"}); po.addEventListener("change",()=>{S.cfg.priorityOptions=po.value;commit();renderAll()});
-    b.append(h("div",{class:"form"},h("label",{class:"wide"},"Priority options, highest first. The first three are colour-coded (highlight colour, amber, grey) on the row and in the dropdown, and Priority sorts by this order.",po)));
+    const po=h("input",{value:S.cfg.priorityOptions||"HIGH,MID,LOW"}); po.addEventListener("change",()=>{S.cfg.priorityOptions=po.value;commit();renderAll();renderSetTab()});
+    b.append(h("div",{class:"form"},h("label",{class:"wide"},"Priority options, highest first, separated by commas. Priority sorts and filters in this order.",po)));
+    const pt=h("table",{class:"plain",style:"margin-top:.6rem;max-width:34rem"}); pt.append(h("thead",{},h("tr",{},h("th",{},"Priority"),h("th",{},"Colour"),h("th",{},""),h("th",{},"Looks like"))));
+    const ptb=h("tbody",{});
+    priorityOptions().forEach(o=>{
+      const cur=(S.cfg.priorityColors||{})[o];
+      const hex=cur&&cur!=="none"?cur:(prioHex(o)||"#9aa3ab");
+      const pick=h("input",{type:"color",value:/^#[0-9a-f]{6}$/i.test(hex)?hex:"#9aa3ab",style:"width:3rem;height:2rem;padding:0;border:none;background:none"});
+      const sample=h("span",{class:"chip",style:"font-weight:700;padding:.15rem .6rem"},o);
+      const show=()=>{const c=prioColor(o);sample.style.background=c||"transparent";sample.style.color=c?inkOn(prioHex(o)):"var(--ink)"};
+      const setC=v=>{const m=Object.assign({},S.cfg.priorityColors||{});if(v==null)delete m[o];else m[o]=v;S.cfg.priorityColors=m;invalidateCols();show()};
+      pick.addEventListener("input",()=>{setC(pick.value)}); pick.addEventListener("change",()=>{commit();renderAll()});
+      const none=h("button",{class:"btn small",title:"No colour for this priority",onclick:()=>{setC("none");commit();renderAll()}},"No colour");
+      const reset=h("button",{class:"btn small",title:"Back to the default colour",onclick:()=>{setC(null);commit();renderAll();renderSetTab()}},"Default");
+      show();
+      ptb.append(h("tr",{},h("td",{},h("b",{},o)),h("td",{},pick),h("td",{style:"white-space:nowrap"},none,reset),h("td",{},sample)));
+    });
+    pt.append(ptb); b.append(pt,h("p",{class:"note"},"Colours are shared with the team. The default is the highlight colour for the first option, then amber and grey; anything after the third has no colour until you pick one."));
     b.append(h("h3",{},"Rename built-in columns"));
     const t3=h("table",{class:"plain"}); t3.append(h("thead",{},h("tr",{},h("th",{},"Column"),h("th",{},"Shown as"))));
     const tb3=h("tbody",{});
@@ -1144,6 +1198,7 @@ function bindDay(id,key,num){const el=$("#"+id);el.addEventListener("input",()=>
 bindDay("dayName","name");bindDay("dayKind","kind");bindDay("dayNo","dayNo",true);bindDay("shootDate","date");bindDay("callTime","call");bindDay("wrapTime","wrap");
 bindDay("setupPct","setupPct",true);bindDay("shootPct","shootPct",true);bindDay("minSetup","minSetup",true);
 $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();renderBody()});
+$("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});
 $("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
 $("#delDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Delete "+d.name+"?","Its shots go with it. Undo straight afterwards brings it all back.","Delete day")))return;const i=S.days.indexOf(d);S.days.splice(i,1);const nx=S.days[Math.max(0,i-1)];P.activeByProject[pid()]=nx&&nx.id;commit();renderAll();toast("Deleted "+d.name+" - Undo to restore")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}
