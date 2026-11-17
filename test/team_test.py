@@ -18,7 +18,7 @@ with sync_playwright() as pw:
     A=mk("Alice"); Bp=mk("Bob")
     print("days:", A.evaluate("()=>S.days.map(d=>d.name+' ['+d.kind+'] '+d.rows.length)"))
     # both open Day 3 - LV
-    for pg in (A,Bp): pg.click("#dayTabs .daytab >> nth=2"); pg.wait_for_timeout(200)
+    for pg in (A,Bp): pg.click("#dayTabs .daytab:has-text('Day 3 - LV')"); pg.wait_for_timeout(200)
     # 1. different fields on same row + another row, at the same time
     A.evaluate("()=>{const r=D().rows[0];r.setup=20;commit()}")
     Bp.evaluate("()=>{const r=D().rows[0];r.director='Bob note';D().rows[1].shoot=25;commit()}")
@@ -51,7 +51,7 @@ with sync_playwright() as pw:
     Bp.evaluate("()=>fetch('/__offline?on=0')"); time.sleep(8); Bp.evaluate("()=>syncNow()"); time.sleep(3)
     lv=json.loads(doc(Bp))["days"][2]["rows"]; print("Bob sees offline edit:", lv[0]["director"], "| A pending now:", A.evaluate("()=>pending.length"), "| A status:", A.inner_text("#status"))
     # 6. Day 4 capture: paste actions, DIT next take
-    A.click("#dayTabs .daytab >> nth=3"); A.wait_for_timeout(300)
+    A.click("#dayTabs .daytab:has-text('Day 4')"); A.wait_for_timeout(300)
     A.click("#pasteBtn"); A.fill("#pasteText","walk_cycle\nsit_down\npick_up_box"); A.click("#pasteGo"); A.wait_for_timeout(300)
     A.evaluate("()=>{D().rows[0].performers='Victoria';D().rows[0].perfCount=1;D().rows[0].body=true;commit();renderBody()}")
     A.click("#ditBtn"); A.wait_for_timeout(200)
@@ -62,7 +62,7 @@ with sync_playwright() as pw:
     A.screenshot(path="src_dit.png")
     A.click("#ditModal [data-close]")
     # Day 1 continuing takes: shot 39 second row should be T7 next take -> T8
-    A.click("#dayTabs .daytab >> nth=0"); A.wait_for_timeout(300)
+    A.click("#dayTabs .daytab:has-text('Day 1')"); A.wait_for_timeout(300)
     print("Day1 names:", A.evaluate("()=>D().rows.map(r=>shotName(r,D(),nextTake(r,D())))")[:4])
     # 7. project name propagates
     A.evaluate("()=>{S.project.name='This Is Me (team)';commit();renderAll()}"); time.sleep(6); Bp.evaluate("()=>syncNow()"); time.sleep(2)

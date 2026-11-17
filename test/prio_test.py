@@ -9,7 +9,7 @@ with sync_playwright() as pw:
         pg.goto(URL); pg.wait_for_selector("#joinModal.open"); pg.fill("#joinName",name); pg.click("#joinGo")
         pg.wait_for_function("()=>typeof S!=='undefined'&&S&&S.days.length>0"); pg.evaluate("()=>{P.poll=2}"); return pg
     A=mk("Alice"); B=mk("Bob")
-    for pg in (A,B): pg.click("#dayTabs .daytab >> nth=2"); pg.wait_for_timeout(200)
+    for pg in (A,B): pg.click("#dayTabs .daytab:has-text('Day 3 - LV')"); pg.wait_for_timeout(200)
     A.evaluate("()=>{const p=['HIGH','MID','LOW','','HIGH','MID'];D().rows.forEach((r,i)=>{if(r.type!=='break')r.priority=p[i%6]});commit();renderAll()}")
     print("filter options:", A.evaluate("()=>$$('#prioFilter option').map(o=>o.textContent)"))
     counts={}
