@@ -145,6 +145,10 @@ body.calm #grid tr.flash td{box-shadow:inset 3px 0 0 var(--warn)}
 #grid th .thl{display:flex;align-items:center;gap:.3em;min-height:1.2em;overflow:hidden}
 #grid th.sortable .thl{cursor:pointer;user-select:none}
 #grid th.sortable .thl:hover{color:var(--ink)}
+#grid th .thl[draggable="true"]{cursor:grab}
+#grid th.coldrag{opacity:.45}
+#grid th.coldrop-l{box-shadow:inset 3px 0 0 var(--accent)}
+#grid th.coldrop-r{box-shadow:inset -3px 0 0 var(--accent)}
 #grid th .arrow{font-size:.8em;color:var(--accent)}
 #grid th .grip{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:7}
 #grid th .grip:hover,#grid th .grip.active{background:linear-gradient(90deg,transparent 3px,var(--focus) 3px,var(--focus) 5px,transparent 5px)}

@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.4.0";
+const VERSION = "2.5.0";
 const CHANGELOG = [
+  ["2.5.0","2026-11-17","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
   ["2.4.0","2026-11-17","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
   ["2.3.0","2026-11-17","Priority filter next to Show (one priority, a priority and higher, or not set; just for you). Priority colours can be set for every option in Settings > Columns, shared with the team, with readable text picked automatically; the .xlsx export uses the same colours."],
   ["2.2.0","2026-11-17","Your own columns: Settings > Columns adds text, long text, number, tick box or dropdown columns to every day for the whole team, reorders and deletes them (Undo restores the data), and can include any of them in shot names. Built-in columns can be renamed for the team. Priority is on every day, colour-coded in its dropdown and down the row's left edge, sorts highest first, and its options are editable. Day kinds are now called Mocap and Live Action. Import can create new columns from unmatched headings; exports carry your columns and renamed headings."],
@@ -103,7 +104,29 @@ function cols(){
     if(c.key==="priority") x.options=["",...priorityOptions()];
     out.push(x);
   }
-  return (_cols=out);
+  return (_cols=applyColOrder(out));
+}
+/* your own column order (dragged headers). The ⠿ column stays first and the row buttons last;
+   columns added later slot in after their usual neighbour */
+function applyColOrder(list){
+  const order=(P.colOrder||[]).filter(k=>list.some(c=>c.key===k));
+  if(!order.length) return list;
+  const first=list.filter(c=>c.key==="handle"), last=list.filter(c=>c.key==="actions");
+  const mid=list.filter(c=>c.key!=="handle"&&c.key!=="actions");
+  const byKey=Object.fromEntries(mid.map(c=>[c.key,c]));
+  const res=order.filter(k=>byKey[k]).map(k=>byKey[k]);
+  mid.forEach((c,i)=>{ if(order.includes(c.key)) return;
+    let j=-1; for(let p=i-1;p>=0;p--){ j=res.indexOf(mid[p]); if(j>=0) break; }
+    res.splice(j+1,0,c); });
+  return [...first,...res,...last];
+}
+function moveColumn(key,beforeKey){
+  const cur=cols().filter(c=>c.key!=="handle"&&c.key!=="actions").map(c=>c.key);
+  const from=cur.indexOf(key); if(from<0||key===beforeKey) return;
+  cur.splice(from,1);
+  const to=beforeKey==null?cur.length:cur.indexOf(beforeKey);
+  cur.splice(to<0?cur.length:to,0,key);
+  P.colOrder=cur; savePrefs(); invalidateCols(); renderHead(); renderBody();
 }
 function colMap(){ return Object.fromEntries(cols().map(c=>[c.key,c])); }
 function invalidateCols(){ _cols=null; }
@@ -507,7 +530,17 @@ function renderHead(){
     const hc=hid.includes(c.key)?" hide-col":"";
     const sortable=!NO_SORT.includes(c.key);
     const th=h("th",{class:(sortable?"sortable":"")+hc,"data-col":c.key});
-    const lab=h("div",{class:"thl",title:sortable?"Click to sort":""},c.label);
+    const movable=c.key!=="handle"&&c.key!=="actions";
+    const lab=h("div",{class:"thl",title:(sortable?"Click to sort":"")+(movable?" · drag to move":""),draggable:movable?"true":null},c.label);
+    if(movable){
+      lab.addEventListener("dragstart",e=>{colDrag=c.key;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","col:"+c.key);th.classList.add("coldrag")});
+      lab.addEventListener("dragend",()=>{colDrag=null;$$("#grid th.coldrop-l,#grid th.coldrop-r,#grid th.coldrag").forEach(x=>x.classList.remove("coldrop-l","coldrop-r","coldrag"))});
+    }
+    if(c.key!=="handle"){
+      th.addEventListener("dragover",e=>{if(!colDrag)return;e.preventDefault();const r=th.getBoundingClientRect();const right=c.key==="actions"?false:(e.clientX>r.left+r.width/2);$$("#grid th.coldrop-l,#grid th.coldrop-r").forEach(x=>x.classList.remove("coldrop-l","coldrop-r"));th.classList.add(right?"coldrop-r":"coldrop-l");th.dataset.side=right?"r":"l"});
+      th.addEventListener("drop",e=>{if(!colDrag)return;e.preventDefault();const key=colDrag;colDrag=null;const list=cols().filter(x=>x.key!=="handle"&&x.key!=="actions").map(x=>x.key);
+        let before=c.key==="actions"?null:(th.dataset.side==="r"?(list[list.indexOf(c.key)+1]??null):c.key);if(before===key)return;moveColumn(key,before)});
+    }
     if(P.sort&&P.sort.key===c.key) lab.append(h("span",{class:"arrow"},P.sort.dir==="asc"?"▲":"▼"));
     if(sortable) lab.addEventListener("click",()=>setSort(c.key));
     th.append(lab);
@@ -717,7 +750,7 @@ function renderBody(){
   });
   recalc();
 }
-let dragId=null;
+let dragId=null, colDrag=null;
 function recalc(){
   const d=D(); if(!d) return; const C=compute(); const wrapT=toMin(d.wrap||"18:00");
   for(const tr of $$("#grid tbody tr[data-id]")){
@@ -783,7 +816,9 @@ function renderCols(){
     cb.addEventListener("change",()=>{const H=hidden();if(cb.checked)P.hiddenBy[kind()]=H.filter(k=>k!==c.key);else H.push(c.key);savePrefs();renderHead();renderBody()});
     p.append(h("label",{},cb,c.label));
   }
-  p.append(h("button",{class:"btn small",style:"margin-top:.4rem",onclick:()=>{P.hiddenBy[kind()]=clone(HIDDEN_DEFAULT[kind()]||[]);savePrefs();renderCols();renderHead();renderBody()}},"Reset columns"));
+  p.append(h("div",{class:"note",style:"margin-top:.4rem"},"Drag a column heading to move it. Your order is used on every day."));
+  p.append(h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{P.hiddenBy[kind()]=clone(HIDDEN_DEFAULT[kind()]||[]);savePrefs();renderCols();renderHead();renderBody()}},"Reset shown columns"),
+    h("button",{class:"btn small",onclick:()=>{P.colOrder=[];savePrefs();invalidateCols();renderCols();renderHead();renderBody();toast("Columns back in their usual order")}},"Reset column order")));
 }
 function renderDayTabs(){
   const bar=$("#dayTabs"); bar.innerHTML="";
@@ -994,7 +1029,7 @@ function renderSetTab(){
     sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
     tog("Stripe alternate rows (easier to follow a row across)","zebra");
     tog("Reduce motion (no flashing or fades)","calm");
-    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{}});savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
+    b.append(f,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[]});invalidateCols();savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
   }
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
