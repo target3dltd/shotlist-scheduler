@@ -337,11 +337,14 @@ body.nosteps .mins.timing input{width:4.5em}
 }
 @media print{
   @page{size:A4 landscape;margin:8mm}
-  html{--ui:9.5px;--tbl:9.5px}
+  /* !important beats the on-screen Display settings, which are set inline */
+  html{--ui:8.5px!important;--tbl:8.6px!important;--lh:1.2!important;--ls:0em!important;--fw:400!important}
+  #grid td,#grid th{line-height:1.2}
+  .stats .stat{padding:.2rem .5rem;min-width:auto} .stat .v{font-size:1.05rem}
   html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
-  .noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
+  .toast,.noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
   .tablewrap{border:none;overflow:visible;max-height:none}
   #grid tr.filters,.grip,.viewbar{display:none!important}
   #grid th{position:static}
@@ -354,7 +357,7 @@ body.nosteps .mins.timing input{width:4.5em}
   #grid th{font-size:.78em;letter-spacing:0;hyphens:auto;overflow-wrap:normal;word-break:normal;padding:.25em .3em}
   #grid td{padding:.25em .3em}
   #grid tbody textarea.cell,#grid tbody input.cell,#grid tbody .mins input,#grid tbody select.cell{display:none!important}
-  #grid .pv{display:block!important;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.3}
+  #grid .pv{display:block!important;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2}
   #grid .pv.shotno{font-weight:700}
   tr{break-inside:auto}
   #grid td{vertical-align:top}
@@ -653,7 +656,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <ul>
     <li>On your own, everything saves in this browser automatically. For a backup, or to move a project, use Settings → Projects → <b>Export project file</b>.</li>
     <li><b>Export CSV</b> gives one row per shot for every day, with Day, Kind and Date columns, calculated times, takes and the last take's name. It opens in Numbers, Excel or Google Sheets, and most shotlist apps can import it.</li>
-    <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Columns are squeezed to fit the page width, with the notes columns giving way first; your on-screen widths aren't changed. Hide columns you don't need on paper with the <b>Columns</b> menu first for roomier notes. Dark mode prints light.</li>
+    <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Text prints small (about 6.5pt, tight line spacing) whatever your on-screen text size, and columns are squeezed to fit the page width, with the notes columns giving way first; your on-screen widths aren't changed. Hide columns you don't need on paper with the <b>Columns</b> menu first for roomier notes. Dark mode prints light.</li>
   </ul>
 
   <h3>Updates</h3>
@@ -688,8 +691,9 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.7.0";
+const VERSION = "2.7.1";
 const CHANGELOG = [
+  ["2.7.1","2026-11-17","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
   ["2.7.0","2026-11-17","Spreadsheet round trip: an exported .xlsx imported back restores the days exactly (name, Mocap / Live Action, date, times, script, refs, your own columns and their types), while still taking any edits made in the sheet. Before, a re-imported Live Action day came back as a Mocap day with a different set of columns. Also fixed: exporting failed when a project had a dropdown column, and importing into a new project now gives it its own new columns instead of adding them to the current project."],
   ["2.6.2","2026-11-17","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
   ["2.6.1","2026-11-17","Print / PDF squeezes the columns to fit an A4 landscape page (notes columns give way first; your on-screen widths are untouched). The − / + buttons on Setup and Shoot can be switched off in Settings > Display if you prefer to type."],
@@ -1416,19 +1420,22 @@ function compute(d){
 /* ===================== grid rendering ===================== */
 function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k])return DEFAULT_WIDTHS[k];const c=colMap()[k]||{};return c.type==="note"?200:c.type==="flag"?70:c.type==="number"?80:130}
 // print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
-const PRINT_W={handle:20,shot:36,priority:50,shotId:112,duration:34,setup:36,start:48,shoot:36,end:60,orig:46,takes:34,perfCount:28,body:28,face:28,glove:28,hero:36,safety:36,refs:96,actions:0};
+const PRINT_W={handle:18,shot:32,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
 function printWidths(){
   if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
   const w={}, flex=[];
-  for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=28; else if(c.type==="number") w[c.key]=34; else flex.push(c.key); }
+  for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=24; else if(c.type==="number") w[c.key]=30; else flex.push(c.key); }
   // text and notes columns share what's left, in proportion to their on-screen widths
   const fixed=Object.values(w).reduce((a,b)=>a+b,0); let room=PAGE-fixed;
   // weight by how much text each column holds on this day, so empty columns shrink and busy ones get the room
-  const rows=(D()||{rows:[]}).rows, MIN=40;
-  const wt={}; flex.forEach(k=>{const n=rows.reduce((a,r)=>a+String(r[k]??"").length,0);wt[k]=n?Math.sqrt(n)+6:0});
+  // row height is set by the wordiest cell, so size each column by its long entries (90th percentile), not its total;
+  // empty columns shrink to a sliver
+  const rows=(D()||{rows:[]}).rows.filter(r=>!r.cut), MIN=36, EMPTY=22;
+  const wt={}; flex.forEach(k=>{const L=rows.map(r=>String(r[k]??"").length).filter(n=>n>0).sort((a,b)=>a-b);wt[k]=L.length?Math.sqrt(L[Math.floor(L.length*0.9)]||L[L.length-1])+2:0});
+  const base=k=>wt[k]?MIN:EMPTY, floor=flex.reduce((a,k)=>a+base(k),0);
   const tw=flex.reduce((a,k)=>a+wt[k],0);
-  if(flex.length&&room>=flex.length*MIN){ const spare=room-flex.length*MIN; flex.forEach(k=>{w[k]=MIN+(tw?Math.floor(spare*wt[k]/tw):Math.floor(spare/flex.length))}); }
-  else { flex.forEach(k=>w[k]=MIN); const f=PAGE/(fixed+flex.length*MIN); for(const k in w) w[k]=Math.floor(w[k]*f); }
+  if(flex.length&&room>=floor){ const spare=room-floor; flex.forEach(k=>{w[k]=base(k)+(tw?Math.floor(spare*wt[k]/tw):Math.floor(spare/flex.length))}); }
+  else { flex.forEach(k=>w[k]=base(k)); const f=PAGE/(fixed+floor); for(const k in w) w[k]=Math.floor(w[k]*f); }
   let total=0; for(const c of cols()){const col=$(`#cols col[data-col="${c.key}"]`);if(!col)continue;const v=(hid.includes(c.key)||c.key==="actions")?0:w[c.key]||0;col.style.width=v+"px";total+=v}
   $("#grid").style.width=total+"px";
 }

@@ -337,11 +337,14 @@ body.nosteps .mins.timing input{width:4.5em}
 }
 @media print{
   @page{size:A4 landscape;margin:8mm}
-  html{--ui:9.5px;--tbl:9.5px}
+  /* !important beats the on-screen Display settings, which are set inline */
+  html{--ui:8.5px!important;--tbl:8.6px!important;--lh:1.2!important;--ls:0em!important;--fw:400!important}
+  #grid td,#grid th{line-height:1.2}
+  .stats .stat{padding:.2rem .5rem;min-width:auto} .stat .v{font-size:1.05rem}
   html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
-  .noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
+  .toast,.noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
   .tablewrap{border:none;overflow:visible;max-height:none}
   #grid tr.filters,.grip,.viewbar{display:none!important}
   #grid th{position:static}
@@ -354,7 +357,7 @@ body.nosteps .mins.timing input{width:4.5em}
   #grid th{font-size:.78em;letter-spacing:0;hyphens:auto;overflow-wrap:normal;word-break:normal;padding:.25em .3em}
   #grid td{padding:.25em .3em}
   #grid tbody textarea.cell,#grid tbody input.cell,#grid tbody .mins input,#grid tbody select.cell{display:none!important}
-  #grid .pv{display:block!important;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.3}
+  #grid .pv{display:block!important;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2}
   #grid .pv.shotno{font-weight:700}
   tr{break-inside:auto}
   #grid td{vertical-align:top}

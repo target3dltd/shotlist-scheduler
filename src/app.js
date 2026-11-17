@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.7.0";
+const VERSION = "2.7.1";
 const CHANGELOG = [
+  ["2.7.1","2026-11-17","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
   ["2.7.0","2026-11-17","Spreadsheet round trip: an exported .xlsx imported back restores the days exactly (name, Mocap / Live Action, date, times, script, refs, your own columns and their types), while still taking any edits made in the sheet. Before, a re-imported Live Action day came back as a Mocap day with a different set of columns. Also fixed: exporting failed when a project had a dropdown column, and importing into a new project now gives it its own new columns instead of adding them to the current project."],
   ["2.6.2","2026-11-17","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
   ["2.6.1","2026-11-17","Print / PDF squeezes the columns to fit an A4 landscape page (notes columns give way first; your on-screen widths are untouched). The − / + buttons on Setup and Shoot can be switched off in Settings > Display if you prefer to type."],
@@ -457,19 +458,22 @@ function compute(d){
 /* ===================== grid rendering ===================== */
 function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k])return DEFAULT_WIDTHS[k];const c=colMap()[k]||{};return c.type==="note"?200:c.type==="flag"?70:c.type==="number"?80:130}
 // print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
-const PRINT_W={handle:20,shot:36,priority:50,shotId:112,duration:34,setup:36,start:48,shoot:36,end:60,orig:46,takes:34,perfCount:28,body:28,face:28,glove:28,hero:36,safety:36,refs:96,actions:0};
+const PRINT_W={handle:18,shot:32,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
 function printWidths(){
   if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
   const w={}, flex=[];
-  for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=28; else if(c.type==="number") w[c.key]=34; else flex.push(c.key); }
+  for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=24; else if(c.type==="number") w[c.key]=30; else flex.push(c.key); }
   // text and notes columns share what's left, in proportion to their on-screen widths
   const fixed=Object.values(w).reduce((a,b)=>a+b,0); let room=PAGE-fixed;
   // weight by how much text each column holds on this day, so empty columns shrink and busy ones get the room
-  const rows=(D()||{rows:[]}).rows, MIN=40;
-  const wt={}; flex.forEach(k=>{const n=rows.reduce((a,r)=>a+String(r[k]??"").length,0);wt[k]=n?Math.sqrt(n)+6:0});
+  // row height is set by the wordiest cell, so size each column by its long entries (90th percentile), not its total;
+  // empty columns shrink to a sliver
+  const rows=(D()||{rows:[]}).rows.filter(r=>!r.cut), MIN=36, EMPTY=22;
+  const wt={}; flex.forEach(k=>{const L=rows.map(r=>String(r[k]??"").length).filter(n=>n>0).sort((a,b)=>a-b);wt[k]=L.length?Math.sqrt(L[Math.floor(L.length*0.9)]||L[L.length-1])+2:0});
+  const base=k=>wt[k]?MIN:EMPTY, floor=flex.reduce((a,k)=>a+base(k),0);
   const tw=flex.reduce((a,k)=>a+wt[k],0);
-  if(flex.length&&room>=flex.length*MIN){ const spare=room-flex.length*MIN; flex.forEach(k=>{w[k]=MIN+(tw?Math.floor(spare*wt[k]/tw):Math.floor(spare/flex.length))}); }
-  else { flex.forEach(k=>w[k]=MIN); const f=PAGE/(fixed+flex.length*MIN); for(const k in w) w[k]=Math.floor(w[k]*f); }
+  if(flex.length&&room>=floor){ const spare=room-floor; flex.forEach(k=>{w[k]=base(k)+(tw?Math.floor(spare*wt[k]/tw):Math.floor(spare/flex.length))}); }
+  else { flex.forEach(k=>w[k]=base(k)); const f=PAGE/(fixed+floor); for(const k in w) w[k]=Math.floor(w[k]*f); }
   let total=0; for(const c of cols()){const col=$(`#cols col[data-col="${c.key}"]`);if(!col)continue;const v=(hid.includes(c.key)||c.key==="actions")?0:w[c.key]||0;col.style.width=v+"px";total+=v}
   $("#grid").style.width=total+"px";
 }
