@@ -17,7 +17,7 @@
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
@@ -31,7 +31,7 @@ const ID_PARTS_DEFAULT = [
 const CFG_DEFAULTS = { stepMin:5, newSetup:15, newShoot:15, breakLabel:"Lunch", breakMin:45,
   newCall:"09:00", newWrap:"18:00", newSetupPct:100, newShootPct:100, newMinSetup:0,
   colLabels:{}, priorityOptions:"HIGH,MID,LOW", priorityColors:{},
-  idParts: ID_PARTS_DEFAULT, idSep:"_", idSpaces:"_", shotPad:3, takePad:1, shotSource:"field" };
+  idParts: ID_PARTS_DEFAULT, idSep:"_", idSpaces:"_", shotPad:3, takePad:1, shotSource:"field", gateAmber:10, gateRed:30 };
 const SEED_STAMP = "0000000000000-seed";
 
 function pad13(n){ return String(Math.max(0, Math.floor(n))).padStart(13, "0"); }

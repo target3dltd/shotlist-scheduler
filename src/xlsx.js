@@ -241,7 +241,8 @@ function restoreDays(recs,recorded,colRemap){
     d.id=uid("d"); d.archived=null; d.rows=[];
     for(const sr of ad.rows||[]){
       if(sr.type==="break"){ d.rows.push(Object.assign(remapKeys(sr),{id:uid("r")})); continue; }
-      const got=byRid.get(sr.id); if(!got) continue;   // deleted from the sheet
+      const got=byRid.get(sr.id);
+      if(!got){ if(sr.cut) d.rows.push(Object.assign({},ROW_BLANK,remapKeys(sr),{id:uid("r")})); continue; }   // cut shots aren't in the sheet; anything else missing was deleted there
       byRid.delete(sr.id);
       const row=Object.assign({},ROW_BLANK,remapKeys(sr),{id:uid("r")});
       const f=got[0].f;
@@ -418,7 +419,7 @@ async function buildTracker(days,opt){
   for(const d of days){
     const C=compute(d);
     for(const r of d.rows){
-      if(r.type==="break") continue;
+      if(r.type==="break"||r.cut) continue;   // cut shots stay out of the tracker; the App data tab keeps them
       const base=takeBase(r,d), n=Math.max(1,Number(r.takes)||0);
       for(let t=1;t<=n;t++) data.push({d,r,take:base+t,logged:t<=(Number(r.takes)||0),start:C.rows[r.id].start});
     }

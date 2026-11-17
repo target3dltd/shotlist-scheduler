@@ -129,6 +129,22 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .warnings{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap}
 .pill{font-size:.92rem;border-radius:999px;padding:.2rem .75rem;background:var(--accent-soft);color:var(--bad)}
 .pill.info{background:var(--info-bg);color:var(--info-ink)}
+.stat .v.warn{color:var(--warn)}
+.stat.live{border-width:2px;border-color:var(--line2)}
+.timeline .nowline{position:absolute;top:0;height:1.7rem;width:2px;background:var(--focus,#2f6fb0);box-shadow:0 0 0 1px var(--panel)}
+/* recovery plan: cut suggestions and wins, coloured by gate */
+.plan{margin-top:.6rem;border:1px solid var(--line);border-left:5px solid var(--ok);border-radius:8px;background:var(--panel)}
+.plan:empty{display:none}
+.plan.gate-slight{border-left-color:var(--line2)} .plan.gate-amber{border-left-color:var(--warn)} .plan.gate-red{border-left-color:var(--bad)}
+.planhead{display:flex;gap:.8rem;align-items:baseline;width:100%;background:none;border:none;padding:.5rem .8rem;cursor:pointer;text-align:left;color:var(--ink);flex-wrap:wrap}
+.planhead span:last-child{margin-left:auto}
+.planbody{padding:0 .8rem .6rem}
+.planh{font-weight:600;margin:.5rem 0 .25rem}
+.planbody ul{margin:0;padding-left:1.1rem} .planbody li{margin:.2rem 0}
+.planbody li .btn{margin-left:.5rem;padding:.1rem .5rem}
+#grid tr.cut td{opacity:.5}
+#grid tr.cut td[data-col=shot],#grid tr.cut td[data-col=shotId]{text-decoration:line-through}
+#grid tr.cut td[data-col=actions]{opacity:1}
 .daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
 .daytab.on{background:var(--band);font-weight:600;border-color:var(--band-line)}
 .daytab.arch{background:transparent;border-style:dashed;color:var(--muted);margin-left:auto}
@@ -344,6 +360,7 @@ body.nosteps .mins.timing input{width:4.5em}
   html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
+  #grid tr.cut{display:none}
   .toast,.noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
   .tablewrap{border:none;overflow:visible;max-height:none}
   #grid tr.filters,.grip,.viewbar{display:none!important}
@@ -413,6 +430,7 @@ body.nosteps .mins.timing input{width:4.5em}
   </div>
   <div class="stats" id="stats"></div>
   <div class="warnings" id="warnings"></div>
+  <div class="plan noprint" id="plan"></div>
   <div class="timeline noprint" id="timeline"></div>
   <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
 </header>
@@ -571,6 +589,16 @@ body.nosteps .mins.timing input{width:4.5em}
     <li>Undo / Redo: the buttons or Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. Undo only reverses <i>your</i> changes. A teammate's edits made in the meantime stay.</li>
   </ul>
 
+  <h3>On the day: ahead / behind and the recovery plan</h3>
+  <ul>
+    <li><b>Running card</b>: on the day itself (the day's Shoot date is today) a card shows how far ahead (<b>-</b>, green) or behind (<b>+</b>) you are. It uses the time each shot was ticked as shot, against when the schedule had it finishing. If the shot you're on runs past its planned finish, the delta keeps growing until you tick it. Hover the card to see what it's based on. The card also shows the projected wrap, and a blue line marks now on the timeline. It updates every 30 seconds.</li>
+    <li>Tick shots as they finish, so the delta is accurate. Shots ticked before this version, or on another day, have no time recorded, so the delta falls back to the clock.</li>
+    <li><b>Recovery plan</b> (under the summary cards) appears when the projected wrap is past target, or there are wins or cut shots. Its colour shows the gate: green on target, grey slightly over, <b>amber</b> and <b>red</b> past the gates you set in Settings &gt; Team defaults (10 and 30 minutes over target wrap to start with). Before the day, it works from the planned wrap.</li>
+    <li><b>Shots to consider cutting</b> are ranked by the minutes they take (setup plus shooting, with buffers) against their priority and screen duration: low priority, long setups and short screen time go first. The list stops once it covers the time you need. Top priority shots only appear as a last resort. The shot you're on is never suggested.</li>
+    <li><b>Cut</b> takes a shot out of the timings without deleting it: the row greys out, it's left off the DIT names, the tracker .xlsx and print, and the CSV marks it Cut. <b>Restore</b> (in the row or the plan) puts it back, and the plan says when a cut shot would fit in the time you have in hand. Undo works too.</li>
+    <li><b>Possible wins</b> spot a shot that goes back to a location you've already set up earlier. <b>Move it</b> puts it straight after that shot and drops its setup to the day's minimum.</li>
+  </ul>
+
   <h3>Columns and priority</h3>
   <ul>
     <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Text cells wrap to show everything you type; Enter moves on rather than adding a line (long text keeps its line breaks). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>
@@ -691,8 +719,9 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.7.1";
+const VERSION = "2.8.0";
 const CHANGELOG = [
+  ["2.8.0","2026-11-17","Running delta: on the shoot day a Running card shows how far ahead (-) or behind (+) you are, from when shots were ticked off and the time now, with the projected wrap and a now line on the timeline. Recovery plan panel with amber and red gates (set in Settings > Team defaults): suggests shots to cut, ranked by setup and shooting time against priority and screen time, and wins such as moving a shot next to others at the same location to skip a setup. Cut takes a shot out of the timings without deleting it, and Restore brings it back."],
   ["2.7.1","2026-11-17","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
   ["2.7.0","2026-11-17","Spreadsheet round trip: an exported .xlsx imported back restores the days exactly (name, Mocap / Live Action, date, times, script, refs, your own columns and their types), while still taking any edits made in the sheet. Before, a re-imported Live Action day came back as a Mocap day with a different set of columns. Also fixed: exporting failed when a project had a dropdown column, and importing into a new project now gives it its own new columns instead of adding them to the current project."],
   ["2.6.2","2026-11-17","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
@@ -732,7 +761,7 @@ const SEED = null;
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
@@ -746,7 +775,7 @@ const ID_PARTS_DEFAULT = [
 const CFG_DEFAULTS = { stepMin:5, newSetup:15, newShoot:15, breakLabel:"Lunch", breakMin:45,
   newCall:"09:00", newWrap:"18:00", newSetupPct:100, newShootPct:100, newMinSetup:0,
   colLabels:{}, priorityOptions:"HIGH,MID,LOW", priorityColors:{},
-  idParts: ID_PARTS_DEFAULT, idSep:"_", idSpaces:"_", shotPad:3, takePad:1, shotSource:"field" };
+  idParts: ID_PARTS_DEFAULT, idSep:"_", idSpaces:"_", shotPad:3, takePad:1, shotSource:"field", gateAmber:10, gateRed:30 };
 const SEED_STAMP = "0000000000000-seed";
 
 function pad13(n){ return String(Math.max(0, Math.floor(n))).padStart(13, "0"); }
@@ -1410,9 +1439,11 @@ function nextTake(r,d){ return lastTake(r,d)+1; }
 /* ===================== schedule maths ===================== */
 function effSetup(r,d){ d=d||D(); if(r.type==="break") return 0; const b=Math.max(Number(r.setup)||0, Number(d.minSetup)||0); return b*(Number(d.setupPct)||100)/100; }
 function effShoot(r,d){ d=d||D(); if(r.type==="break") return Number(r.shoot)||0; return (Number(r.shoot)||0)*(Number(d.shootPct)||100)/100; }
+// target wrap in minutes from the call day's midnight: a wrap earlier than the call is the next morning
+function wrapMin(d){const w=toMin(d.wrap||"18:00"),c=toMin(d.call||"09:00");return w<c?w+1440:w}
 function compute(d){
   d=d||D(); let t=toMin(d.call||"09:00"); const out={}; let setupT=0, shootT=0, breakT=0;
-  for(const r of d.rows){ const su=effSetup(r,d), sh=effShoot(r,d); const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
+  for(const r of d.rows){ const su=r.cut?0:effSetup(r,d), sh=r.cut?0:effShoot(r,d); const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
     if(r.type==="break") breakT+=sh; else {setupT+=su; shootT+=sh;} t=end; }
   return {rows:out, wrap:t, setupT, shootT, breakT};
 }
@@ -1725,7 +1756,7 @@ function renderBody(){
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(!isBreak){const cb=h("input",{type:"checkbox",title:"Mark as shot","data-k":"done"});cb.checked=!!r.done;
-          cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute());renderDayTabs()});
+          cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;x.doneAt=cb.checked?dayClock(D()):null;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute());renderDayTabs()});
           hd.append(h("label",{class:"chk"},cb,"Shot"))}
         td.append(hd);
       }
@@ -1743,6 +1774,7 @@ function renderBody(){
         const b=h("div",{class:"rowbtns"});
         b.append(h("button",{class:"mv",title:"Move up",onclick:()=>move(r.id,-1)},"↑"),h("button",{class:"mv",title:"Move down",onclick:()=>move(r.id,1)},"↓"),
           h("button",{title:"Duplicate row",onclick:()=>dup(r.id)},"Dup"),h("button",{title:"Insert a break / move below",onclick:()=>insertBreakAfter(r.id)},"+Brk"),
+          ...(isBreak?[]:[h("button",{class:"cutbtn",title:r.cut?"Put this shot back in the schedule":"Cut this shot from the schedule (nothing is deleted)",onclick:()=>setCut([r.id],!r.cut)},r.cut?"Restore":"Cut")]),
           h("button",{title:"Delete row",onclick:()=>del(r.id)},"Del"));
         td.append(b);
       }
@@ -1757,6 +1789,7 @@ function renderBody(){
       tr.append(td);
     }
     if(r.done) tr.classList.add("done");
+    if(r.cut){ tr.classList.add("cut"); tr.title="Cut from the schedule: it takes no time. Restore it from the row buttons or the plan panel."; }
     if(r.type!=="break") paintPrio(null,tr,r.priority);
     tr.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"));tr.classList.add("dropbefore")});
     tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
@@ -1766,7 +1799,7 @@ function renderBody(){
 }
 let dragId=null, colDrag=null;
 function recalc(){
-  const d=D(); if(!d) return; const C=compute(); const wrapT=toMin(d.wrap||"18:00");
+  const d=D(); if(!d) return; const C=compute(); const wrapT=wrapMin(d);
   for(const tr of $$("#grid tbody tr[data-id]")){
     const r=d.rows.find(x=>x.id===tr.dataset.id); if(!r) continue; const c=C.rows[r.id];
     $('[data-t="start"]',tr).textContent=fmt(c.start);
@@ -1778,7 +1811,7 @@ function recalc(){
     const sh=$('.eff[data-eff="shoot"]',tr); if(sh) sh.textContent=(r.type!=="break"&&Math.round(c.sh)!==Number(r.shoot))?"= "+Math.round(c.sh)+" min":"";
     tr.classList.toggle("over",c.end>wrapT&&!r.done);
   }
-  renderStats(C); renderTimeline(C); refreshTabLabel(C);
+  renderStats(C); renderTimeline(C); renderPlan(C); refreshTabLabel(C);
 }
 function tabSub(d,C){const shots=d.rows.filter(r=>r.type!=="break");const done=shots.filter(r=>r.done).length;
   if(C.shootT>0) return "wrap "+fmt(C.wrap); if(!shots.length) return "empty"; return done===shots.length?"shot":shots.length+" setups";}
@@ -1786,15 +1819,19 @@ function refreshTabLabel(C){const b=$("#dayTabs .daytab.on");if(!b)return;const 
 function renderStats(C){
   const d=D(); const st=$("#stats"); st.innerHTML=""; const w=$("#warnings"); w.innerHTML="";
   if(!d) return;
-  const wrapT=toMin(d.wrap||"18:00"), callT=toMin(d.call||"09:00"); const over=C.wrap-wrapT;
+  const wrapT=wrapMin(d), callT=toMin(d.call||"09:00"); const over=C.wrap-wrapT;
   const shots=d.rows.filter(r=>r.type!=="break"); const done=shots.filter(r=>r.done).length;
   const takes=shots.reduce((a,r)=>a+(Number(r.takes)||0),0);
   const card=(k,v,sub,cls="")=>h("div",{class:"stat"},h("div",{class:"k"},k),h("div",{class:"v "+cls},v),sub?h("div",{class:"sub"},sub):null);
+  const L=liveStatus(d,C);
+  if(L){ const s=L.slip, po=Math.round(L.proj-wrapT), g=cfg();
+    const cls=s<=0?"ok":po>=(Number(g.gateRed)||30)?"bad":po>=(Number(g.gateAmber)||10)?"warn":"";
+    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(s>0?"behind":s<0?"ahead":"")+" · projected wrap "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis; st.append(c); }
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
     card("Shooting total",dur(C.shootT)), card("Breaks / moves",dur(C.breakT)),
-    card("Shots",String(shots.length),done?done+" shot, "+(shots.length-done)+" to go":"none marked shot"));
+    card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")));
   if(takes||d.kind==="capture") st.append(card("Takes",String(takes),"logged on this day"));
   if(d.origWrap) st.append(card("Original PDF wrap",fmt(toMin(d.origWrap)),"as planned"));
   if(C.shootT>0&&!d.rows.some(r=>r.type==="break"&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
@@ -1807,19 +1844,116 @@ function renderStats(C){
   const unnumbered=shots.filter(r=>!String(r.shot||"").trim()).length;
   if(unnumbered&&d.kind!=="capture") w.append(h("span",{class:"pill info"},unnumbered+" shot"+(unnumbered>1?"s":"")+" without a shot number"));
 }
+/* ===================== running delta and the recovery plan ===================== */
+function nowMin(){const n=new Date();return n.getHours()*60+n.getMinutes()+n.getSeconds()/60}
+// the time now on this day's clock, or null when it isn't this day; after midnight a night shoot carries on (24:30)
+function dayClock(d){
+  if(!d||!d.date) return null; const n=nowMin();
+  if(d.date===todayISO()) return n;
+  const y=new Date(Date.now()-864e5), yISO=y.getFullYear()+"-"+String(y.getMonth()+1).padStart(2,"0")+"-"+String(y.getDate()).padStart(2,"0");
+  if(d.date===yISO&&n<12*60&&wrapMin(d)>1440) return n+1440;
+  return null;
+}
+// how far ahead (-) or behind (+) the day is running, from when shots were ticked off and where the clock is now
+function liveStatus(d,C){
+  const now=dayClock(d); if(now==null) return null;
+  const call=toMin(d.call||"09:00"); if(now<call-60) return null;
+  const rows=d.rows.filter(r=>!r.cut);
+  let li=-1; rows.forEach((r,i)=>{if(r.type!=="break"&&r.done)li=i});
+  const last=li>=0?rows[li]:null, next=rows.slice(li+1).find(r=>r.type!=="break"&&!r.done)||null;
+  let slip, basis;
+  if(last&&last.doneAt!=null){slip=last.doneAt-C.rows[last.id].end;basis=`shot ${last.shot||last.action||""} finished at ${fmt(last.doneAt)}, planned ${fmt(C.rows[last.id].end)}`.replace("shot  ","shot ")}
+  else if(next){slip=Math.min(0,now-C.rows[next.id].setupStart);basis=slip<0?"next shot isn't due to start until "+fmt(C.rows[next.id].setupStart):"on the shot that's due now"}
+  else {slip=0;basis="every shot is ticked"}
+  if(next){const late=now-C.rows[next.id].end; if(late>slip){slip=late;basis=`shot ${next.shot||next.action||""} was due to finish at ${fmt(C.rows[next.id].end)}`}}
+  slip=Math.round(slip);
+  return {slip,basis,now,next,proj:C.wrap+slip};
+}
+function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
+function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
+function buildPlan(d,C){
+  const L=liveStatus(d,C), target=wrapMin(d), proj=L?L.proj:C.wrap, need=Math.round(proj-target);
+  const c=cfg(), amber=Number(c.gateAmber)||10, red=Number(c.gateRed)||30;
+  const gate=need<=0?"green":need>=red?"red":need>=amber?"amber":"slight";
+  const top=priorityOptions()[0];
+  const pool=d.rows.filter(r=>r.type!=="break"&&!r.done&&!r.cut&&!(L&&L.next&&L.next.id===r.id));
+  const cost=r=>Math.round(effSetup(r,d)+effShoot(r,d));
+  // cut first: most minutes for the least priority and screen time
+  const score=r=>cost(r)/(Math.pow(prioWeight(r.priority),2)*(1+Math.min(durSec(r.duration),60)/60));
+  const ranked=pool.filter(r=>cost(r)>0).sort((a,b)=>score(b)-score(a));
+  const cuts=[]; let got=0;
+  if(need>0){
+    for(const r of ranked){ if(got>=need) break; if(top&&String(r.priority).trim()===top) continue; cuts.push({r,save:cost(r)}); got+=cost(r); }
+    for(const r of ranked){ if(got>=need) break; if(!(top&&String(r.priority).trim()===top)) continue; cuts.push({r,save:cost(r),last:true}); got+=cost(r); }
+  }
+  // wins: a shot that returns to a location already set up earlier can move next to it and skip most of its setup
+  const wins=[]; const minEff=Math.max(0,Number(d.minSetup)||0)*(Number(d.setupPct)||100)/100;
+  const rem=d.rows.filter(r=>!r.done&&!r.cut);
+  rem.forEach((r,i)=>{ if(r.type==="break"||!String(r.location||"").trim()) return;
+    const loc=normLoc(r.location), prev=rem.slice(0,i).reverse().find(x=>x.type!=="break");
+    if(prev&&normLoc(prev.location)===loc) return;
+    const anchor=rem.slice(0,i).reverse().find(x=>x.type!=="break"&&normLoc(x.location)===loc);
+    const save=Math.round(effSetup(r,d)-minEff); if(anchor&&save>=5) wins.push({r,anchor,save});
+  });
+  wins.sort((a,b)=>b.save-a.save);
+  const spare=-need, restorable=d.rows.filter(r=>r.cut).map(r=>({r,cost:Math.round(effSetup(r,d)+effShoot(r,d))})).filter(x=>x.cost<=Math.max(0,spare)).sort((a,b)=>prioWeight(b.r.priority)-prioWeight(a.r.priority));
+  return {L,need,gate,cuts,got,wins:wins.slice(0,4),spare,restorable,amber,red};
+}
+function normLoc(s){return String(s||"").toLowerCase().replace(/\s+/g," ").trim()}
+function rowLabel(r){return (r.shot?"Shot "+r.shot:"")+(r.action?(r.shot?" · ":"")+r.action:"")||(r.description?String(r.description).slice(0,40):"Untitled shot")}
+function setCut(ids,on){const d=D();if(!d)return;for(const id of ids){const r=d.rows.find(x=>x.id===id);if(r)r.cut=on?true:null}commit();renderBody();toast(on?(ids.length>1?`Cut ${ids.length} shots`:"Cut from the schedule")+" - Undo or Restore brings it back":"Back in the schedule")}
+function applyWin(id,anchorId){const d=D();const i=d.rows.findIndex(x=>x.id===id);if(i<0)return;const [r]=d.rows.splice(i,1);const a=d.rows.findIndex(x=>x.id===anchorId);r.setup=0;d.rows.splice(a+1,0,r);commit();renderBody();jump(r.id);toast("Moved next to the same location, setup down to the minimum - Undo to go back")}
+function renderPlan(C){
+  const box=$("#plan"); if(!box) return; box.innerHTML=""; const d=D(); if(!d||!d.rows.some(r=>r.type!=="break")) return;
+  const p=buildPlan(d,C);
+  const show=p.need>0||p.wins.length||(p.restorable.length&&p.spare>=p.amber)||d.rows.some(r=>r.cut);
+  if(!show) return;
+  const head={green:p.spare>0?`${dur(p.spare)} in hand`:"On target",slight:`${dur(p.need)} over target wrap`,amber:`Amber gate: ${dur(p.need)} over target wrap`,red:`Red gate: ${dur(p.need)} over target wrap`}[p.gate];
+  const sub={green:"Nothing needs cutting.",slight:"Within the amber gate. Keep an eye on it.",amber:"Worth deciding now what could go.",red:"Cut something to wrap on time."}[p.gate];
+  const open=P.planOpen!==false;
+  box.className="plan noprint gate-"+p.gate;
+  const tg=h("button",{class:"planhead",onclick:()=>{P.planOpen=!open;savePrefs();renderPlan(compute())}},h("b",{},"Recovery plan · "+head),h("span",{class:"note"},(p.L?"Live: ":"Plan: ")+sub),h("span",{},open?"▴":"▾"));
+  box.append(tg); if(!open) return;
+  const body=h("div",{class:"planbody"}); box.append(body);
+  const shotBtn=r=>h("a",{href:"#",onclick:e=>{e.preventDefault();jump(r.id)}},rowLabel(r));
+  if(p.cuts.length){
+    const enough=p.got>=p.need;
+    body.append(h("div",{class:"planh"},`Shots to consider cutting (${enough?"together they save "+dur(p.got):"all of these only save "+dur(p.got)+" of the "+dur(p.need)+" needed"})`));
+    const ul=h("ul",{});
+    p.cuts.forEach(x=>ul.append(h("li",{},shotBtn(x.r),h("span",{class:"note"},` · ${x.r.priority||"no priority"} · ${dur(x.save)} of setup and shooting${durSec(x.r.duration)?` · ${x.r.duration} on screen`:""}${x.last?" · top priority, last resort":""}`),h("button",{class:"btn small",onclick:()=>setCut([x.r.id],true)},"Cut"))));
+    body.append(ul,h("button",{class:"btn small danger",onclick:()=>setCut(p.cuts.filter(x=>!x.last).map(x=>x.r.id),true)},"Cut the suggested shots"));
+    body.append(h("p",{class:"note"},"Ranked by time it takes against priority and screen time: low priority, long setups and short screen time go first. Top priority shots are only listed as a last resort. Cutting takes the shot out of the timings; nothing is deleted."));
+  }
+  if(p.wins.length){
+    body.append(h("div",{class:"planh"},"Possible wins"));
+    const ul=h("ul",{});
+    p.wins.forEach(x=>ul.append(h("li",{},shotBtn(x.r),h("span",{class:"note"},` goes back to ${x.r.location}. Shoot it straight after `),shotBtn(x.anchor),h("span",{class:"note"},` and skip most of its setup: saves about ${dur(x.save)}.`),h("button",{class:"btn small",onclick:()=>applyWin(x.r.id,x.anchor.id)},"Move it"))));
+    body.append(ul);
+  }
+  const cut=d.rows.filter(r=>r.cut);
+  if(cut.length){
+    body.append(h("div",{class:"planh"},`Cut (${cut.length})`+(p.spare>0?` · ${dur(p.spare)} in hand`:"")));
+    const ul=h("ul",{});
+    cut.forEach(r=>{const cst=Math.round(effSetup(r,d)+effShoot(r,d));ul.append(h("li",{},shotBtn(r),h("span",{class:"note"},` · ${r.priority||"no priority"} · ${dur(cst)}${p.spare>=cst?" · fits in the time in hand":""}`),h("button",{class:"btn small",onclick:()=>setCut([r.id],false)},"Restore")))});
+    body.append(ul);
+  }
+  if(p.L) body.append(h("p",{class:"note"},"Running "+(p.L.slip>0?dur(p.L.slip)+" behind":p.L.slip<0?dur(-p.L.slip)+" ahead":"on time")+": "+p.L.basis+". Projected wrap "+fmt(p.L.proj)+"."));
+}
+setInterval(()=>{ if(!S||document.hidden) return; const d=D(); if(d&&dayClock(d)!=null){const C=compute();renderStats(C);renderTimeline(C);renderPlan(C)} },30000);
 function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
-  const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,toMin(d.wrap||"18:00"))+15;
+  const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,wrapMin(d))+15;
   const span=Math.max(60,end-start); const pct=m=>((m-start)/span*100)+"%";
   const pxHr=(tl.clientWidth||800)/span*60, every=pxHr<26?180:pxHr<46?120:60;
   for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){if(hr%every){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}));continue}const f=(hr-start)/span;tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick"+(f<0.04?" first":f>0.96?" last":""),style:"left:"+pct(hr)},fmt(hr)))}
-  const wrapT=toMin(d.wrap||"18:00");
+  const wrapT=wrapMin(d);
   for(const r of d.rows){
     const c=C.rows[r.id]; const name=r.type==="break"?(r.label||"Break"):("Shot "+(r.shot||r.action||"-"));
     if(c.su>0){const s=h("div",{class:"seg setup",style:`left:${pct(c.setupStart)};width:${c.su/span*100}%`,title:`${name} - setup ${fmt(c.setupStart)} to ${fmt(c.start)}`});s.onclick=()=>jump(r.id);tl.append(s)}
     if(c.sh>0){const s=h("div",{class:"seg "+(r.type==="break"?"break":"shoot")+(c.end>wrapT?" over":""),style:`left:${pct(c.start)};width:${c.sh/span*100}%;border-left:1px solid var(--panel)`,title:`${name} - ${fmt(c.start)} to ${fmt(c.end)}`});s.onclick=()=>jump(r.id);tl.append(s)}
   }
   tl.append(h("div",{class:"wrapline",style:"left:"+pct(wrapT),title:"Target wrap "+fmt(wrapT)}));
+  { const n=dayClock(d);if(n!=null&&n>=start&&n<=end)tl.append(h("div",{class:"nowline",style:"left:"+pct(n),title:"Now "+fmt(n)}))}
 }
 function jump(id){const tr=$(`#grid tbody tr[data-id="${id}"]`);if(!tr)return;tr.scrollIntoView({behavior:"smooth",block:"center"});tr.style.outline="2px solid var(--accent)";setTimeout(()=>tr.style.outline="",1200)}
 function renderCols(){
@@ -1915,7 +2049,7 @@ function addDay(){
 }
 
 /* ===================== DIT names ===================== */
-function ditRows(){const d=D();return d?d.rows.filter(r=>r.type!=="break"&&(P.ditShowDone||!r.done||Number(r.takes)>0)):[]}
+function ditRows(){const d=D();return d?d.rows.filter(r=>r.type!=="break"&&!r.cut&&(P.ditShowDone||!r.done||Number(r.takes)>0)):[]}
 function renderDit(){
   const d=D(); const tb=$("#ditRows"); tb.innerHTML=""; $("#ditDay").textContent=d?"· "+d.name:"";
   $("#ditShowDone").checked=!!P.ditShowDone;
@@ -2043,6 +2177,7 @@ function renderSetTab(){
     txt("Break name","breakLabel"); num("Break length (min)","breakMin");
     txt("New day: call","newCall","time"); txt("New day: target wrap","newWrap","time");
     num("New day: setup buffer %","newSetupPct"); num("New day: shoot buffer %","newShootPct"); num("New day: minimum setup (min)","newMinSetup");
+    num("Amber gate: minutes over target wrap","gateAmber"); num("Red gate: minutes over target wrap","gateRed");
     b.append(f);
   }
   else if(setTab==="display"){
@@ -2146,13 +2281,13 @@ function saveFile(){commit();download(fileBase()+".shotlist.json",JSON.stringify
 function csvEsc(v){v=v==null?"":String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function exportCSV(){
   commit();
-  const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)"];
+  const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)","Cut"];
   const customs=cols().filter(c=>c.custom); head.push(...customs.map(c=>c.label));
   const lines=[head.map(csvEsc).join(",")];
   for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
     lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?"Break/Move":"Shot",br?(r.label||"Break"):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
-      br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
+      br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
@@ -2507,7 +2642,8 @@ function restoreDays(recs,recorded,colRemap){
     d.id=uid("d"); d.archived=null; d.rows=[];
     for(const sr of ad.rows||[]){
       if(sr.type==="break"){ d.rows.push(Object.assign(remapKeys(sr),{id:uid("r")})); continue; }
-      const got=byRid.get(sr.id); if(!got) continue;   // deleted from the sheet
+      const got=byRid.get(sr.id);
+      if(!got){ if(sr.cut) d.rows.push(Object.assign({},ROW_BLANK,remapKeys(sr),{id:uid("r")})); continue; }   // cut shots aren't in the sheet; anything else missing was deleted there
       byRid.delete(sr.id);
       const row=Object.assign({},ROW_BLANK,remapKeys(sr),{id:uid("r")});
       const f=got[0].f;
@@ -2684,7 +2820,7 @@ async function buildTracker(days,opt){
   for(const d of days){
     const C=compute(d);
     for(const r of d.rows){
-      if(r.type==="break") continue;
+      if(r.type==="break"||r.cut) continue;   // cut shots stay out of the tracker; the App data tab keeps them
       const base=takeBase(r,d), n=Math.max(1,Number(r.takes)||0);
       for(let t=1;t<=n;t++) data.push({d,r,take:base+t,logged:t<=(Number(r.takes)||0),start:C.rows[r.id].start});
     }

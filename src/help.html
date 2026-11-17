@@ -34,6 +34,16 @@
     <li>Undo / Redo: the buttons or Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. Undo only reverses <i>your</i> changes. A teammate's edits made in the meantime stay.</li>
   </ul>
 
+  <h3>On the day: ahead / behind and the recovery plan</h3>
+  <ul>
+    <li><b>Running card</b>: on the day itself (the day's Shoot date is today) a card shows how far ahead (<b>-</b>, green) or behind (<b>+</b>) you are. It uses the time each shot was ticked as shot, against when the schedule had it finishing. If the shot you're on runs past its planned finish, the delta keeps growing until you tick it. Hover the card to see what it's based on. The card also shows the projected wrap, and a blue line marks now on the timeline. It updates every 30 seconds.</li>
+    <li>Tick shots as they finish, so the delta is accurate. Shots ticked before this version, or on another day, have no time recorded, so the delta falls back to the clock.</li>
+    <li><b>Recovery plan</b> (under the summary cards) appears when the projected wrap is past target, or there are wins or cut shots. Its colour shows the gate: green on target, grey slightly over, <b>amber</b> and <b>red</b> past the gates you set in Settings &gt; Team defaults (10 and 30 minutes over target wrap to start with). Before the day, it works from the planned wrap.</li>
+    <li><b>Shots to consider cutting</b> are ranked by the minutes they take (setup plus shooting, with buffers) against their priority and screen duration: low priority, long setups and short screen time go first. The list stops once it covers the time you need. Top priority shots only appear as a last resort. The shot you're on is never suggested.</li>
+    <li><b>Cut</b> takes a shot out of the timings without deleting it: the row greys out, it's left off the DIT names, the tracker .xlsx and print, and the CSV marks it Cut. <b>Restore</b> (in the row or the plan) puts it back, and the plan says when a cut shot would fit in the time you have in hand. Undo works too.</li>
+    <li><b>Possible wins</b> spot a shot that goes back to a location you've already set up earlier. <b>Move it</b> puts it straight after that shot and drops its setup to the day's minimum.</li>
+  </ul>
+
   <h3>Columns and priority</h3>
   <ul>
     <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Text cells wrap to show everything you type; Enter moves on rather than adding a line (long text keeps its line breaks). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>

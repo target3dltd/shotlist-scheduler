@@ -129,6 +129,22 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .warnings{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap}
 .pill{font-size:.92rem;border-radius:999px;padding:.2rem .75rem;background:var(--accent-soft);color:var(--bad)}
 .pill.info{background:var(--info-bg);color:var(--info-ink)}
+.stat .v.warn{color:var(--warn)}
+.stat.live{border-width:2px;border-color:var(--line2)}
+.timeline .nowline{position:absolute;top:0;height:1.7rem;width:2px;background:var(--focus,#2f6fb0);box-shadow:0 0 0 1px var(--panel)}
+/* recovery plan: cut suggestions and wins, coloured by gate */
+.plan{margin-top:.6rem;border:1px solid var(--line);border-left:5px solid var(--ok);border-radius:8px;background:var(--panel)}
+.plan:empty{display:none}
+.plan.gate-slight{border-left-color:var(--line2)} .plan.gate-amber{border-left-color:var(--warn)} .plan.gate-red{border-left-color:var(--bad)}
+.planhead{display:flex;gap:.8rem;align-items:baseline;width:100%;background:none;border:none;padding:.5rem .8rem;cursor:pointer;text-align:left;color:var(--ink);flex-wrap:wrap}
+.planhead span:last-child{margin-left:auto}
+.planbody{padding:0 .8rem .6rem}
+.planh{font-weight:600;margin:.5rem 0 .25rem}
+.planbody ul{margin:0;padding-left:1.1rem} .planbody li{margin:.2rem 0}
+.planbody li .btn{margin-left:.5rem;padding:.1rem .5rem}
+#grid tr.cut td{opacity:.5}
+#grid tr.cut td[data-col=shot],#grid tr.cut td[data-col=shotId]{text-decoration:line-through}
+#grid tr.cut td[data-col=actions]{opacity:1}
 .daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
 .daytab.on{background:var(--band);font-weight:600;border-color:var(--band-line)}
 .daytab.arch{background:transparent;border-style:dashed;color:var(--muted);margin-left:auto}
@@ -344,6 +360,7 @@ body.nosteps .mins.timing input{width:4.5em}
   html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
+  #grid tr.cut{display:none}
   .toast,.noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
   .tablewrap{border:none;overflow:visible;max-height:none}
   #grid tr.filters,.grip,.viewbar{display:none!important}
@@ -413,6 +430,7 @@ body.nosteps .mins.timing input{width:4.5em}
   </div>
   <div class="stats" id="stats"></div>
   <div class="warnings" id="warnings"></div>
+  <div class="plan noprint" id="plan"></div>
   <div class="timeline noprint" id="timeline"></div>
   <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
 </header>
