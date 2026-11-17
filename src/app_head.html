@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Shotlist Scheduler</title>
+<style>
+:root{
+  --ui:13px; --tbl:13px;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#fbfaf8; --field:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e2e0db; --line2:#bdb9b1;
+  --accent:#c2412d; --accent-soft:#f6e3df; --setup:#c9c3b6; --shoot:#2f4858; --break:#d9a441;
+  --ok:#2e7d4f; --warn:#b4541a; --bad:#b3261e; --done-bg:#e8f1ea; --over-bg:#fdf2f0; --break-bg:#fbf3e2;
+  --info-bg:#e9eef2; --info-ink:#2f4858; --tab-bg:#efeee9; --focus:#9fb3c8; --code-bg:#f2f1ee; --shadow:rgba(0,0,0,.08);
+  --handle:#aaa; --tick:#eee; --overlay:rgba(20,20,20,.55); --ref-bg:#fafafa;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+html[data-theme="dark"]{
+  --bg:#141518; --panel:#1d1e22; --panel2:#222328; --field:#25262b; --ink:#ececec; --muted:#9c9ca6; --line:#33343a; --line2:#4b4c54;
+  --accent:#ec7a5f; --accent-soft:#3b2420; --setup:#6e6a60; --shoot:#86b0c9; --break:#cf9b34;
+  --ok:#62c38a; --warn:#e8935a; --bad:#f07367; --done-bg:#1d2c23; --over-bg:#3a2222; --break-bg:#33301f;
+  --info-bg:#232f37; --info-ink:#a9c8db; --tab-bg:#25262b; --focus:#5d7d99; --code-bg:#2a2b30; --shadow:rgba(0,0,0,.5);
+  --handle:#777; --tick:#2a2b30; --overlay:rgba(0,0,0,.65); --ref-bg:#232428;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html{font-size:var(--ui)}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+body{font-size:1rem}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--field)}
+header.top{background:var(--bg);border-bottom:1px solid var(--line);padding:.9rem 1.4rem .8rem}
+.titlebar{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+h1{font-size:1.38rem;margin:0;letter-spacing:-.01em}
+h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
+.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:.38rem .75rem;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--line2)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:.15rem .55rem;font-size:.92rem}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.icon{padding:.15rem .5rem;font-size:1rem;line-height:1.2}
+.toolbar{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+.status{display:inline-flex;align-items:center;gap:.4rem;font-size:.88rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.1rem .6rem;background:var(--panel);cursor:default;white-space:nowrap}
+.status i{width:.55rem;height:.55rem;border-radius:50%;background:var(--muted);display:inline-block}
+.status.live i{background:var(--ok)} .status.busy i{background:var(--warn)} .status.off i{background:var(--bad)}
+.who{display:flex;gap:.25rem;align-items:center}
+.who span{width:1.7rem;height:1.7rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;border:2px solid var(--bg)}
+.controls{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-end;margin-top:.8rem}
+.field{display:flex;flex-direction:column;gap:.25rem}
+.field label,.flabel{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select{border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;min-width:0}
+.field input[type=time]{width:8.6rem}
+.field input[type=number]{width:5.4rem}
+.daybtns{display:flex;gap:.35rem;align-items:flex-end}
+.stats{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.45rem .75rem;min-width:7.4rem}
+.stat .k{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.stat .v{font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .v.bad{color:var(--bad)} .stat .v.ok{color:var(--ok)}
+.stat .sub{font-size:.85rem;color:var(--muted)}
+.warnings{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap}
+.pill{font-size:.92rem;border-radius:999px;padding:.2rem .75rem;background:var(--accent-soft);color:var(--bad)}
+.pill.info{background:var(--info-bg);color:var(--info-ink)}
+.daytabs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.8rem;border-bottom:1px solid var(--line)}
+.daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
+.daytab.on{background:var(--panel);font-weight:600;border-color:var(--line2)}
+.daytab small{color:var(--muted);font-weight:400;margin-left:.45rem}
+.daytab .kind{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:4px;padding:0 .25rem;margin-right:.4rem;color:var(--muted)}
+.daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
+.timeline{margin-top:.8rem;position:relative;height:2.6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
+.timeline .seg.setup{background:var(--setup)} .timeline .seg.shoot{background:var(--shoot)} .timeline .seg.break{background:var(--break)}
+.timeline .seg.over{outline:1px solid var(--bad)}
+.timeline .tick{position:absolute;top:1.65rem;font-size:.73rem;color:var(--muted);transform:translateX(-50%)}
+.timeline .tickline{position:absolute;top:0;bottom:.9rem;width:1px;background:var(--tick)}
+.timeline .wrapline{position:absolute;top:0;bottom:0;width:2px;background:var(--bad)}
+.legend{display:flex;gap:.9rem;font-size:.85rem;color:var(--muted);margin-top:.3rem}
+.legend i{display:inline-block;width:.75rem;height:.75rem;border-radius:2px;margin-right:.3rem;vertical-align:-1px}
+
+main{padding:.9rem 1.4rem 4.5rem}
+.tablewrap{overflow:auto;max-height:88vh;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+#grid{font-size:var(--tbl);border-collapse:separate;border-spacing:0;table-layout:fixed}
+#grid th,#grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:.46em;overflow:hidden}
+body.compact #grid th,body.compact #grid td{padding:.2em .35em}
+#grid th{position:sticky;top:0;background:var(--panel2);z-index:5;text-align:left;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+#grid th .thl{display:flex;align-items:center;gap:.3em;min-height:1.2em;overflow:hidden}
+#grid th.sortable .thl{cursor:pointer;user-select:none}
+#grid th.sortable .thl:hover{color:var(--ink)}
+#grid th .arrow{font-size:.8em;color:var(--accent)}
+#grid th .grip{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:7}
+#grid th .grip:hover,#grid th .grip.active{background:linear-gradient(90deg,transparent 3px,var(--focus) 3px,var(--focus) 5px,transparent 5px)}
+#grid tr.filters th{top:var(--headH,30px);padding:.22em .3em;text-transform:none;letter-spacing:0}
+#grid tr.filters input{width:100%;border:1px solid var(--line);border-radius:4px;padding:.15em .4em;font-size:.9em;font-weight:400;color:var(--ink)}
+#grid tr.filters input.on{border-color:var(--accent);background:var(--accent-soft)}
+td.num,th.num{text-align:center}
+#grid tr.over td{background:var(--over-bg)}
+#grid tr.done td{background:var(--done-bg)}
+#grid tr.break td{background:var(--break-bg)}
+#grid tr.dragging{opacity:.4}
+#grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
+#grid tr.flash td{animation:flash 1.6s ease-out}
+@keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--warn)}100%{box-shadow:inset 0 0 0 2px transparent}}
+.viewbar{display:none;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem;padding:.45rem .75rem;border-radius:6px;background:var(--info-bg);color:var(--info-ink);font-size:.92rem}
+.viewbar.show{display:flex}
+.sorted .handle{visibility:hidden}
+.sorted .rowbtns .mv{display:none}
+.handle{cursor:grab;color:var(--handle);user-select:none;font-size:1.15em;line-height:1;padding:.15em}
+.ctl{display:flex;gap:.3em;align-items:center;white-space:nowrap}
+textarea.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;resize:none;padding:.22em .3em;line-height:1.35;overflow:hidden;min-height:1.9em;display:block}
+textarea.cell:hover,input.cell:hover,select.cell:hover{border-color:var(--line)}
+textarea.cell:focus,input.cell:focus,select.cell:focus{outline:none;border-color:var(--focus);background:var(--field)}
+input.cell,select.cell{width:100%;border:1px solid transparent;border-radius:4px;background:transparent;padding:.22em .3em}
+input.cell.small{text-align:center}
+input.shotno{font-weight:700;font-size:1.08em}
+.mins{display:flex;align-items:center;gap:2px;justify-content:center}
+.mins input{width:3.5em;text-align:center;border:1px solid var(--line);border-radius:4px;padding:.22em .1em;font-variant-numeric:tabular-nums}
+.mins button{border:1px solid var(--line);background:var(--panel);border-radius:4px;width:1.7em;height:1.7em;cursor:pointer;padding:0;line-height:1}
+.eff{font-size:.8em;color:var(--muted);text-align:center;margin-top:2px}
+.time{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.time.end{font-weight:400;color:var(--muted)}
+.orig{font-family:var(--mono);font-size:.85em;color:var(--muted)}
+.delta{font-family:var(--mono);font-size:.85em}
+.delta.late{color:var(--bad)} .delta.early{color:var(--ok)}
+.sid{font-family:var(--mono);font-size:.86em;word-break:break-all;color:var(--info-ink)}
+.sid .copy{float:right;margin-left:.3em}
+.chip{display:inline-block;font-family:var(--mono);font-size:.82em;border:1px solid var(--line2);border-radius:4px;padding:0 .3em;color:var(--muted)}
+.refs{display:flex;gap:6px}
+.ref{width:150px;height:92px;border:1px dashed var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--ref-bg);color:var(--muted);font-size:.85em;cursor:pointer}
+.ref.empty{height:2.3em}
+.ref img{max-width:100%;max-height:100%;display:block}
+.ref .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:3px;font-size:.78em;padding:0 4px;cursor:pointer;display:none}
+.ref:hover .x{display:block}
+.rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.rowbtns button:last-child{grid-column:span 2}
+.rowbtns button{border:1px solid var(--line);background:var(--panel);border-radius:4px;cursor:pointer;font-size:.85em;padding:1px 5px;white-space:nowrap}
+.rowbtns button:hover{border-color:var(--line2)}
+.chk{display:flex;align-items:center;gap:.3em;font-size:.85em;color:var(--muted)}
+.flagcell{display:flex;justify-content:center}
+.hide-col{display:none}
+.colmenu{position:relative}
+.colmenu .pop{position:absolute;right:0;top:110%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;box-shadow:0 8px 24px var(--shadow);display:none;z-index:40;min-width:15rem;max-height:70vh;overflow:auto}
+.colmenu.open .pop{display:block}
+.colmenu .pop label{display:flex;gap:.45rem;align-items:center;padding:2px 0;white-space:nowrap}
+.colmenu .pop .note{font-size:.85rem;color:var(--muted);margin:.2rem 0 .4rem}
+.addrow{margin-top:.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
+.empty-day{padding:2rem;color:var(--muted);text-align:center}
+
+/* modals */
+.modal{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;z-index:100;padding:1.8rem}
+.modal.open{display:flex}
+.modal .box{background:var(--panel);color:var(--ink);border-radius:10px;max-width:62rem;width:100%;max-height:90vh;overflow:auto;padding:1.4rem 1.8rem;position:relative;box-shadow:0 20px 60px var(--shadow)}
+.modal .box.narrow{max-width:30rem}
+.modal .close{position:absolute;top:.8rem;right:.9rem}
+.modal.lightbox .box{background:transparent;padding:0;max-width:none;width:auto;text-align:center;box-shadow:none}
+.modal.lightbox img{max-width:92vw;max-height:86vh;border-radius:6px;background:#fff}
+.box h2{margin:0 0 .3rem;font-size:1.38rem}
+.box h3{margin:1.3rem 0 .45rem;font-size:1.08rem}
+.box p,.box li{line-height:1.5}
+.box code{font-family:var(--mono);background:var(--code-bg);padding:0 4px;border-radius:3px}
+.box .ver{font-family:var(--mono);color:var(--muted)}
+.tabs{display:flex;gap:.3rem;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:.8rem 0 1rem}
+.tabs button{border:1px solid transparent;border-bottom:none;background:transparent;padding:.45rem .8rem;border-radius:6px 6px 0 0;cursor:pointer;color:var(--muted)}
+.tabs button.on{border-color:var(--line);background:var(--panel2);color:var(--ink);font-weight:600;position:relative;top:1px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.8rem 1rem}
+.form .wide{grid-column:1/-1}
+.form label{display:flex;flex-direction:column;gap:.25rem;font-size:.88rem;color:var(--muted)}
+.form input,.form select,.form textarea{border:1px solid var(--line);border-radius:6px;padding:.38rem .5rem;color:var(--ink)}
+.form textarea{min-height:4rem;resize:vertical}
+.form .inline{flex-direction:row;align-items:center;gap:.5rem;color:var(--ink)}
+.note{font-size:.9rem;color:var(--muted)}
+table.plain{border-collapse:collapse;width:100%;font-size:.95rem}
+table.plain th,table.plain td{border-bottom:1px solid var(--line);padding:.35rem .4rem;text-align:left;vertical-align:middle}
+table.plain th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+table.plain input,table.plain select{width:100%;border:1px solid var(--line);border-radius:4px;padding:.25rem .4rem}
+table.plain input[type=checkbox]{width:auto}
+.preview{font-family:var(--mono);background:var(--code-bg);padding:.6rem .8rem;border-radius:6px;word-break:break-all;margin-top:.6rem}
+.dit-list{font-family:var(--mono);width:100%;min-height:9rem;border:1px solid var(--line);border-radius:6px;padding:.5rem;font-size:.9rem}
+.dit td.name{font-family:var(--mono);font-size:.88rem;word-break:break-all}
+.dit .takes{display:flex;gap:.25rem;align-items:center;justify-content:center}
+.dit .takes b{min-width:1.6rem;text-align:center;font-variant-numeric:tabular-nums}
+.act-list{list-style:none;padding:0;margin:0}
+.act-list li{border-bottom:1px solid var(--line);padding:.45rem 0;font-size:.95rem}
+.act-list .meta{color:var(--muted);font-size:.85rem}
+.err{color:var(--bad);font-size:.92rem;min-height:1.2em}
+.toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.55rem 1.1rem;border-radius:6px;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
+.toast.show{opacity:1}
+
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  html{--ui:9.5px;--tbl:9.5px}
+  html[data-theme="dark"]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
+  body{background:#fff}
+  header.top{border:none;padding:0 0 6px}
+  .noprint,.rowbtns,.handle,.mins button,.ref .x,.addrow,.timeline,.legend,.toolbar,.daytab:not(.on),.daytab.add,.sid .copy{display:none!important}
+  .tablewrap{border:none;overflow:visible;max-height:none}
+  #grid tr.filters,.grip,.viewbar{display:none!important}
+  #grid th{position:static}
+  textarea.cell,input.cell,select.cell{border:none!important;padding:0}
+  .ref{width:110px;height:68px;border:none}
+  tr{break-inside:avoid}
+  main{padding:0}
+  .mins input{border:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="titlebar">
+    <h1><span id="projTitle" title="Project name - change it in Settings">Shotlist</span> <small>Shotlist Scheduler <span id="verLabel"></span></small></h1>
+    <span class="status noprint" id="status" title=""><i></i><span>Local</span></span>
+    <span class="who noprint" id="who"></span>
+    <span class="spacer"></span>
+    <div class="toolbar noprint">
+      <button class="btn small" id="undoBtn" title="Undo your last change (Ctrl/Cmd+Z)">↶ Undo</button>
+      <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
+      <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
+      <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
+      <button class="btn small" id="csvBtn">Export CSV</button>
+      <button class="btn small" id="printBtn">Print / PDF</button>
+      <button class="btn small" id="actBtn" title="Who changed what">Activity</button>
+      <button class="btn small icon" id="themeBtn" title="Switch light / dark">◐</button>
+      <button class="btn small" id="setBtn">Settings</button>
+      <button class="btn small primary" id="helpBtn">Help</button>
+    </div>
+  </div>
+  <div class="daytabs" id="dayTabs"></div>
+  <div class="controls noprint" id="dayControls">
+    <div class="field"><label>Day name</label><input type="text" id="dayName" style="width:11rem"></div>
+    <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Schedule</option><option value="capture">Capture (mocap / volcap)</option></select></div>
+    <div class="field"><label>Day #</label><input type="number" id="dayNo" min="1" step="1" style="width:4.2rem"></div>
+    <div class="field"><label>Shoot date</label><input type="date" id="shootDate"></div>
+    <div class="field"><label>Call / start</label><input type="time" id="callTime"></div>
+    <div class="field"><label>Target wrap</label><input type="time" id="wrapTime"></div>
+    <div class="field"><label title="Scales every setup time">Setup buffer %</label><input type="number" id="setupPct" min="50" max="400" step="5"></div>
+    <div class="field"><label title="Scales every shoot time">Shoot buffer %</label><input type="number" id="shootPct" min="50" max="400" step="5"></div>
+    <div class="field"><label>Min setup (min)</label><input type="number" id="minSetup" min="0" max="120" step="5"></div>
+    <div class="field"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
+    <div class="daybtns">
+      <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
+      <button class="btn small" id="delDayBtn" title="Delete this day">Delete day</button>
+      <button class="btn small" id="resetBtn" title="Restore this day as originally imported">Reset day</button>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="warnings" id="warnings"></div>
+  <div class="timeline noprint" id="timeline"></div>
+  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--bad)"></i>Target wrap</span></div>
+</header>
+
+<main>
+  <div class="viewbar noprint" id="viewbar"></div>
+  <div class="tablewrap"><table id="grid"><colgroup id="cols"></colgroup><thead></thead><tbody></tbody></table></div>
+  <div class="addrow noprint">
+    <button class="btn" id="addShot">+ Add shot</button>
+    <button class="btn" id="addBreak">+ Add break / move</button>
+    <button class="btn" id="pasteBtn" title="Paste a list of actions, one per line">+ Paste list of actions</button>
+  </div>
+</main>
+
+<!-- Settings -->
+<div class="modal" id="setModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Settings</h2>
+  <div class="tabs" id="setTabs"></div>
+  <div id="setBody"></div>
+</div></div>
+
+<!-- DIT names -->
+<div class="modal" id="ditModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>DIT names <small class="note" id="ditDay"></small></h2>
+  <p class="note">Each name is built from the Shot name settings. <b>Next take</b> adds one take and copies that take's name, ready to paste into the capture or camera software. Use − if a take didn't happen.</p>
+  <div class="toolbar" style="margin:.6rem 0">
+    <button class="btn small" id="ditCopyAll">Copy every take name</button>
+    <button class="btn small" id="ditCopyNext">Copy next-take names</button>
+    <label class="note" style="display:flex;gap:.35rem;align-items:center"><input type="checkbox" id="ditShowDone"> include rows already marked shot</label>
+  </div>
+  <table class="plain dit"><thead><tr><th style="width:5rem">Shot #</th><th>Next take name</th><th style="width:9rem;text-align:center">Takes</th><th style="width:12rem"></th></tr></thead><tbody id="ditRows"></tbody></table>
+  <h3>Copied list</h3>
+  <textarea class="dit-list" id="ditOut" readonly placeholder="Names you copy appear here too, so you can select and copy them by hand."></textarea>
+</div></div>
+
+<!-- Activity -->
+<div class="modal" id="actModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Activity</h2>
+  <p class="note" id="actNote"></p>
+  <ul class="act-list" id="actList"></ul>
+</div></div>
+
+<!-- Join team -->
+<div class="modal" id="joinModal"><div class="box narrow">
+  <h2>Join the team schedule</h2>
+  <p class="note">Add your name so teammates can see who's editing. <span id="joinKeyNote">Ask whoever set up the site for the team key. It's stored on this device so you only enter it once.</span></p>
+  <div class="form" style="grid-template-columns:1fr">
+    <label>Your name (shown to the team)<input id="joinName" autocomplete="name"></label>
+    <label id="joinKeyRow">Team key<input id="joinKey" type="password" autocomplete="current-password"></label>
+  </div>
+  <div class="err" id="joinErr"></div>
+  <div class="toolbar"><button class="btn primary" id="joinGo">Join</button><button class="btn" id="joinLocal" title="Use this copy on its own, saved only in this browser">Work offline instead</button></div>
+</div></div>
+
+<!-- Confirm -->
+<div class="modal" id="askModal"><div class="box narrow">
+  <h2 id="askTitle"></h2><p id="askText"></p>
+  <div class="toolbar"><button class="btn primary" id="askYes">OK</button><button class="btn" id="askNo">Cancel</button></div>
+</div></div>
+
+<!-- Paste actions -->
+<div class="modal" id="pasteModal"><div class="box narrow">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Paste a list of actions</h2>
+  <p class="note">One action per line. Each becomes a new shot on this day using the team defaults.</p>
+  <textarea class="dit-list" id="pasteText" placeholder="walk_cycle&#10;sit_down&#10;pick_up_box"></textarea>
+  <div class="toolbar" style="margin-top:.6rem"><button class="btn primary" id="pasteGo">Add these shots</button></div>
+</div></div>
+
+<!-- Help -->
+<div class="modal" id="helpModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Help</h2>
+  <div class="ver" id="helpVer"></div>
+  /*__HELP__*/
+  <h3>Version history</h3>
+  <ul id="changelog"></ul>
+</div></div>
+
+<div class="modal lightbox" id="lightbox"><div class="box"><img id="lightImg" alt=""></div></div>
+<input type="file" id="imgInput" accept="image/*" hidden>
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+<div class="toast" id="toast"></div>

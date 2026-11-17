@@ -1,0 +1,84 @@
+  <h3>What this is</h3>
+  <p>A shoot scheduler and shot-naming tool for a whole production. Each project holds its details, cast and crew, settings and every shoot day. Change any setup or shoot time and the day's start and end times recalculate down the list. Capture days add the mocap / volcap columns and build shot names with take numbers for the DIT.</p>
+
+  <h3>How times are worked out</h3>
+  <ul>
+    <li>A day starts at <b>Call / start</b>. For each row: <code>start = previous end + setup</code>, <code>end = start + shoot</code>. Breaks and moves add their minutes.</li>
+    <li><b>Setup buffer %</b> and <b>Shoot buffer %</b> scale every row at once (150% = everything takes half as long again). Breaks aren't scaled. The scaled minutes show under each box.</li>
+    <li><b>Min setup</b> sets a floor for every setup before the buffer is applied.</li>
+    <li>Rows finishing after <b>Target wrap</b> turn red, and the wrap card shows how far over you are.</li>
+  </ul>
+
+  <h3>Days</h3>
+  <ul>
+    <li>Each shoot day has a tab under the title with its own name, kind, day number, date, call, wrap, buffers and minimum setup. Once a day has timings, its tab shows the calculated wrap.</li>
+    <li><b>Kind</b>: <i>Schedule</i> days focus on setups and timings. <i>Capture</i> days (tagged <span class="chip">cap</span>) also show Takes, Action, Performer(s), # Perf., Genre, Body / Face / Glove, Hero and Safety. Every column is available on both kinds: switch any on or off under <b>Columns</b>. Your choice is remembered separately for each kind.</li>
+    <li><b>Day #</b> is used in shot names (for example <code>d4</code>).</li>
+    <li><b>+ Day</b> adds a day. <b>Copy day</b> duplicates the current day with the ticks and takes cleared, which is handy for planning a pickup day. <b>Delete day</b> removes it, and Undo brings it back. <b>Reset day</b> puts an imported day back as it was imported.</li>
+  </ul>
+
+  <h3>Editing</h3>
+  <ul>
+    <li>Click any text to edit it. Use − / + for minutes; the step size is a team default in Settings.</li>
+    <li>Drag the ⠿ handle to reorder, or use ↑ ↓. <b>Dup</b> copies a row, <b>+Brk</b> adds a break or move below, <b>Del</b> removes the row.</li>
+    <li><b>+ Paste list of actions</b> turns a pasted list (one action per line) into shots.</li>
+    <li>Tick <b>Shot</b> when a setup is done. Use <b>Show → Not yet shot</b> to hide finished rows.</li>
+    <li>Click a reference image to enlarge it. Click an empty box to add an image, or hover and press ✕ to remove one.</li>
+    <li><b>Column widths:</b> drag a column header's right edge. Double-click the edge to reset it.</li>
+    <li><b>Sort:</b> click a header (▲ then ▼, a third click clears it). Sorting only changes the view; times still follow the running order. <b>Make this the running order</b> in the blue bar applies the sort to the schedule.</li>
+    <li><b>Filter:</b> type in the box under a header. Start with <code>!</code> to exclude (<code>!insert</code>). For numbers and times use <code>&gt;</code> or <code>&lt;</code>, e.g. Setup <code>&gt;10</code>, End <code>&gt;17:30</code>, Takes <code>&gt;2</code>.</li>
+    <li>Undo / Redo: the buttons or Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. Undo only reverses <i>your</i> changes. A teammate's edits made in the meantime stay.</li>
+  </ul>
+
+  <h3>Shot names and DIT</h3>
+  <ul>
+    <li>The <b>Shot name</b> column shows the name the <i>next</i> take will get. <b>Copy</b> puts it on the clipboard.</li>
+    <li><b>DIT names</b> lists every shot on the day. <b>Next take → copy</b> logs the take and copies its name, e.g. <code>012_T4_10357_d4_a1_Victoria_walk_cycle_yB</code>. Use − if a take didn't happen. <b>Copy all</b> copies every take name for a shot, one per line. <b>Copy every take name</b> does the whole day.</li>
+    <li>Settings → <b>Shot names</b> decides what goes into the name and in what order, with prefixes and tags, the separator, what happens to spaces, and how many digits shot and take numbers get. These settings are shared with the whole team, so everyone generates the same names.</li>
+    <li>Blank parts and <code>-</code> are skipped, so there are never double separators. Characters that break file names (<code>/ \ : * ? " &lt; &gt; |</code>, commas and brackets) are removed. A slash between names becomes <code>+</code>, e.g. <code>Victoria+Leo</code>.</li>
+  </ul>
+
+  <h3>Projects, cast and crew</h3>
+  <ul>
+    <li>Settings → <b>Project</b> holds the project name, client, production ID, frame rate, dates, location, capture system, lead and notes. Click the project name in the title bar to jump there.</li>
+    <li>Settings → <b>Cast &amp; crew</b> keeps names, roles, phone, email and notes. You can export it as a CSV.</li>
+    <li>Settings → <b>Projects</b>: open, create (blank, same settings without shots, or a full copy), remove, export a project file, or import one. Shotlist Builder project files (<code>.json</code>) and older Scheduler saves import too. A Builder file becomes a capture day, with retakes counted as takes.</li>
+  </ul>
+
+  <h3>Settings</h3>
+  <ul>
+    <li><b>Team defaults</b> (shared): − / + step, setup and shoot minutes for new shots, the break name and length, and the call, wrap, buffers and minimum setup for new days.</li>
+    <li><b>Display</b> (just you): light, dark or match-device theme (also the ◐ button), interface and table text size, compact or comfortable rows, and a 12 or 24-hour clock.</li>
+  </ul>
+
+  <h3>Working as a team</h3>
+  <ul>
+    <li>On the team site, everyone with the team key edits the same live schedule. The coloured initials show who's online. The dot next to them shows the connection: <b>Live</b>, <b>Saving…</b> or <b>Offline</b>. Teammates' changes appear within a few seconds, and changed rows flash briefly.</li>
+    <li><b>No lost work when two people edit at once.</b> Every change is saved as its own small edit (this field on this row) and never overwrites the whole schedule. Different fields, even on the same row, simply combine. If two people change the same field at the same moment, the later save is what everyone sees, and both changes are listed in <b>Activity</b>.</li>
+    <li>Moving rows uses positions, not row numbers, so reordering while someone else adds or edits rows merges cleanly.</li>
+    <li>Deleting keeps the data behind the scenes, so Undo, or a teammate's later edit, never resurrects a half-deleted row.</li>
+    <li><b>Offline:</b> changes are kept on your device and sent when the connection returns, even after closing the browser. The status shows how many are waiting.</li>
+    <li><b>Activity</b> lists recent changes with who made them and when.</li>
+    <li>Settings → <b>Team &amp; sync</b>: your display name, how often to check for changes, Sync now, and Forget team key.</li>
+  </ul>
+
+  <h3>Saving and moving it elsewhere</h3>
+  <ul>
+    <li>On your own, everything saves in this browser automatically. For a backup, or to move a project, use Settings → Projects → <b>Export project file</b>.</li>
+    <li><b>Export CSV</b> gives one row per shot for every day, with Day, Kind and Date columns, calculated times, takes and the last take's name. It opens in Numbers, Excel or Google Sheets, and most shotlist apps can import it.</li>
+    <li><b>Print / PDF</b> prints the open day in landscape A4, using the columns that are showing. Dark mode prints light.</li>
+  </ul>
+
+  <h3>Setting up the team site (Netlify)</h3>
+  <ul>
+    <li>The team version needs the site deployed from GitHub (or the Netlify CLI), not drag-and-drop, because only those deploys run the small server part that stores the shared schedule (Netlify Functions and Netlify Blobs).</li>
+    <li>Access is controlled by the Netlify site password, which covers the page and the data. If you ever want a second lock, set the environment variable <code>TEAM_KEY</code> and everyone will also be asked for that key. Without either, anyone with the link could open the schedule.</li>
+    <li>Data lives in the site's Netlify Blobs store. Nothing is sent to any other service.</li>
+  </ul>
+
+  <h3>About the This Is Me data</h3>
+  <ul>
+    <li><b>Day 1 - 14 Oct</b> and <b>Day 2 - 21 Oct</b> (VolCap) were rebuilt from the Shotlist tracker. Each row is one setup in the order it was shot, with its takes, performers, prop and action. Hero, Safety and NG takes are in Director notes, and the GS process is in VFX notes. No timings were logged for those days.</li>
+    <li><b>Day 3 - LV</b> comes from the LV Timings PDF. The four unnumbered lobby shots are labelled 06c to 06f, and a 45 min lunch was added before Shot 12 as a placeholder.</li>
+    <li><b>Day 4 - Mocap</b> is an empty capture day, ready to plan.</li>
+  </ul>
