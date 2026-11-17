@@ -36,9 +36,10 @@ with sync_playwright() as pw:
     print("csv new day rows:", pg.evaluate("()=>{const d=D();return d.name+' '+d.rows.length+' rows, kind '+d.kind}"))
     pg.evaluate("()=>undo()")
     # --- update bar ---
+    real=open("out_repo/public/version.json").read()
     open("out_repo/public/version.json","w").write('{"version":"9.9.9"}')
     pg.evaluate("()=>checkVersion()"); pg.wait_for_timeout(500)
     print("update bar:", pg.is_visible("#updateBar"), "|", pg.inner_text("#updateText"))
     pg.screenshot(path="test_out/update_bar.png")
-    open("out_repo/public/version.json","w").write('{"version":"2.1.0"}\n')
+    open("out_repo/public/version.json","w").write(real)
     print("ERRORS:", errs); b.close()

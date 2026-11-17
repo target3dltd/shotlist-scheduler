@@ -55,7 +55,7 @@ async function readSheets(file){
 }
 
 /* ---------- mapping ---------- */
-const IMPORT_TARGETS=[
+const BASE_IMPORT_TARGETS=[
   ["ignore","Ignore"],["shot","Shot #"],["take","Take # (groups retakes)"],["shootDay","Shoot day (one day per value)"],
   ["action","Action"],["description","Description"],["performers","Performer(s)"],["perfCount","# Of performers"],["props","Prop / set notes"],
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
@@ -63,6 +63,11 @@ const IMPORT_TARGETS=[
   ["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera & lighting"],["vfx","VFX notes"],["director","Director notes"],
   ["label","Break name"],["rowType","Row type (Shot / Break)"]
 ];
+function importTargets(){
+  const custom=cols().filter(c=>c.custom).map(c=>[c.key,c.label+" (your column)"]);
+  const relabel=([k,l])=>{const c=colMap()[k];return [k,c&&c.label!==c.base&&!c.custom?`${c.label} (${l})`:l]};
+  return [...BASE_IMPORT_TARGETS.map(relabel),...custom,["new","+ New column (named after the heading)"]];
+}
 const APPEND_TARGETS=["director","vfx","camera","location","props","script","description"];
 const IMPORT_SYN={
   shot:["shot #","shot","shot no","shot number","shot#","sc/shot","scene/shot"],
@@ -86,9 +91,10 @@ const IMPORT_SKIP=["shot id","totals","seconds (tc)","frame range","seconds (fra
 const normH=s=>String(s==null?"":s).toLowerCase().replace(/\s+/g," ").trim();
 function guessTarget(h,used){
   const n=normH(h); if(!n) return "ignore";
+  for(const c of cols()){ if(!c.label||c.fixed&&c.key!=="shot") continue; if(normH(c.label)===n&&(c.custom||c.label!==c.base)&&!used.has(c.key)) return c.key; }
   if(IMPORT_SKIP.includes(n)) return "ignore";
   for(const [k,list] of Object.entries(IMPORT_SYN)) if(list.includes(n)&&(!used.has(k)||APPEND_TARGETS.includes(k))) return k;
-  return "ignore";
+  return "new";
 }
 function detectHeader(rows){
   for(let i=0;i<Math.min(rows.length,15);i++){const strs=rows[i].filter(c=>typeof c==="string"&&c.trim()&&isNaN(c)).length;if(strs>=2)return i}
@@ -127,11 +133,12 @@ function buildImpMap(){
     const head=String(hdr[c]??"").trim()||`Column ${c+1}`;
     let t=guessTarget(hdr[c],used); if(t!=="ignore") used.add(t);
     if(!body.some(r=>String(r[c]??"").trim()!=="")) t="ignore";
+    if(t==="new"&&!String(hdr[c]??"").trim()) t="ignore";
     IMP.map.push({h:head,t,sample:String((body.find(r=>String(r[c]??"").trim()!=="")||[])[c]??"")});
   }
   const tb=$("#impMap"); tb.innerHTML="";
   IMP.map.forEach((m,i)=>{
-    const s=h("select",{"data-mi":i}); IMPORT_TARGETS.forEach(([v,l])=>s.append(h("option",{value:v},l))); s.value=m.t;
+    const s=h("select",{"data-mi":i}); importTargets().forEach(([v,l])=>s.append(h("option",{value:v},l))); s.value=m.t;
     s.addEventListener("change",()=>{IMP.map[i].t=s.value;updImpInfo()});
     tb.append(h("tr",{},h("td",{},h("b",{},m.h)),h("td",{class:"note",style:"max-width:16rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",title:m.sample},m.sample),h("td",{},s)));
   });
@@ -165,6 +172,8 @@ function impRecords(){
       // a row only counts if it carries real content: pre-built blank tracker rows have just a number and 0/FALSE ticks
       if(!["shot","perfCount","body","face","glove","done","setup","shoot"].includes(m.t)) any=true;
       if(["setup","shoot"].includes(m.t)&&parseMinutes(v)>0) any=true;
+      if(m.t==="new"){rec.f["new:"+c]=v;return}
+      if(String(m.t).startsWith("c_")){const cc=colMap()[m.t]||{};rec.f[m.t]=cc.type==="flag"?isOn(v):cc.type==="number"&&!isNaN(Number(v))?Number(v):String(v);return}
       if(["body","face","glove","done"].includes(m.t)) rec.f[m.t]=isOn(v);
       else if(m.t==="setup"||m.t==="shoot") rec.f[m.t]=parseMinutes(v);
       else if(m.t==="perfCount"){const n=Number(v);rec.f.perfCount=isNaN(n)?String(v):n}
@@ -208,12 +217,29 @@ function groupToRow(g,recorded,kindCapture){
   row.takes=recorded?g.recs.length:0;
   if(recorded&&!("done" in first)) row.done=true;
   if(row.setup==null) row.setup=0; if(row.shoot==null) row.shoot=0;
+  for(const k of Object.keys(row)) if(k.startsWith("new:")) delete row[k];
   if(g.recs[0].brk||(row.label&&!row.action&&!row.shot&&!row.description)){row.type="break";row.label=row.label||row.shot||"Break";row.shot="";row.takes=0;row.done=false;}
   if(!kindCapture&&!row.description&&row.action) row.description=row.action;
   return row;
 }
+function guessColType(c){
+  const vals=impDataRows().map(r=>r[c]).filter(v=>v!==""&&v!=null);
+  if(!vals.length) return "text";
+  if(vals.every(v=>typeof v==="boolean"||/^(0|1|y|n|yes|no|true|false|x)$/i.test(String(v).trim()))) return "flag";
+  if(vals.every(v=>!isNaN(String(v).trim()))) return "number";
+  const distinct=new Set(vals.map(v=>String(v).trim()));
+  if(distinct.size<=8&&vals.length>=distinct.size*2&&[...distinct].every(v=>v.length<=20)) return "list";
+  return vals.reduce((a,v)=>a+String(v).length,0)/vals.length>30?"note":"text";
+}
 async function runImport(){
   const dest=$("#impDest").value, recorded=$("#impTakes").checked;
+  // columns mapped to "+ New column" become project columns first
+  let made=0;
+  IMP.map.forEach((m,c)=>{ if(m.t!=="new") return;
+    const type=guessColType(c), id=uid("k").replace(/[^a-z0-9]/gi,"");
+    const options=type==="list"?[...new Set(impDataRows().map(r=>String(r[c]??"").trim()).filter(Boolean))].join(","):"";
+    S.cols.push({id,label:m.h,type,options}); m.t="c_"+id; made++; });
+  if(made){ invalidateCols(); }
   const recs=impRecords(); if(!recs.length) return;
   const groups=groupImport(recs);
   const has=k=>IMP.map.some(m=>m.t===k);
@@ -247,7 +273,7 @@ async function runImport(){
   }
   commit(); P.activeByProject[pid()]=target.id; savePrefs(); renderAll();
   $("#impModal").classList.remove("open");
-  toast(`Imported ${groups.length} shot${groups.length===1?"":"s"} - Undo to take it back`);
+  toast(`Imported ${groups.length} shot${groups.length===1?"":"s"}${made?` and ${made} new column${made>1?"s":""}`:""} - Undo to take it back`);
 }
 
 /* ---------- export: tracker workbook in the Shotlist Builder format ---------- */
@@ -295,22 +321,26 @@ async function buildTracker(days,opt){
 
   // Shotlist: one row per take
   const flagCols=["body","face","glove"];
-  const cols=[{k:"shot",h:"Shot #",w:9},{k:"take",h:"Take #",w:8},{k:"sid",h:"Shot ID",w:44},{k:"app",h:"Shot name (app)",w:44},{k:"prod",h:"Shoot/Production ID",w:12},
+  const tcols=[{k:"shot",h:"Shot #",w:9},{k:"take",h:"Take #",w:8},{k:"sid",h:"Shot ID",w:44},{k:"app",h:"Shot name (app)",w:44},{k:"prod",h:"Shoot/Production ID",w:12},
     {k:"day",h:"Shoot Day",w:8},{k:"priority",h:"Priority",w:9},{k:"perfCount",h:"# Of Performers",w:10},{k:"props",h:"Prop",w:16},{k:"performers",h:"Performer(s)",w:16},
     {k:"genre",h:"Genre",w:12},{k:"action",h:"Action",w:30},{k:"done",h:"Shot?",w:7},{k:"body",h:"Body",w:7},{k:"face",h:"Face",w:7},{k:"glove",h:"Glove",w:7},
     {k:"hero",h:"Hero",w:8},{k:"safety",h:"Safety",w:8},{k:"description",h:"Description",w:30},{k:"location",h:"Location / Setup",w:18},{k:"shotType",h:"Shot type",w:14},
-    {k:"camera",h:"Technical Notes",w:28},{k:"vfx",h:"Capture Notes",w:24},{k:"director",h:"Notes",w:30},{k:"setup",h:"Setup (min)",w:9},{k:"shoot",h:"Shoot (min)",w:9},{k:"start",h:"Planned start",w:10}];
-  if(opt.withTiming) cols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
-  cols.forEach((x,i)=>{x.i=i+1;x.L=colLetter(i+1)});
-  const L=k=>(cols.find(x=>x.k===k)||{}).L;
+    {k:"camera",h:"Technical Notes",w:28},{k:"vfx",h:"Capture Notes",w:24},{k:"director",h:"Notes",w:30},
+    ...cols().filter(x=>x.custom).map(x=>({k:x.key,h:x.label,w:x.type==="note"?28:x.type==="flag"?8:14,custom:x.type})),
+    {k:"setup",h:"Setup (min)",w:9},{k:"shoot",h:"Shoot (min)",w:9},{k:"start",h:"Planned start",w:10}];
+  if(opt.withTiming) tcols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
+  { const cm=colMap(); const keymap={done:null,start:null,setup:"setup",shoot:"shoot",shot:"shot",priority:"priority",perfCount:"perfCount",props:"props",performers:"performers",genre:"genre",action:"action",body:"body",face:"face",glove:"glove",hero:"hero",safety:"safety",description:"description",location:"location",shotType:"shotType",camera:"camera",vfx:"vfx",director:"director"};
+    tcols.forEach(x=>{const k=keymap[x.k];const c=k&&cm[k];if(c&&c.label!==c.base)x.h=c.label}); }
+  tcols.forEach((x,i)=>{x.i=i+1;x.L=colLetter(i+1)});
+  const L=k=>(tcols.find(x=>x.k===k)||{}).L;
   const sl=wb.addWorksheet("Shotlist",{properties:{tabColor:{argb:XC.accent}},views:[{state:"frozen",xSplit:3,ySplit:2,showGridLines:false}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:2"}});
-  sl.columns=cols.map(x=>({width:x.w}));
+  sl.columns=tcols.map(x=>({width:x.w}));
   const hr=sl.getRow(1); hr.height=30;
-  cols.forEach(x=>{const cell=hr.getCell(x.i);cell.value=x.h;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}});cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};cell.border={bottom:{style:"medium",color:{argb:XC.accent}}}});
+  tcols.forEach(x=>{const cell=hr.getCell(x.i);cell.value=x.h;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}});cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};cell.border={bottom:{style:"medium",color:{argb:XC.accent}}}});
   const tr=sl.getRow(2); tr.height=20;
-  cols.forEach(x=>{const cell=tr.getCell(x.i);cell.fill=fill(XC.stage);cell.font=F({bold:true});cell.alignment={horizontal:"center",vertical:"middle"};cell.border={bottom:thin}});
+  tcols.forEach(x=>{const cell=tr.getCell(x.i);cell.fill=fill(XC.stage);cell.font=F({bold:true});cell.alignment={horizontal:"center",vertical:"middle"};cell.border={bottom:thin}});
   tr.getCell(1).value="Totals";
-  ["done","body","face","glove"].forEach(k=>{const l=L(k);tr.getCell(cols.find(x=>x.k===k).i).value={formula:`SUMPRODUCT(--(${l}3:${l}100000))`}});
+  ["done","body","face","glove"].forEach(k=>{const l=L(k);tr.getCell(tcols.find(x=>x.k===k).i).value={formula:`SUMPRODUCT(--(${l}3:${l}100000))`}});
 
   // the rows: every logged take of every shot; planned shots with no takes get one row
   const data=[];
@@ -338,20 +368,23 @@ async function buildTracker(days,opt){
       case "prod": return `IF(${ref("prod")}="","",${pre?`"${pre}"&`:""}${ref("prod")})`;
       case "day": return `IF(${ref("day")}="","",${pre?`"${pre}"&`:""}${ref("day")})`;
       case "body": case "face": case "glove": return `IF(N(${L(p.key)}${rn})=1,"${pre}","")`;
-      default: { const k=p.key; if(!L(k)) return `""`; return `IF(OR(${ref(k)}="",${ref(k)}="-"),"",${pre?`"${pre}"&`:""}${ref(k)})`; }
+      default: { const k=p.key; if(!L(k)) return `""`;
+        const cc=tcols.find(y=>y.k===k); if(cc&&cc.custom==="flag"){const tag=pre||cleanSeg((colMap()[k]||{}).label||"");return `IF(N(${L(k)}${rn})=1,"${xs(tag)}","")`}
+        return `IF(OR(${ref(k)}="",${ref(k)}="-"),"",${pre?`"${pre}"&`:""}${ref(k)})`; }
     }
   };
   const total=Math.max(300,data.length+50);
   const aL=L("action");
   for(let i=0;i<total;i++){
     const rn=i+3, row=sl.getRow(rn), x=data[i];
-    const put=(k,v)=>{const col=cols.find(y=>y.k===k);if(col)row.getCell(col.i).value=v};
+    const put=(k,v)=>{const col=tcols.find(y=>y.k===k);if(col)row.getCell(col.i).value=v};
     if(x){
       const r=x.r, d=x.d;
       put("shot",shotNumber(r,d)); put("take",x.take); put("app",shotName(r,d,x.take));
       const pid_=String(S.project.prodId||"").trim(); put("prod",pid_===""?null:(isNaN(Number(pid_))?pid_:Number(pid_)));
       put("day",d.dayNo||dayIndex(d)+1);
       for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
+      for(const col of tcols.filter(y=>y.custom)){const v=r[col.k];if(col.custom==="flag")put(col.k,isOn(v)?1:0);else if(v!=null&&String(v).trim()!=="")put(col.k,col.custom==="number"&&!isNaN(Number(v))?Number(v):String(v))}
       if(r.perfCount!==""&&r.perfCount!=null) put("perfCount",isNaN(Number(r.perfCount))?r.perfCount:Number(r.perfCount));
       put("done",x.logged||r.done?1:0); flagCols.forEach(k=>put(k,isOn(r[k])?1:0));
       put("setup",Number(r.setup)||0); put("shoot",Number(r.shoot)||0); put("start",hhmm(x.start));
@@ -368,16 +401,18 @@ async function buildTracker(days,opt){
       put("secFr",{formula:`IFERROR(IF(OR(${L("range")}${rn}="",${L("fps")}${rn}="",${L("fps")}${rn}=0),"",${L("range")}${rn}/${L("fps")}${rn}),"")`});
       if(!x) put("fps",{formula:`IF(${L("fps")}${rn-1}="","",${L("fps")}${rn-1})`});
     }
-    cols.forEach(col=>{const cell=row.getCell(col.i);cell.border=box;const auto=["sid","app","secTc","range","secFr"].includes(col.k);
+    tcols.forEach(col=>{const cell=row.getCell(col.i);cell.border=box;const auto=["sid","app","secTc","range","secFr"].includes(col.k);
       cell.fill=fill(auto?XC.paper:XC.white);cell.font=auto?F({name:"Consolas",size:9,color:{argb:XC.signal}}):F();
       const centre=["shot","take","prod","day","priority","perfCount","done","body","face","glove","hero","safety","setup","shoot","start","fps","fs","fe"].includes(col.k);
       cell.alignment={vertical:"top",horizontal:centre?"center":undefined,wrapText:["description","camera","vfx","director","location"].includes(col.k)}});
-    if(opt.withTiming){row.getCell(cols.find(y=>y.k==="tcIn").i).numFmt="hh:mm:ss";row.getCell(cols.find(y=>y.k==="tcOut").i).numFmt="hh:mm:ss"}
+    if(opt.withTiming){row.getCell(tcols.find(y=>y.k==="tcIn").i).numFmt="hh:mm:ss";row.getCell(tcols.find(y=>y.k==="tcOut").i).numFmt="hh:mm:ss"}
   }
   const last=total+2; const rng=k=>`${L(k)}3:${L(k)}${last}`; let pri=1;
-  sl.dataValidations.add(rng("priority"),{type:"list",allowBlank:true,showErrorMessage:false,formulae:['"HIGH,MID,LOW"']});
-  sl.addConditionalFormatting({ref:rng("priority"),rules:[["HIGH",XC.accent,XC.white],["MID","FFD9A441",XC.ink],["LOW",XC.stage,XC.muted]].map(([v,bg,fc])=>({type:"cellIs",operator:"equal",formulae:[`"${v}"`],style:st(bg,fc,1),priority:pri++}))});
-  sl.addConditionalFormatting({ref:`A3:${colLetter(cols.length)}${last}`,rules:[{type:"expression",formulae:[`N($${L("done")}3)=1`],style:st(XC.done),priority:pri++}]});
+  const popts=priorityOptions(); const plist=popts.join(",").replace(/"/g,"");
+  if(plist&&plist.length<=250) sl.dataValidations.add(rng("priority"),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${plist}"`]});
+  sl.addConditionalFormatting({ref:rng("priority"),rules:[[XC.accent,XC.white],["FFD9A441",XC.ink],[XC.stage,XC.muted]].slice(0,popts.length).map(([bg,fc],i)=>({type:"cellIs",operator:"equal",formulae:[`"${popts[i].replace(/"/g,"")}"`],style:st(bg,fc,1),priority:pri++}))});
+  for(const col of tcols.filter(y=>y.custom==="list")){const o=optList((S.tcols.find(x=>"c_"+x.id===col.k)||{}).options).join(",").replace(/"/g,"");if(o&&o.length<=250)sl.dataValidations.add(rng(col.k),{type:"list",allowBlank:true,showErrorMessage:false,formulae:[`"${o}"`]})}
+  sl.addConditionalFormatting({ref:`A3:${colLetter(tcols.length)}${last}`,rules:[{type:"expression",formulae:[`N($${L("done")}3)=1`],style:st(XC.done),priority:pri++}]});
   ["done","body","face","glove"].forEach(k=>sl.addConditionalFormatting({ref:rng(k),rules:[{type:"expression",formulae:[`AND($${aL}3<>"",N(${L(k)}3)=0)`],style:st(XC.soft,XC.accent),priority:pri++}]}));
 
   // ID Settings
@@ -385,7 +420,7 @@ async function buildTracker(days,opt){
   ids.columns=[{width:26},{width:12},{width:64}];
   ids.getCell("A1").value="Shot ID Builder"; ids.getCell("A1").font=F({size:18,bold:true}); ids.getRow(1).height=30;
   ["Part","Include?","How it appears when ON"].forEach((t,i)=>{const cell=ids.getCell(2,i+1);cell.value=t;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}})});
-  parts.forEach((p,i)=>{const r=ids.getRow(3+i);r.getCell(1).value=ID_PART_LABELS[p.key]||p.key;r.getCell(2).value=!!p.on;
+  parts.forEach((p,i)=>{const r=ids.getRow(3+i);r.getCell(1).value=partLabel(p.key)||"(deleted column)";r.getCell(2).value=!!p.on;
     r.getCell(3).value=["body","face","glove"].includes(p.key)?`'${xs(p.prefix)}' when ticked, otherwise skipped`:(xs(p.prefix)?`Value prefixed with ${xs(p.prefix)} (skipped if blank or '-')`:"Value as entered (skipped if blank or '-')");
     r.getCell(1).font=F({bold:true});r.getCell(2).alignment={horizontal:"center"};for(let k=1;k<=3;k++){r.getCell(k).border=box}});
   ids.dataValidations.add(`B3:B${parts.length+2}`,{type:"list",allowBlank:false,formulae:['"TRUE,FALSE"']});

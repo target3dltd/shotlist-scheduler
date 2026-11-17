@@ -67,7 +67,7 @@ async function getSnapshot(st, pid){
 }
 function validOps(ops){
   if (!Array.isArray(ops) || ops.length === 0 || ops.length > 3000) return false;
-  return ops.every(o => o && ["doc", "day", "row", "person"].includes(o.e) && typeof o.id === "string" && o.id.length <= 80
+  return ops.every(o => o && ["doc", "day", "row", "person", "col"].includes(o.e) && typeof o.id === "string" && o.id.length <= 80
     && o.set && typeof o.set === "object" && !Array.isArray(o.set));
 }
 async function compact(st, pid, snap, etag, keys){

@@ -1,5 +1,5 @@
   <h3>What this is</h3>
-  <p>A shoot scheduler and shot-naming tool for a whole production. Each project holds its details, cast and crew, settings and every shoot day. Change any setup or shoot time and the day's start and end times recalculate down the list. Capture days add the mocap / volcap columns and build shot names with take numbers for the DIT.</p>
+  <p>A shoot scheduler and shot-naming tool for a whole production. Each project holds its details, cast and crew, settings and every shoot day. Change any setup or shoot time and the day's start and end times recalculate down the list. Mocap days add the motion-capture columns and build shot names with take numbers for the DIT.</p>
 
   <h3>How times are worked out</h3>
   <ul>
@@ -12,7 +12,7 @@
   <h3>Days</h3>
   <ul>
     <li>Each shoot day has a tab under the title with its own name, kind, day number, date, call, wrap, buffers and minimum setup. Once a day has timings, its tab shows the calculated wrap.</li>
-    <li><b>Kind</b>: <i>Schedule</i> days focus on setups and timings. <i>Capture</i> days (tagged <span class="chip">cap</span>) also show Takes, Action, Performer(s), # Perf., Genre, Body / Face / Glove, Hero and Safety. Every column is available on both kinds: switch any on or off under <b>Columns</b>. Your choice is remembered separately for each kind.</li>
+    <li><b>Kind</b>: <i>Live Action</i> days (tagged <span class="chip">LA</span>) focus on setups and timings. <i>Mocap</i> days (tagged <span class="chip">Mocap</span>) also show Takes, Action, Performer(s), # Perf., Genre, Body / Face / Glove, Hero and Safety. Every column is available on both kinds: switch any on or off under <b>Columns</b>. Your choice is remembered separately for each kind.</li>
     <li><b>Day #</b> is used in shot names (for example <code>d4</code>).</li>
     <li><b>+ Day</b> adds a day. <b>Copy day</b> duplicates the current day with the ticks and takes cleared, which is handy for planning a pickup day. <b>Delete day</b> removes it, and Undo brings it back. <b>Reset day</b> puts an imported day back as it was imported.</li>
   </ul>
@@ -30,6 +30,15 @@
     <li>Undo / Redo: the buttons or Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. Undo only reverses <i>your</i> changes. A teammate's edits made in the meantime stay.</li>
   </ul>
 
+  <h3>Columns and priority</h3>
+  <ul>
+    <li>Settings → <b>Columns</b> adds your own columns. They are shared with the team and appear on every day. Each one can be text, long text, a number, a tick box or a dropdown (list the options with commas). Reorder them with ↑ ↓ and delete with ✕. Deleting keeps the values behind the scenes, so Undo brings the column back with its data.</li>
+    <li>Tick <b>In shot name</b> to add a column to the generated names, then set its prefix and position in Settings → Shot names. A tick-box column adds its prefix (or its name) when ticked.</li>
+    <li><b>Rename built-in columns</b> for the whole team, e.g. Hero to Hero code. Clear the box to go back to the original name.</li>
+    <li><b>Priority</b> is on every day. The first three options are colour-coded in the dropdown and down the row's left edge (highlight colour, amber, grey). Sorting by Priority puts the highest first. Change the options in Settings → Columns.</li>
+    <li>The <b>Columns</b> menu in the toolbar shows or hides columns just for you, separately for Mocap and Live Action days.</li>
+  </ul>
+
   <h3>Shot names and DIT</h3>
   <ul>
     <li>The <b>Shot name</b> column shows the name the <i>next</i> take will get. <b>Copy</b> puts it on the clipboard.</li>
@@ -42,7 +51,7 @@
   <ul>
     <li>Settings → <b>Project</b> holds the project name, client, production ID, frame rate, dates, location, capture system, lead and notes. Click the project name in the title bar to jump there.</li>
     <li>Settings → <b>Cast &amp; crew</b> keeps names, roles, phone, email and notes. You can export it as a CSV.</li>
-    <li>Settings → <b>Projects</b>: open, create (blank, same settings without shots, or a full copy), remove, export a project file, or import one. Shotlist Builder project files (<code>.json</code>) and older Scheduler saves import too. A Builder file becomes a capture day, with retakes counted as takes.</li>
+    <li>Settings → <b>Projects</b>: open, create (blank, same settings without shots, or a full copy), remove, export a project file, or import one. Shotlist Builder project files (<code>.json</code>) and older Scheduler saves import too. A Builder file becomes a Mocap day, with retakes counted as takes.</li>
   </ul>
 
   <h3>Spreadsheets</h3>
@@ -50,7 +59,9 @@
     <li><b>Import sheet</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
     <li><b>Group retakes</b> merges consecutive rows with the same Shot # and Action into one shot with a take count. Hero / Safety / NG marks per take are noted in Director notes, e.g. <code>Hero: T7</code>.</li>
     <li>Tick <b>Rows are takes already recorded</b> when importing a log of what was shot. Leave it off for a plan, so the first take you log is T1.</li>
+    <li>Headings that don't match anything are set to <b>+ New column</b>, which creates a project column named after the heading. Its type is worked out from the values: tick box, number, dropdown or text. Change any of them to Ignore if you don't want them.</li>
     <li>Send the shots to a new day, to new days split by the Shoot Day column, to the open day, or to a new project. A Builder export's Project tab fills in the project details. Undo takes an import back.</li>
+    <li>Exports include your own columns and any renamed headings.</li>
     <li><b>Export .xlsx</b> writes the Shotlist Builder tracker for Google Sheets or Excel: a Project tab with cast and crew, then a Shotlist with one row per take. Take # and Shot ID are live formulas driven by an ID Settings tab, so retakes added in the sheet number themselves. Optional timecode and frame columns and a Schedule tab are included. In Google Sheets: File &gt; Import &gt; Upload &gt; Replace spreadsheet.</li>
     <li>On the team site the spreadsheet library is served from the site itself. The standalone file fetches it from a public library server the first time you import or export.</li>
   </ul>
@@ -104,5 +115,5 @@
   <ul>
     <li><b>Day 1 - 14 Oct</b> and <b>Day 2 - 21 Oct</b> (VolCap) were rebuilt from the Shotlist tracker. Each row is one setup in the order it was shot, with its takes, performers, prop and action. Hero, Safety and NG takes are in Director notes, and the GS process is in VFX notes. No timings were logged for those days.</li>
     <li><b>Day 3 - LV</b> comes from the LV Timings PDF. The four unnumbered lobby shots are labelled 06c to 06f, and a 45 min lunch was added before Shot 12 as a placeholder.</li>
-    <li><b>Day 4 - Mocap</b> is an empty capture day, ready to plan.</li>
+    <li><b>Day 4 - Mocap</b> is an empty Mocap day, ready to plan.</li>
   </ul>

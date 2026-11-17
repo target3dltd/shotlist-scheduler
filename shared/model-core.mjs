@@ -20,6 +20,8 @@ const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart"
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","done",
   "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
+const COL_FIELDS = ["label","type","options"];   // project-level custom columns; their values live on rows as c_<id>
+const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
 const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes"];
 const ID_PARTS_DEFAULT = [
   { key:"shot", on:true,  prefix:"" }, { key:"take", on:true, prefix:"T" }, { key:"prod", on:true, prefix:"" },
@@ -29,13 +31,14 @@ const ID_PARTS_DEFAULT = [
   { key:"hero", on:true, prefix:"" }, { key:"shotType", on:false, prefix:"" }, { key:"location", on:false, prefix:"" } ];
 const CFG_DEFAULTS = { stepMin:5, newSetup:15, newShoot:15, breakLabel:"Lunch", breakMin:45,
   newCall:"09:00", newWrap:"18:00", newSetupPct:100, newShootPct:100, newMinSetup:0,
+  colLabels:{}, priorityOptions:"HIGH,MID,LOW",
   idParts: ID_PARTS_DEFAULT, idSep:"_", idSpaces:"_", shotPad:3, takePad:1, shotSource:"field" };
 const SEED_STAMP = "0000000000000-seed";
 
 function pad13(n){ return String(Math.max(0, Math.floor(n))).padStart(13, "0"); }
 function opStamp(batchKey, i){ return batchKey + "." + String(i).padStart(4, "0"); }
 function stampTime(s){ return Number(String(s || "").slice(0, 13)) || 0; }
-function emptyModel(){ return { doc:{ doc:{} }, day:{}, row:{}, person:{} }; }
+function emptyModel(){ return { doc:{ doc:{} }, day:{}, row:{}, person:{}, col:{} }; }
 
 function applyOp(model, op, stamp, force){
   const bucket = model[op.e] || (model[op.e] = {});
@@ -50,7 +53,7 @@ function foldBatch(model, batch){
   return model;
 }
 function mergeModels(into, other){
-  for (const e of ["doc","day","row","person"]){
+  for (const e of ["doc","day","row","person","col"]){
     const src = other[e] || {};
     for (const id of Object.keys(src)){
       const ent = (into[e] || (into[e] = {}))[id] || (into[e][id] = {});
@@ -77,6 +80,11 @@ function seedModel(seed){
     PERSON_FIELDS.forEach(k => { if (p[k] !== undefined) f[k] = p[k]; });
     set("person", p.id, f);
   });
+  (seed.cols || []).forEach((c, i) => {
+    const f = { pos: i + 1, _del: false };
+    COL_FIELDS.forEach(k => { if (c[k] !== undefined) f[k] = c[k]; });
+    set("col", c.id, f);
+  });
   const days = seed.days || [];
   days.forEach((d, di) => {
     const f = { pos: di + 1, _del: false };
@@ -85,6 +93,7 @@ function seedModel(seed){
     (d.rows || []).forEach((r, ri) => {
       const rf = { day: d.id, pos: ri + 1, _del: false };
       ROW_FIELDS.forEach(k => { if (r[k] !== undefined) rf[k] = r[k]; });
+      Object.keys(r).forEach(k => { if (isCustomKey(k)) rf[k] = r[k]; });
       set("row", r.id, rf);
     });
   });
@@ -122,11 +131,20 @@ function materialize(model){
     if (!d) continue;
     const r = { id, pos: val(e, "pos", 0) };
     ROW_FIELDS.forEach(k => { r[k] = val(e, k, null); });
+    Object.keys(e).forEach(k => { if (isCustomKey(k)) r[k] = e[k].v; });
     d.rows.push(r);
   }
   const byPos = (a, b) => (a.pos - b.pos) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  days.sort(byPos); days.forEach(d => d.rows.sort(byPos)); people.sort(byPos);
-  return { project, cfg, people, days };
+  const cols = [];
+  for (const id of Object.keys(model.col || {})){
+    const e = model.col[id];
+    if (val(e, "_del", false)) continue;
+    const c = { id, pos: val(e, "pos", 0) };
+    COL_FIELDS.forEach(k => { c[k] = val(e, k, ""); });
+    cols.push(c);
+  }
+  days.sort(byPos); days.forEach(d => d.rows.sort(byPos)); people.sort(byPos); cols.sort(byPos);
+  return { project, cfg, people, cols, days };
 }
 
 /* give positions to anything new or moved, touching as few items as possible:
@@ -192,6 +210,20 @@ function diffDocs(a, b){
     }
   }
   for (const p of a.people || []) if (!bP[p.id]) put("person", p.id, "_del", true, false);
+  const aC = Object.fromEntries((a.cols || []).map(c => [c.id, c]));
+  const bC = Object.fromEntries((b.cols || []).map(c => [c.id, c]));
+  const cPos = assignPositions(b.cols || []);
+  for (const c of b.cols || []){
+    const o = aC[c.id];
+    if (!o){
+      put("col", c.id, "_del", false, true); put("col", c.id, "pos", cPos[c.id] !== undefined ? cPos[c.id] : c.pos, null);
+      COL_FIELDS.forEach(k => put("col", c.id, k, c[k] === undefined ? "" : c[k], null));
+    } else {
+      COL_FIELDS.forEach(k => { if (!same(o[k], c[k])) put("col", c.id, k, c[k], o[k]); });
+      if (cPos[c.id] !== undefined) put("col", c.id, "pos", cPos[c.id], o.pos);
+    }
+  }
+  for (const c of a.cols || []) if (!bC[c.id]) put("col", c.id, "_del", true, false);
   for (const k of Object.keys(CFG_DEFAULTS))
     if (!same((a.cfg || {})[k], (b.cfg || {})[k])) put("doc", "doc", "cfg_" + k, b.cfg[k], (a.cfg || {})[k]);
 
@@ -225,14 +257,17 @@ function diffDocs(a, b){
       put("row", id, "day", day, null);
       put("row", id, "pos", pos, null);
       ROW_FIELDS.forEach(k => put("row", id, k, r[k] === undefined ? null : r[k], null));
+      Object.keys(r).forEach(k => { if (isCustomKey(k) && r[k] != null && r[k] !== "") put("row", id, k, r[k], null); });
     } else {
       if (o.day !== day) put("row", id, "day", day, o.day);
       if (moved) put("row", id, "pos", pos, o.r.pos);
       ROW_FIELDS.forEach(k => { if (!same(o.r[k], r[k])) put("row", id, k, r[k] === undefined ? null : r[k], o.r[k]); });
+      const ck = new Set([...Object.keys(o.r), ...Object.keys(r)].filter(isCustomKey));
+      ck.forEach(k => { if (!same(o.r[k], r[k])) put("row", id, k, r[k] === undefined ? null : r[k], o.r[k]); });
     }
   }
   for (const id of Object.keys(aRows)) if (!bRows[id]) put("row", id, "_del", true, false);
   return Object.values(ops);
 }
 
-export { DAY_FIELDS, ROW_FIELDS, PERSON_FIELDS, PROJECT_FIELDS, CFG_DEFAULTS, SEED_STAMP, pad13, opStamp, stampTime, emptyModel, applyOp, foldBatch, mergeModels, cloneModel, seedModel, materialize, assignPositions, diffDocs };
+export { DAY_FIELDS, ROW_FIELDS, PERSON_FIELDS, COL_FIELDS, isCustomKey, PROJECT_FIELDS, CFG_DEFAULTS, SEED_STAMP, pad13, opStamp, stampTime, emptyModel, applyOp, foldBatch, mergeModels, cloneModel, seedModel, materialize, assignPositions, diffDocs };

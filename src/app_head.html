@@ -108,7 +108,15 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .daytab{border:1px solid var(--line);border-bottom:none;background:var(--tab-bg);border-radius:6px 6px 0 0;padding:.45rem .9rem;cursor:pointer;position:relative;top:1px}
 .daytab.on{background:var(--panel);font-weight:600;border-color:var(--line2)}
 .daytab small{color:var(--muted);font-weight:400;margin-left:.45rem}
-.daytab .kind{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:4px;padding:0 .25rem;margin-right:.4rem;color:var(--muted)}
+.daytab .kind{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:4px;padding:0 .25rem;margin-right:.4rem;color:var(--muted)}
+.daytab .kind.mocap{border-color:var(--shoot);color:var(--shoot)}
+/* priority colour code: dropdown and a bar down the row's left edge */
+select.cell.p-0{background:var(--accent);color:#fff;font-weight:700;border-radius:4px}
+select.cell.p-1{background:#d9a441;color:#1d1d1f;font-weight:700;border-radius:4px}
+select.cell.p-2{background:var(--info-bg);color:var(--muted);font-weight:700;border-radius:4px}
+#grid tr.prio0 td:first-child{box-shadow:inset 5px 0 0 var(--accent)}
+#grid tr.prio1 td:first-child{box-shadow:inset 5px 0 0 #d9a441}
+#grid tr.prio2 td:first-child{box-shadow:inset 5px 0 0 var(--line2)}
 .daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
 .timeline{margin-top:.8rem;position:relative;height:2.6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
@@ -280,7 +288,7 @@ table.plain input[type=checkbox]{width:auto}
   <div class="daytabs" id="dayTabs"></div>
   <div class="controls noprint" id="dayControls">
     <div class="field"><label>Day name</label><input type="text" id="dayName" style="width:11rem"></div>
-    <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Schedule</option><option value="capture">Capture (mocap / volcap)</option></select></div>
+    <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Live Action</option><option value="capture">Mocap</option></select></div>
     <div class="field"><label>Day #</label><input type="number" id="dayNo" min="1" step="1" style="width:4.2rem"></div>
     <div class="field"><label>Shoot date</label><input type="date" id="shootDate"></div>
     <div class="field"><label>Call / start</label><input type="time" id="callTime"></div>
