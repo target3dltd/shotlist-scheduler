@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.3.0";
+const VERSION = "2.4.0";
 const CHANGELOG = [
+  ["2.4.0","2026-11-17","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
   ["2.3.0","2026-11-17","Priority filter next to Show (one priority, a priority and higher, or not set; just for you). Priority colours can be set for every option in Settings > Columns, shared with the team, with readable text picked automatically; the .xlsx export uses the same colours."],
   ["2.2.0","2026-11-17","Your own columns: Settings > Columns adds text, long text, number, tick box or dropdown columns to every day for the whole team, reorders and deletes them (Undo restores the data), and can include any of them in shot names. Built-in columns can be renamed for the team. Priority is on every day, colour-coded in its dropdown and down the row's left edge, sorts highest first, and its options are editable. Day kinds are now called Mocap and Live Action. Import can create new columns from unmatched headings; exports carry your columns and renamed headings."],
   ["2.1.0","2026-11-17","Spreadsheet import and export. Import sheet brings in .xlsx or .csv (Google Sheets, Excel, Numbers, the Shotlist Builder or the Shotlist tracker): pick the sheet and header row, map each column, group retakes into take counts, and send them to a new day, one day per Shoot Day, the open day or a new project. Export .xlsx writes the Shotlist Builder tracker: Project tab with cast and crew, Shotlist with one row per take and live Take # and Shot ID formulas driven by an ID Settings tab, optional timecode and frame columns, a Schedule tab and Instructions. Drop a file anywhere to import it. Easier on the eyes: Settings > Display now has colour themes (warm paper, dim, high contrast light and dark, plus light and dark), a highlight colour, readable fonts (Atkinson Hyperlegible, Lexend, serif, rounded, mono), text weight, line and letter spacing, roomy rows, striped rows, reduce motion, and one-click presets. The ◐ button flips between your chosen light and dark themes. Safer updates: open copies show a 'new version' bar and save before refreshing, and test deploys use separate data so they can't touch the live schedule."],
@@ -334,7 +335,24 @@ async function getSeed(){
 }
 
 /* ===================== document helpers ===================== */
-function D(){ if(!S) return null; const id=P.activeByProject[pid()]; return S.days.find(d=>d.id===id)||S.days[0]||null; }
+function D(){ if(!S) return null; const id=P.activeByProject[pid()]; return S.days.find(d=>d.id===id)||tabOrder().ready[0]||S.days[0]||null; }
+/* day status: set by hand, or worked out - wrapped once the date has passed or every shot is ticked */
+function todayISO(){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); }
+function dayStatus(d){
+  if(d.status==="ready"||d.status==="wrapped") return d.status;
+  if(d.date&&d.date<todayISO()) return "wrapped";
+  const shots=d.rows.filter(r=>r.type!=="break");
+  if(shots.length&&shots.every(r=>r.done)) return "wrapped";
+  return "ready";
+}
+/* tab order: Ready to roll (soonest first, undated after), then Wrapped (most recent first); the days' own order is the tie-break */
+function tabOrder(){
+  const idx=new Map(S.days.map((d,i)=>[d.id,i]));
+  const ready=S.days.filter(d=>dayStatus(d)==="ready"), wrapped=S.days.filter(d=>dayStatus(d)==="wrapped");
+  ready.sort((a,b)=>(a.date&&b.date?(a.date<b.date?-1:a.date>b.date?1:0):a.date?-1:b.date?1:0)||idx.get(a.id)-idx.get(b.id));
+  wrapped.sort((a,b)=>(a.date&&b.date?(a.date>b.date?-1:a.date<b.date?1:0):a.date?-1:b.date?1:0)||idx.get(b.id)-idx.get(a.id));
+  return {ready,wrapped};
+}
 function ensureActive(){ const d=D(); if(d) P.activeByProject[pid()]=d.id; }
 function findRow(id){ for(const d of S.days){const r=d.rows.find(x=>x.id===id); if(r) return {d,r}} return null; }
 function kind(){ return (D()&&D().kind)||"schedule"; }
@@ -660,7 +678,7 @@ function renderBody(){
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(!isBreak){const cb=h("input",{type:"checkbox",title:"Mark as shot","data-k":"done"});cb.checked=!!r.done;
-          cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute())});
+          cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute());renderDayTabs()});
           hd.append(h("label",{class:"chk"},cb,"Shot"))}
         td.append(hd);
       }
@@ -769,18 +787,24 @@ function renderCols(){
 }
 function renderDayTabs(){
   const bar=$("#dayTabs"); bar.innerHTML="";
-  S.days.forEach(d=>{
-    const b=h("button",{class:"daytab"+(D()&&d.id===D().id?" on":""),title:(d.date||"")+" · "+d.rows.filter(r=>r.type!=="break").length+" setups"},
+  const {ready,wrapped}=tabOrder(); const cur=D();
+  const tab=d=>{
+    const st=dayStatus(d), auto=!d.status;
+    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
       h("span",{class:"kind "+(d.kind==="capture"?"mocap":"la")},d.kind==="capture"?"Mocap":"LA"), d.name||"Day", h("small",{},tabSub(d,compute(d))));
-    b.onclick=()=>{if(D()&&D().id===d.id)return;commit();P.activeByProject[pid()]=d.id;P.sort=null;savePrefs();renderAll()};
-    bar.append(b);
-  });
+    b.onclick=()=>{if(cur&&cur.id===d.id)return;commit();P.activeByProject[pid()]=d.id;P.sort=null;savePrefs();renderAll()};
+    return b;
+  };
+  bar.append(h("span",{class:"tabgroup ready"},"Ready to roll"));
+  ready.forEach(d=>bar.append(tab(d)));
   bar.append(h("button",{class:"daytab add",title:"Add an empty day",onclick:addDay},"+ Day"));
+  if(wrapped.length){ bar.append(h("span",{class:"tabgroup wrapped"},"Wrapped")); wrapped.forEach(d=>bar.append(tab(d))); }
 }
 function renderSettingsRow(){
   const d=D(); $("#dayControls").style.display=d?"":"none"; if(!d) return;
   const set=(id,v)=>{const el=$("#"+id);if(document.activeElement!==el)el.value=v??""};
-  set("dayName",d.name); set("dayKind",d.kind||"schedule"); set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
+  set("dayName",d.name); set("dayKind",d.kind||"schedule"); set("dayStatus",d.status||"");
+  { const o=$("#dayStatus option[value='']"); if(o) o.textContent="Auto ("+(dayStatus(Object.assign({},d,{status:""}))==="wrapped"?"Wrapped":"Ready to roll")+")"; } set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
   set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all"); renderPrioFilter();
   $("#projTitle").textContent=S.project.name||"Untitled project"; document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
 }
@@ -1040,7 +1064,7 @@ function exportCSV(){
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
 const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
-const DAY_BLANK={kind:"schedule",dayNo:null,date:"",call:"09:00",wrap:"18:00",setupPct:100,shootPct:100,minSetup:0,origWrap:null};
+const DAY_BLANK={kind:"schedule",status:"",dayNo:null,date:"",call:"09:00",wrap:"18:00",setupPct:100,shootPct:100,minSetup:0,origWrap:null};
 function normDoc(doc){
   const out={project:Object.assign({name:"",client:"",prodId:"",fps:"",dates:"",location:"",system:"",lead:"",notes:""},doc.project||{}),cfg:Object.assign({},CFG_DEFAULTS,doc.cfg||{}),people:(doc.people||[]).map(p=>Object.assign({id:uid("p"),group:"Crew",name:"",role:"",phone:"",email:"",notes:""},p)),cols:(doc.cols||[]).map(c=>Object.assign({id:uid("k").replace(/[^a-z0-9]/gi,""),label:"Column",type:"text",options:""},c)),days:[]};
   (doc.days||[]).forEach((d,i)=>out.days.push(Object.assign({},DAY_BLANK,d,{id:d.id||uid("d"),name:d.name||("Day "+(i+1)),rows:(d.rows||[]).map(r=>Object.assign({},ROW_BLANK,r,{id:r.id||uid("r")}))})));
@@ -1194,8 +1218,8 @@ async function boot(){
 }
 
 /* ===================== wiring ===================== */
-function bindDay(id,key,num){const el=$("#"+id);el.addEventListener("input",()=>{const d=D();if(!d)return;d[key]=num?(el.value===""?"":Number(el.value)):el.value;if(key==="name"){const b=$("#dayTabs .daytab.on");if(b){const sm=$("small",b);b.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=el.value||"Day"})}}recalc();if(key==="dayNo")$$("#grid tbody tr[data-id]").forEach(tr=>refreshNames(tr.dataset.id));softCommit()});el.addEventListener("change",()=>{const d=D();if(num&&/Pct$/.test(key)&&!(Number(el.value)>0)){d[key]=100;el.value=100}commit();if(key==="kind"){renderAll()}else{renderDayTabs();recalc()}})}
-bindDay("dayName","name");bindDay("dayKind","kind");bindDay("dayNo","dayNo",true);bindDay("shootDate","date");bindDay("callTime","call");bindDay("wrapTime","wrap");
+function bindDay(id,key,num){const el=$("#"+id);el.addEventListener("input",()=>{const d=D();if(!d)return;d[key]=num?(el.value===""?"":Number(el.value)):el.value;if(key==="name"){const b=$("#dayTabs .daytab.on");if(b){const sm=$("small",b);b.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=el.value||"Day"})}}recalc();if(key==="dayNo")$$("#grid tbody tr[data-id]").forEach(tr=>refreshNames(tr.dataset.id));softCommit()});el.addEventListener("change",()=>{const d=D();if(num&&/Pct$/.test(key)&&!(Number(el.value)>0)){d[key]=100;el.value=100}commit();if(key==="kind"){renderAll()}else{renderDayTabs();renderSettingsRow();recalc()}})}
+bindDay("dayName","name");bindDay("dayKind","kind");bindDay("dayStatus","status");bindDay("dayNo","dayNo",true);bindDay("shootDate","date");bindDay("callTime","call");bindDay("wrapTime","wrap");
 bindDay("setupPct","setupPct",true);bindDay("shootPct","shootPct",true);bindDay("minSetup","minSetup",true);
 $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();renderBody()});
 $("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});

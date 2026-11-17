@@ -116,6 +116,12 @@ select.cell.prio{font-weight:700;border-radius:4px}
 #grid tr.prio td:first-child{box-shadow:inset 5px 0 0 var(--prio)}
 .swatch{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.35rem;border:1px solid var(--line2)}
 .daytab.add{background:transparent;border-style:dashed;color:var(--muted)}
+.tabgroup{align-self:flex-end;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:0 .35rem .5rem;white-space:nowrap}
+.tabgroup.wrapped{margin-left:1rem;border-left:1px solid var(--line2);padding-left:1rem}
+.daytab.wrapped{opacity:.82}
+.daytab.wrapped.on{opacity:1}
+.daytab .stat-dot{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;margin-right:.35rem;background:var(--ok);vertical-align:1px}
+.daytab.wrapped .stat-dot{background:var(--muted)}
 .timeline{margin-top:.8rem;position:relative;height:2.6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
 .timeline .seg.setup{background:var(--setup)} .timeline .seg.shoot{background:var(--shoot)} .timeline .seg.break{background:var(--break)}
@@ -286,6 +292,7 @@ table.plain input[type=checkbox]{width:auto}
   <div class="daytabs" id="dayTabs"></div>
   <div class="controls noprint" id="dayControls">
     <div class="field"><label>Day name</label><input type="text" id="dayName" style="width:11rem"></div>
+    <div class="field"><label>Status</label><select id="dayStatus"><option value="">Auto</option><option value="ready">Ready to roll</option><option value="wrapped">Wrapped</option></select></div>
     <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Live Action</option><option value="capture">Mocap</option></select></div>
     <div class="field"><label>Day #</label><input type="number" id="dayNo" min="1" step="1" style="width:4.2rem"></div>
     <div class="field"><label>Shoot date</label><input type="date" id="shootDate"></div>

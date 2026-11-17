@@ -15,7 +15,7 @@
    half-deleted row. Order uses a fractional "pos" per row/day, so a move
    only touches the moved row and concurrent moves/inserts merge. */
 
-const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap"];
+const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","done",
   "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog"];
