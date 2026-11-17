@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.5.0";
+const VERSION = "2.5.1";
 const CHANGELOG = [
+  ["2.5.1","2026-11-17","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
   ["2.5.0","2026-11-17","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
   ["2.4.0","2026-11-17","Day tabs are grouped: Ready to roll first (soonest date first), then Wrapped to the right (most recent first). Each day has a Status: Auto (wrapped once its date has passed or every shot is ticked), Ready to roll or Wrapped. The page opens on the next day ready to roll."],
   ["2.3.0","2026-11-17","Priority filter next to Show (one priority, a priority and higher, or not set; just for you). Priority colours can be set for every option in Settings > Columns, shared with the team, with readable text picked automatically; the .xlsx export uses the same colours."],

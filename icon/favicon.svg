@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2c31"/><stop offset="1" stop-color="#151518"/>
+    </linearGradient>
+    <clipPath id="arm"><rect x="8" y="10" width="48" height="11" rx="2.5"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- clapper arm, tipped open -->
+  <g transform="rotate(-13 10 21)">
+    <rect x="8" y="10" width="48" height="11" rx="2.5" fill="#f6f5f2"/>
+    <g clip-path="url(#arm)" fill="#e2563d">
+      <path d="M14 10h7l-6 11H8z"/><path d="M28 10h7l-6 11h-7z"/><path d="M42 10h7l-6 11h-7z"/><path d="M56 10h3l-6 11h-7z"/>
+    </g>
+  </g>
+  <!-- board: three staggered schedule bars -->
+  <rect x="8" y="25" width="48" height="31" rx="4" fill="#f6f5f2"/>
+  <rect x="13" y="30.5" width="17" height="5.5" rx="2.75" fill="#e2563d"/>
+  <rect x="22" y="38.5" width="20" height="5.5" rx="2.75" fill="#2f4858"/>
+  <rect x="34" y="46.5" width="17" height="5.5" rx="2.75" fill="#d9a441"/>
+</svg>
