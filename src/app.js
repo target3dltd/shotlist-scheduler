@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.6.0";
+const VERSION = "2.6.1";
 const CHANGELOG = [
+  ["2.6.1","2026-11-17","Print / PDF squeezes the columns to fit an A4 landscape page (notes columns give way first; your on-screen widths are untouched). The − / + buttons on Setup and Shoot can be switched off in Settings > Display if you prefer to type."],
   ["2.6.0","2026-11-17","Days are archived instead of deleted: Archive day puts the tab away for everyone and the Archived tab restores it. The day settings and filters sit on a coloured banner that joins the open tab. Timeline and banner colours in Settings > Display (or the Timeline colours link under the timeline). Timeline hour labels no longer get cropped. Short text columns (Action, Performer(s), custom text columns such as Runner notes) now wrap. Optional highlight of the rows teammates are working in, in their badge colour, off by default. Wrapped day tabs sit in the right third of the tab bar, and tabs shrink to fit as more days are added (hover for the full name). Tablet and phone friendly: the shot number stays in view while swiping along a row, the day banner folds down to the filters (tap Day settings for the rest), extra toolbar buttons move under More, tabs and summary cards scroll sideways, bigger touch targets, and column widths can be dragged with a finger."],
   ["2.5.1","2026-11-17","New app icon: a clapperboard with schedule bars, for browser tabs, bookmarks and phone home screens (Add to Home Screen opens it like an app)."],
   ["2.5.0","2026-11-17","Drag a column heading to move the column (just for you, on every day); a click still sorts. Reset column order in the Columns menu. Display reset also restores the column order."],
@@ -54,7 +55,7 @@ const HIDDEN_DEFAULT={
 const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24",band:"",bandMix:10};
 const BANDS=[["","Theme default (soft slate)"],["none","None (plain)"],["#2f6fb0","Blue"],["#1f7a7a","Teal"],["#2e7d4f","Green"],["#c8a052","Sand"],["#d0700f","Orange"],["#b3264e","Rose"],["#7a5ea8","Purple"],["custom","Pick my own..."]];
 function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;if(/^#[0-9a-f]{3}$/i.test(c))return "#"+c.slice(1).split("").map(x=>x+x).join("");const m=c.match(/\d+(\.\d+)?/g);if(m&&m.length>=3)return "#"+m.slice(0,3).map(x=>Math.round(+x).toString(16).padStart(2,"0")).join("");return "#888888"}
-const P=Object.assign({name:"",poll:3,peerRows:false,tl:{}},DISPLAY_DEFAULTS,{
+const P=Object.assign({name:"",poll:3,peerRows:false,tl:{},steppers:true},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
 if(!P.v22){ for(const k of Object.keys(P.hiddenBy||{})) P.hiddenBy[k]=(P.hiddenBy[k]||[]).filter(x=>x!=="priority"); P.v22=true; }
@@ -453,6 +454,23 @@ function compute(d){
 
 /* ===================== grid rendering ===================== */
 function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k])return DEFAULT_WIDTHS[k];const c=colMap()[k]||{};return c.type==="note"?200:c.type==="flag"?70:c.type==="number"?80:130}
+// print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
+const PRINT_W={handle:20,shot:36,priority:50,shotId:112,duration:34,setup:36,start:48,shoot:36,end:60,orig:46,takes:34,perfCount:28,body:28,face:28,glove:28,hero:36,safety:36,refs:96,actions:0};
+function printWidths(){
+  if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
+  const w={}, flex=[];
+  for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=28; else if(c.type==="number") w[c.key]=34; else flex.push(c.key); }
+  // text and notes columns share what's left, in proportion to their on-screen widths
+  const fixed=Object.values(w).reduce((a,b)=>a+b,0); let room=PAGE-fixed;
+  // weight by how much text each column holds on this day, so empty columns shrink and busy ones get the room
+  const rows=(D()||{rows:[]}).rows, MIN=40;
+  const wt={}; flex.forEach(k=>{const n=rows.reduce((a,r)=>a+String(r[k]??"").length,0);wt[k]=n?Math.sqrt(n)+6:0});
+  const tw=flex.reduce((a,k)=>a+wt[k],0);
+  if(flex.length&&room>=flex.length*MIN){ const spare=room-flex.length*MIN; flex.forEach(k=>{w[k]=MIN+(tw?Math.floor(spare*wt[k]/tw):Math.floor(spare/flex.length))}); }
+  else { flex.forEach(k=>w[k]=MIN); const f=PAGE/(fixed+flex.length*MIN); for(const k in w) w[k]=Math.floor(w[k]*f); }
+  let total=0; for(const c of cols()){const col=$(`#cols col[data-col="${c.key}"]`);if(!col)continue;const v=(hid.includes(c.key)||c.key==="actions")?0:w[c.key]||0;col.style.width=v+"px";total+=v}
+  $("#grid").style.width=total+"px";
+}
 function applyWidths(){
   let total=0; const hid=hidden();
   for(const c of cols()){const col=$(`#cols col[data-col="${c.key}"]`);if(!col)continue;const hd=hid.includes(c.key);col.style.width=hd?"0px":colW(c.key)+"px";col.style.display=hd?"none":"";if(!hd)total+=colW(c.key);}
@@ -592,7 +610,7 @@ let textTimer=null;
 function softCommit(){ clearTimeout(textTimer); textTimer=setTimeout(commit,700); }
 function minsCtl(r,key){
   const step=()=>Math.max(1,Number(cfg().stepMin)||5);
-  const wrap=h("div",{}); const box=h("div",{class:"mins"});
+  const wrap=h("div",{}); const box=h("div",{class:"mins timing"});
   const inp=h("input",{type:"number",min:"0",step:String(step()),value:r[key]??0,"aria-label":key,"data-k":key});
   inp.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[key]=Math.max(0,Number(inp.value)||0);recalc()});
   inp.addEventListener("change",commit);
@@ -1082,6 +1100,7 @@ function renderSetTab(){
     sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
     tog("Stripe alternate rows (easier to follow a row across)","zebra");
     tog("Reduce motion (no flashing or fades)","calm");
+    tog("Show − / + buttons on Setup and Shoot times (untick to just type)","steppers");
     tog("Highlight rows the team are working in, in each person's badge colour","peerRows");
     const f2=h("div",{class:"form",id:"colourForm"});
     const pick=(label,key,cssVar)=>{const cur=()=>(P.tl||{})[key]||getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()||"#888888";
@@ -1264,6 +1283,7 @@ function applyDisplay(){
   document.body.classList.toggle("roomy",P.density==="roomy");
   document.body.classList.toggle("zebra",!!P.zebra);
   document.body.classList.toggle("calm",!!P.calm);
+  document.body.classList.toggle("nosteps",P.steppers===false);
   const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
   const mix=Math.max(4,Math.min(40,Number(P.bandMix)||10));
   if(P.band==="none"){root.style.setProperty("--band","var(--bg)");root.style.setProperty("--band-line","var(--line)")}
@@ -1354,6 +1374,16 @@ $("#expGo").onclick=exportXlsx;
 $("#updateGo").onclick=refreshForUpdate; $("#updateLater").onclick=()=>$("#updateBar").classList.remove("show");
 document.addEventListener("dragover",e=>{if([...(e.dataTransfer||{}).types||[]].includes("Files"))e.preventDefault()});
 document.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();if(/\.json$/i.test(f.name)){importMode="new";importFile(f)}else openImport(f)}); $("#printBtn").onclick=()=>window.print();
+// on paper, show cell values as plain text so nothing is clipped and long rows can run onto the next page
+function printText(on){
+  $$("#grid .pv").forEach(x=>x.remove());
+  if(!on) return;
+  $$("#grid tbody textarea.cell, #grid tbody input.cell, #grid tbody .mins input, #grid tbody select.cell").forEach(el=>{
+    const v=el.tagName==="SELECT"?(el.selectedOptions[0]?el.selectedOptions[0].textContent:""):el.value;
+    el.after(h("div",{class:"pv"+(el.classList.contains("shotno")?" shotno":"")},v||""));
+  });
+}
+window.addEventListener("beforeprint",()=>{printWidths();printText(true)}); window.addEventListener("afterprint",()=>{printText(false);if(S)applyWidths()});
 $("#ditBtn").onclick=()=>{commit();renderDit();$("#ditModal").classList.add("open")};
 $("#ditShowDone").addEventListener("change",e=>{P.ditShowDone=e.target.checked;savePrefs();renderDit()});
 $("#ditCopyAll").onclick=async()=>{const d=D();const list=[];for(const r of ditRows()){const b2=takeBase(r,d);for(let t=b2+1;t<=b2+(Number(r.takes)||0);t++){const n=shotName(r,d,t);if(n)list.push(n)}}if(!list.length){toast("No takes logged yet");return}await copyText(list.join("\n"));addOut(list.join("\n"),true);toast("Copied "+list.length+" names")};
