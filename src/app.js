@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.11.0";
+const VERSION = "2.11.1";
 const CHANGELOG = [
+  ["2.11.1","2026-11-18","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
   ["2.11.0","2026-11-18","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
   ["2.10.0","2026-11-17","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
   ["2.9.0","2026-11-17","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
@@ -1559,7 +1560,8 @@ function needKey(msg){
 async function startTeam(){
   try{
     await loadProjects();
-    const ok=projects.filter(p=>!p.archived);
+    let ok=projects.filter(p=>!p.archived);
+    if(!ok.length){ await api("/api/projects",{name:"Untitled project",seed:blankSeed("Untitled project")},{noProject:true}); await loadProjects(); ok=projects.filter(p=>!p.archived); }
     if(!P.projectId||!ok.some(p=>p.id===P.projectId)) P.projectId=(ok[0]||{}).id;
     $("#joinModal").classList.remove("open");
     P.wasTeam=true; savePrefs();

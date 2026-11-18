@@ -154,5 +154,14 @@
   <ul>
     <li>The team version needs the site deployed from GitHub (or the Netlify CLI), not drag-and-drop, because only those deploys run the small server part that stores the shared schedule (Netlify Functions and Netlify Blobs).</li>
     <li>Access is controlled by the Netlify site password, which covers the page and the data. If you ever want a second lock, set the environment variable <code>TEAM_KEY</code> and everyone will also be asked for that key. Without either, anyone with the link could open the schedule.</li>
-    <li>Data lives in the site's Netlify Blobs store. Nothing is sent to any other service.</li>
+    <li>Data lives in the site's Netlify Blobs store. Nothing is sent to any other service. No project data is kept in the code or the GitHub repo, so a new site always starts empty.</li>
+  </ul>
+
+  <h3>Separate teams and private projects</h3>
+  <ul>
+    <li>Everyone who can open a site can see <b>every</b> project on it (Settings &gt; Projects). The site password and the team key are for the whole site, not one project. So projects for different teams or clients, which mustn't be seen by each other, go on <b>separate sites</b>.</li>
+    <li><b>To set up a site for another team:</b> in Netlify, Add new site &gt; Import an existing project &gt; GitHub, and pick the same repository. Give it its own name (e.g. <code>clientname-shotlist</code>), then turn on its own site password (Site configuration &gt; Access control). It starts empty: create the project there, or Import a project file. Optionally set a different <code>TEAM_KEY</code> on that site.</li>
+    <li>Each site has its own separate data store, password and link, so the two teams never see each other's projects. Both run the same tool, and every update pushed to GitHub reaches both sites automatically.</li>
+    <li>On one device you can use both sites. Each keeps its own projects, name and settings, because they're different web addresses.</li>
+    <li>To move a project from one site to another: Settings &gt; Projects &gt; Export project file on the first site, then Import it on the other. Remember this hands its contents to whoever can open the second site.</li>
   </ul>

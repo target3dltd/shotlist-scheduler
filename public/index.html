@@ -763,7 +763,16 @@ body.nosteps .mins.timing input{width:4.5em}
   <ul>
     <li>The team version needs the site deployed from GitHub (or the Netlify CLI), not drag-and-drop, because only those deploys run the small server part that stores the shared schedule (Netlify Functions and Netlify Blobs).</li>
     <li>Access is controlled by the Netlify site password, which covers the page and the data. If you ever want a second lock, set the environment variable <code>TEAM_KEY</code> and everyone will also be asked for that key. Without either, anyone with the link could open the schedule.</li>
-    <li>Data lives in the site's Netlify Blobs store. Nothing is sent to any other service.</li>
+    <li>Data lives in the site's Netlify Blobs store. Nothing is sent to any other service. No project data is kept in the code or the GitHub repo, so a new site always starts empty.</li>
+  </ul>
+
+  <h3>Separate teams and private projects</h3>
+  <ul>
+    <li>Everyone who can open a site can see <b>every</b> project on it (Settings &gt; Projects). The site password and the team key are for the whole site, not one project. So projects for different teams or clients, which mustn't be seen by each other, go on <b>separate sites</b>.</li>
+    <li><b>To set up a site for another team:</b> in Netlify, Add new site &gt; Import an existing project &gt; GitHub, and pick the same repository. Give it its own name (e.g. <code>clientname-shotlist</code>), then turn on its own site password (Site configuration &gt; Access control). It starts empty: create the project there, or Import a project file. Optionally set a different <code>TEAM_KEY</code> on that site.</li>
+    <li>Each site has its own separate data store, password and link, so the two teams never see each other's projects. Both run the same tool, and every update pushed to GitHub reaches both sites automatically.</li>
+    <li>On one device you can use both sites. Each keeps its own projects, name and settings, because they're different web addresses.</li>
+    <li>To move a project from one site to another: Settings &gt; Projects &gt; Export project file on the first site, then Import it on the other. Remember this hands its contents to whoever can open the second site.</li>
   </ul>
 
   <h3>Version history</h3>
@@ -778,8 +787,9 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.11.0";
+const VERSION = "2.11.1";
 const CHANGELOG = [
+  ["2.11.1","2026-11-18","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
   ["2.11.0","2026-11-18","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
   ["2.10.0","2026-11-17","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
   ["2.9.0","2026-11-17","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
@@ -3161,7 +3171,8 @@ function needKey(msg){
 async function startTeam(){
   try{
     await loadProjects();
-    const ok=projects.filter(p=>!p.archived);
+    let ok=projects.filter(p=>!p.archived);
+    if(!ok.length){ await api("/api/projects",{name:"Untitled project",seed:blankSeed("Untitled project")},{noProject:true}); await loadProjects(); ok=projects.filter(p=>!p.archived); }
     if(!P.projectId||!ok.some(p=>p.id===P.projectId)) P.projectId=(ok[0]||{}).id;
     $("#joinModal").classList.remove("open");
     P.wasTeam=true; savePrefs();

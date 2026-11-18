@@ -24,7 +24,7 @@ const COMPACT_AT = 250;          // fold old batches into the snapshot once ther
 const COMPACT_AGE_MS = 120_000;  // only fold batches older than this
 const PRESENCE_TTL_MS = 45_000;
 const MAX_BODY = 5_500_000;      // Netlify's request limit is ~6 MB
-const DEFAULT_PID = SEED.id || "main";
+const DEFAULT_PID = (SEED && SEED.id) || "main";   // no project data ships with the code: a new site starts empty
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" }
@@ -47,11 +47,12 @@ async function listKeys(st, prefix){
   return blobs.map(b => b.key).sort();
 }
 async function ensureDefaultProject(st){
+  if (!SEED) return;
   const meta = await st.get("projects/" + DEFAULT_PID, { type: "json" });
   if (!meta) await st.setJSON("projects/" + DEFAULT_PID, { id: DEFAULT_PID, name: (SEED.project && SEED.project.name) || "Project", created: Date.now() }, { onlyIfNew: true });
 }
 async function seedFor(st, pid){
-  if (pid === DEFAULT_PID) return SEED;
+  if (SEED && pid === DEFAULT_PID) return SEED;
   return await st.get(`p/${pid}/seed`, { type: "json" });
 }
 async function getSnapshot(st, pid){
