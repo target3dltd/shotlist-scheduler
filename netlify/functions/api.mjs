@@ -167,6 +167,14 @@ export default async (req, context) => {
           await st.setJSON("keys/" + id, { key, ver: ((prev && prev.ver) || 0) + 1, set: Date.now() });
           return json({ id, key });
         }
+        if (body.action === "rename"){                      // keep the project list's name in step with the project
+          const id = cleanPid(body.id), meta = await st.get("projects/" + id, { type: "json" });
+          if (!meta) return json({ error: "No such project" }, 404);
+          if (!(await canOpen(st, req, id, heldKeys(req)[id] || req.headers.get("x-project-key") || ""))) return noKey();
+          const name = String(body.name || "").trim().slice(0, 80) || "Untitled project";
+          if (meta.name !== name){ meta.name = name; await st.setJSON("projects/" + id, meta); }
+          return json({ ok: true, name });
+        }
         if (body.action === "archive" || body.action === "restore"){
           const id = cleanPid(body.id), meta = await st.get("projects/" + id, { type: "json" });
           if (!meta) return json({ error: "No such project" }, 404);

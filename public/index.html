@@ -804,8 +804,9 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.12.0";
+const VERSION = "2.12.1";
 const CHANGELOG = [
+  ["2.12.1","2026-11-18","Fix: renaming a project in Settings > Project now also renames it in the project list (Settings > Projects, the project key prompt), for everyone."],
   ["2.12.0","2026-11-18","Project keys: with ADMIN_KEY set on the site, each project has its own key, people only see and open the projects whose keys they hold, and the server enforces it for the schedule, saves, activity and images. The admin opens everything. Change a key to cut someone off one job without touching the others; devices using the old key drop the project at once. Share includes the key, and Remove from this device takes a project off a machine."],
   ["2.11.1","2026-11-18","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
   ["2.11.0","2026-11-18","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
@@ -2204,6 +2205,16 @@ async function submitKey(){
     await loadProjects(); if(r.id){await openProject(r.id);toast("Opened "+r.name)} else await startTeam();
   }catch(e){$("#keyErr").textContent=e.message}
 }
+// the project list (Settings > Projects, the key prompt) keeps its own copy of each project's name: keep it in step
+let nameSynced={};
+async function syncProjectName(force){
+  if(!S||!pid()) return; const name=(S.project.name||"").trim()||"Untitled project"; const id=pid();
+  const entry=projects.find(p=>p.id===id);
+  if(MODE==="local"){ if(entry&&entry.name!==name){entry.name=name;lsSet("shotlist2-projects",projects)} return; }
+  if(!force&&(nameSynced[id]===name||!entry||entry.name===name)) return;
+  nameSynced[id]=name;
+  try{ await api("/api/projects",{action:"rename",id,name},{noProject:true}); if(entry) entry.name=name; }catch(e){ delete nameSynced[id]; }
+}
 function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
   const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,wrapMin(d))+15;
@@ -2278,7 +2289,8 @@ function renderSettingsRow(){
   { const o=$("#dayStatus option[value='']"); if(o) o.textContent="Auto ("+(dayStatus(Object.assign({},d,{status:""}))==="wrapped"?"Wrapped":"Ready to roll")+")"; } set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
   set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all"); renderPrioFilter();
   $("#bandSummary").textContent=`${d.name||"Day"} · call ${fmt(toMin(d.call||"09:00"))} · wrap ${fmt(toMin(d.wrap||"18:00"))}`;
-  $("#projTitle").textContent=S.project.name||"Untitled project"; document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
+  $("#projTitle").textContent=S.project.name||"Untitled project";
+  if(!syncProjectName._t) syncProjectName._t=setTimeout(()=>{syncProjectName._t=null;syncProjectName(false)},1500); document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
 }
 function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); }
 function renderAllKeepFocus(){
@@ -2343,7 +2355,7 @@ function renderSetTab(){
   if(setTab==="project"){
     const f=h("div",{class:"form"});
     const fields=[["name","Project name"],["client","Client / production"],["prodId","Shoot / production ID"],["fps","Frame rate (fps)"],["dates","Shoot date(s)"],["location","Location"],["system","Capture system"],["lead","Director / lead"]];
-    for(const [k,l] of fields){const i=h("input",{value:S.project[k]||""});bindDoc(i,null,v=>{S.project[k]=v;if(k==="name")$("#projTitle").textContent=v||"Untitled project"});f.append(h("label",{},l,i))}
+    for(const [k,l] of fields){const i=h("input",{value:S.project[k]||""});bindDoc(i,null,v=>{S.project[k]=v;if(k==="name")$("#projTitle").textContent=v||"Untitled project"});if(k==="name")i.addEventListener("change",()=>syncProjectName(true));f.append(h("label",{},l,i))}
     const ta=h("textarea",{}); ta.value=S.project.notes||""; bindDoc(ta,null,v=>{S.project.notes=v}); f.append(h("label",{class:"wide"},"Project notes",ta));
     b.append(h("p",{class:"note"},"Shared with everyone on this project. The production ID can go into shot names (see Shot names)."),f);
   }
