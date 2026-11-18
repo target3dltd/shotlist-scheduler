@@ -224,6 +224,10 @@ td.num,th.num{text-align:center}
 tr.tech .kindtag{border-color:var(--tech);color:var(--tech)}
 tr.break:not(.tech) .kindtag{border-color:var(--break);color:color-mix(in srgb,var(--break) 70%,var(--ink))}
 .rowbtns .techbtn{color:var(--tech)}
+#grid td.jumpable{cursor:pointer} #grid td.jumpable:hover .time{text-decoration:underline dotted;color:var(--accent,inherit)}
+.jumppop{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:.7rem .8rem;display:flex;flex-direction:column;gap:.4rem;min-width:15rem;max-width:22rem}
+.jumppop label{display:flex;flex-direction:column;gap:.25rem;font-weight:600;font-size:.9em}
+.jumppop input{font-size:1.05em;padding:.3rem .4rem;border:1px solid var(--line);border-radius:5px}
 .movelist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:.4rem .6rem;display:flex;flex-direction:column;gap:.15rem}
 .movelist label.isdone span:first-of-type{color:var(--muted)}
 #moveBody .form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}

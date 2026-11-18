@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.15.0";
+const VERSION = "2.16.0";
 const CHANGELOG = [
+  ["2.16.0","2026-11-18","Jump a row to a time: click a row's Start time, type when you want it to happen, and it moves to the slot where it starts closest to that time (with a preview of where it will land). Works for shots, breaks and tech rows."],
   ["2.15.0","2026-11-18","Move shots between days: Move on a shot (or Move… in the recovery plan) sends it, and any others you tick, to another day or a new one, at the start or end. One click picks every shot not yet shot. Copy adds fresh copies instead. Moved shots keep everything and stay the same shot for the team."],
   ["2.14.0","2026-11-18","Tech / turnaround rows: a purple row type for technical setups, resets and turnarounds, added with + Tech / turnaround or +Tech on a row. They take time like a break but have their own colour, total and timeline colour, and a tag on the row switches between Break and Tech."],
   ["2.13.1","2026-11-18","A storyboard picture that won't load now says why in its box (click to retry) instead of staying blank, and the PDF import checks its pictures load back and says which days they went on."],
@@ -835,7 +836,7 @@ function renderBody(){
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
       else if(k==="setup"){ td.className+=" num"; if(!isBreak) td.append(minsCtl(r,"setup")); }
       else if(k==="shoot"){ td.className+=" num"; td.append(minsCtl(r,"shoot")); }
-      else if(k==="start"){ td.className+=" num"; td.append(h("div",{class:"time","data-t":"start"}),h("div",{class:"orig","data-t":"setupfrom"})); }
+      else if(k==="start"){ td.className+=" num jumpable"; td.title="Click to move this row to a time of day"; td.append(h("div",{class:"time","data-t":"start"}),h("div",{class:"orig","data-t":"setupfrom"})); td.addEventListener("click",()=>openJumpTime(r.id,td)); }
       else if(k==="end"){ td.className+=" num"; td.append(h("div",{class:"time end","data-t":"end"})); }
       else if(k==="orig"){ td.className+=" num"; td.append(h("div",{class:"orig"},r.origStart||"-"),h("div",{class:"delta","data-t":"delta"})); }
       else if(k==="refs"){ if(!isBreak){const rf=h("div",{class:"refs"});rf.append(refBox(r,"ref1"),refBox(r,"ref2"));if(r.ref2||r.ref3)rf.append(refBox(r,"ref3"));td.append(rf)} }
@@ -1266,6 +1267,41 @@ function addDay(){
   const d={id:uid("d"),name:"Day "+n,kind:"schedule",dayNo:n,date:"",call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,origWrap:null,rows:[]};
   S.days.push(d); P.activeByProject[pid()]=d.id; commit(); savePrefs(); renderAll();
 }
+
+/* ===================== jump a row to a time of day ===================== */
+// tries the row in every position and picks the one where it starts closest to the time asked for
+function bestSlot(d,id,target){
+  const row=d.rows.find(r=>r.id===id); if(!row) return null; const rest=d.rows.filter(r=>r.id!==id);
+  let best=null;
+  for(let i=0;i<=rest.length;i++){
+    const trial=[...rest.slice(0,i),row,...rest.slice(i)], C=compute(Object.assign({},d,{rows:trial})), st=C.rows[id].start;
+    const diff=Math.abs(st-target); if(!best||diff<best.diff-0.01) best={i,start:st,diff,before:rest[i]||null,after:rest[i-1]||null};
+  }
+  return best;
+}
+function jumpTarget(d,v){ let t=toMin(v); if(t<toMin(d.call||"09:00")&&wrapMin(d)>1440) t+=1440; return t; }
+function openJumpTime(id,td){
+  closeJumpTime(); const d=D(); const r=d&&d.rows.find(x=>x.id===id); if(!r) return;
+  const C=compute(), cur=C.rows[id].start;
+  const inp=h("input",{type:"time",value:hhmm(cur%1440)}), hint=h("div",{class:"note"});
+  const name=isBlock(r)?blockName(r):"Shot "+(r.shot||"-");
+  const preview=()=>{ if(!inp.value){hint.textContent="";return} const b=bestSlot(d,id,jumpTarget(d,inp.value)); if(!b){hint.textContent="";return}
+    const nb=n=>n?(isBlock(n)?blockName(n):"shot "+(n.shot||"-")):"";
+    hint.textContent=(Math.round(b.diff)<=1?"Starts at ":"Closest it can start: ")+fmt(b.start)+(b.after&&b.before?` (between ${nb(b.after)} and ${nb(b.before)})`:b.before?" (first in the day)":" (last in the day)"); };
+  const go=()=>{ if(!inp.value) return; const b=bestSlot(d,id,jumpTarget(d,inp.value)); if(!b) return;
+    const from=d.rows.findIndex(x=>x.id===id); const rest=d.rows.filter(x=>x.id!==id); rest.splice(b.i,0,r);
+    closeJumpTime(); if(rest.findIndex(x=>x.id===id)===from){toast(name+" already starts closest to that time");return}
+    d.rows=rest; commit(); renderBody(); jump(id);
+    toast(`${name} now starts at ${fmt(compute().rows[id].start)}`+(Math.round(b.diff)>1?` - the closest slot to ${fmt(jumpTarget(d,inp.value))}`:"")+" - Undo to put it back"); };
+  inp.addEventListener("input",preview); inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}if(e.key==="Escape")closeJumpTime()});
+  const pop=h("div",{class:"jumppop",id:"jumpPop"},h("label",{},"Move "+name+" to start at",inp),hint,
+    h("div",{class:"toolbar"},h("button",{class:"btn small primary",onclick:go},"Move"),h("button",{class:"btn small",onclick:closeJumpTime},"Cancel")));
+  document.body.append(pop);
+  const bb=td.getBoundingClientRect(); pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,bb.left))+"px"; pop.style.top=Math.min(innerHeight-pop.offsetHeight-8,bb.bottom+4)+"px";
+  preview(); setTimeout(()=>{inp.focus();document.addEventListener("mousedown",jumpOutside,true)},0);
+}
+function jumpOutside(e){const p=$("#jumpPop");if(p&&!p.contains(e.target))closeJumpTime()}
+function closeJumpTime(){const p=$("#jumpPop");if(p)p.remove();document.removeEventListener("mousedown",jumpOutside,true)}
 
 /* ===================== move or copy shots to another day ===================== */
 let MOVE=null;
