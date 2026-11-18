@@ -851,8 +851,9 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.16.0";
+const VERSION = "2.16.1";
 const CHANGELOG = [
+  ["2.16.1","2026-11-18","The jump-to-time box always opens fully on screen (above the row when there's no room below)."],
   ["2.16.0","2026-11-18","Jump a row to a time: click a row's Start time, type when you want it to happen, and it moves to the slot where it starts closest to that time (with a preview of where it will land). Works for shots, breaks and tech rows."],
   ["2.15.0","2026-11-18","Move shots between days: Move on a shot (or Move… in the recovery plan) sends it, and any others you tick, to another day or a new one, at the start or end. One click picks every shot not yet shot. Copy adds fresh copies instead. Moved shots keep everything and stay the same shot for the team."],
   ["2.14.0","2026-11-18","Tech / turnaround rows: a purple row type for technical setups, resets and turnarounds, added with + Tech / turnaround or +Tech on a row. They take time like a break but have their own colour, total and timeline colour, and a tag on the row switches between Break and Tech."],
@@ -2418,9 +2419,13 @@ function openJumpTime(id,td){
   inp.addEventListener("input",preview); inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}if(e.key==="Escape")closeJumpTime()});
   const pop=h("div",{class:"jumppop",id:"jumpPop"},h("label",{},"Move "+name+" to start at",inp),hint,
     h("div",{class:"toolbar"},h("button",{class:"btn small primary",onclick:go},"Move"),h("button",{class:"btn small",onclick:closeJumpTime},"Cancel")));
-  document.body.append(pop);
-  const bb=td.getBoundingClientRect(); pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,bb.left))+"px"; pop.style.top=Math.min(innerHeight-pop.offsetHeight-8,bb.bottom+4)+"px";
-  preview(); setTimeout(()=>{inp.focus();document.addEventListener("mousedown",jumpOutside,true)},0);
+  pop.style.visibility="hidden"; document.body.append(pop); preview();
+  // below the cell if it fits, otherwise above it; always on screen
+  const place=()=>{const bb=td.getBoundingClientRect(), ph=pop.offsetHeight, pw=pop.offsetWidth;
+    const top=bb.bottom+4+ph<=innerHeight-8?bb.bottom+4:Math.max(8,bb.top-4-ph);
+    pop.style.left=Math.max(8,Math.min(innerWidth-pw-8,bb.left))+"px"; pop.style.top=Math.max(8,Math.min(innerHeight-ph-8,top))+"px"; pop.style.visibility="";};
+  place(); inp.addEventListener("input",()=>requestAnimationFrame(place));
+  setTimeout(()=>{inp.focus();document.addEventListener("mousedown",jumpOutside,true)},0);
 }
 function jumpOutside(e){const p=$("#jumpPop");if(p&&!p.contains(e.target))closeJumpTime()}
 function closeJumpTime(){const p=$("#jumpPop");if(p)p.remove();document.removeEventListener("mousedown",jumpOutside,true)}
