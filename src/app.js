@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.17.0";
+const VERSION = "2.17.1";
 const CHANGELOG = [
+  ["2.17.1","2026-11-18","Laptops: choose which audio input carries the LTC, open the slate in its own window for a second screen, and keyboard shortcuts in Slate View and Note View."],
   ["2.17.0","2026-11-18","Slate View: a full-screen, customisable slate for the next shot, with time of day timecode or timecode jammed from LTC audio (e.g. a Tentacle Sync into the mic input) or typed in, free-running after the jam; clapping logs the take with its timecode. Note View: the current shot full screen with its pictures and script, editable notes, a scribble pad saved to the shot, a take logger (Roll / Cut, Good / NG / Hero / Safety) and Shot done. Both work on phones and tablets."],
   ["2.16.1","2026-11-18","The jump-to-time box always opens fully on screen (above the row when there's no room below)."],
   ["2.16.0","2026-11-18","Jump a row to a time: click a row's Start time, type when you want it to happen, and it moves to the slot where it starts closest to that time (with a preview of where it will land). Works for shots, breaks and tech rows."],
@@ -412,6 +413,7 @@ async function openProject(id){
   if(MODE==="team"&&!base){base=emptyModel();cursor=""}
   S=viewModel(); lastView=clone(S); ensureActive(); renderAll(); updUndo(); updateStatus();
   if(MODE==="team"){scheduleSync(0); if(pending.length) scheduleFlush(300)}
+  bootView();
 }
 async function getSeed(){
   if(MODE==="team"){try{return await api("/api/seed")}catch(e){return null}}
@@ -1406,7 +1408,9 @@ const LTC={on:false};
 async function startLtc(status){
   if(LTC.on) return;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){status("This browser can't listen to audio. Use time of day, or type a timecode to jam.");return}
-  let stream; try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}catch(e){status("Microphone access was refused, so LTC can't be read. Allow the microphone for this site and try again.");return}
+  const want=slateCfg().audioIn, opts={echoCancellation:false,noiseSuppression:false,autoGainControl:false};
+  let stream; try{ try{stream=await navigator.mediaDevices.getUserMedia({audio:want?Object.assign({deviceId:{exact:want}},opts):opts})}
+    catch(e1){ if(!want||e1.name==="NotAllowedError") throw e1; stream=await navigator.mediaDevices.getUserMedia({audio:opts}); status("The chosen input isn't connected, so the default one is being used."); } }catch(e){status("Microphone access was refused, so LTC can't be read. Allow the microphone for this site and try again.");return}
   const ctx=new (window.AudioContext||window.webkitAudioContext)(); const src=ctx.createMediaStreamSource(stream);
   const proc=ctx.createScriptProcessor(1024,1,1); const mute=ctx.createGain(); mute.gain.value=0;
   const frames=[]; let maxF=0, good=0, prev=null;
@@ -1431,6 +1435,35 @@ async function startLtc(status){
   setTimeout(()=>{if(LTC.on&&!good){status("No timecode heard yet. Check the cable goes into the mic input and the Tentacle is set to output LTC (audio), then keep the volume up.")}},6000);
 }
 function stopLtc(){if(!LTC.on)return;try{LTC.proc.disconnect();LTC.stream.getTracks().forEach(t=>t.stop());LTC.ctx.close()}catch(e){}LTC.on=false}
+
+// which audio input carries the LTC (laptops often have several)
+function audioInputPicker(c){
+  const sel=h("select",{},h("option",{value:""},"Default input"));
+  if(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices) navigator.mediaDevices.enumerateDevices().then(ds=>{
+    const ins=ds.filter(d=>d.kind==="audioinput"&&d.deviceId&&d.deviceId!=="default"&&d.deviceId!=="communications");
+    ins.forEach((d,i)=>sel.append(h("option",{value:d.deviceId},d.label||`Input ${i+1}`)));
+    if(ins.length&&!ins[0].label) sel.append(h("option",{disabled:true},"(names appear after the first jam)"));
+    sel.value=ins.some(d=>d.deviceId===c.audioIn)?c.audioIn:"";
+  }).catch(()=>{});
+  sel.addEventListener("change",()=>setSlate({audioIn:sel.value}));
+  return h("label",{class:"slaudio"},"Audio input for LTC",sel);
+}
+function popOutSlate(){
+  const u=location.pathname+"?p="+encodeURIComponent(pid())+"&view=slate&day="+encodeURIComponent((D()||{}).id||"");
+  const w=window.open(u,"shotlist-slate","popup,width=1280,height=760");
+  if(!w) toast("The browser blocked the new window: allow pop-ups for this site and try again");
+  else closeSlate();
+}
+// a window opened as the slate goes straight to it
+const BOOT_VIEW=new URLSearchParams(location.search).get("view"), BOOT_DAY=new URLSearchParams(location.search).get("day");
+let bootViewDone=false;
+function bootView(){
+  if(!BOOT_VIEW||bootViewDone) return; bootViewDone=true;
+  let n=0; const t=setInterval(()=>{ n++; if(S&&S.days&&S.days.length){
+      if(BOOT_DAY&&S.days.some(d=>d.id===BOOT_DAY)) P.activeByProject[pid()]=BOOT_DAY;
+      renderAll(); clearInterval(t); BOOT_VIEW==="notes"?openNotes():openSlate(); document.title="Slate · "+(S.project.name||""); }
+    else if(n>40) clearInterval(t); },250);
+}
 
 /* ===================== Slate View ===================== */
 const SLV={id:null,raf:0};
@@ -1471,7 +1504,7 @@ function renderSlate(){
     h("button",{title:"Slate settings and timecode",onclick:()=>slateSettings()},"⚙"),
     document.fullscreenEnabled?h("button",{title:"Full screen",onclick:()=>{document.fullscreenElement?document.exitFullscreen():v.requestFullscreen().catch(()=>{})}},"⛶"):null,
     h("button",{title:"Close",onclick:closeSlate},"✕"));
-  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("div",{class:"slsettings",id:"slSet"}));
+  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("p",{class:"keyhint"},"Keys: Space or C clap · ← → shots · F full screen · Esc close"),h("div",{class:"slsettings",id:"slSet"}));
   if(!r) $("#slMsg").textContent="No shots on this day yet.";
   fitSlate();
 }
@@ -1502,7 +1535,11 @@ function slateSettings(){
       h("button",{class:"btn small",onclick:()=>startLtc(say)},"Jam from LTC (Tentacle)"),
       LTC.on?h("button",{class:"btn small",onclick:()=>{stopLtc();say("Stopped listening.")}},"Stop listening"):null),
     h("div",{class:"toolbar"},manual,h("button",{class:"btn small",onclick:()=>{const ms=parseTc(manual.value,slateFps());if(ms==null){say("Type a timecode like 14:02:10:00");return}jamTo(ms,"typed");renderSlate();slateSettings()}},"Jam now")),
-    h("p",{class:"note"},"LTC: plug the Tentacle (or any LTC source) into the phone or tablet's mic input with a TRRS adaptor cable, set it to output audio timecode, and keep the volume up. The slate jams in a second or two (within about a frame), then free-runs from the device clock: jam again every few hours, like a hardware slate. Or type the timecode and press Jam now on the beat."),
+    audioInputPicker(c),
+    h("p",{class:"note"},"LTC: plug the Tentacle (or any LTC source) into the phone or tablet's mic input with a TRRS adaptor cable (on a laptop: the headset socket, or a USB audio interface or USB-C headset adaptor, then pick it as the audio input above), set it to output audio timecode, and keep the volume up. The slate jams in a second or two (within about a frame), then free-runs from the device clock: jam again every few hours, like a hardware slate. Or type the timecode and press Jam now on the beat."),
+    h("h3",{},"Second screen"),
+    h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:popOutSlate},"Open the slate in its own window")),
+    h("p",{class:"note"},"Drag that window onto a second monitor or projector facing camera (⛶ or F for full screen), and keep the schedule open on the laptop. Both stay in step."),
     h("h3",{},"Show"),
     h("div",{class:"slchecks"},tog("prod","Production"),tog("dir","Director"),tog("dop","Camera / DOP"),tog("shot","Shot"),tog("take","Take"),tog("roll","Roll"),tog("date","Date"),tog("day","Day"),tog("fps","FPS"),tog("name","Shot name"),tog("desc","Description"),tog("custom","Custom line"),tog("tc","Timecode")),
     h("div",{class:"form"},txt("dir","Director",S.project.lead||""),txt("dop","Camera / DOP"),txt("roll","Roll / card","A001"),txt("custom","Custom line","e.g. INT. TAVERN - NIGHT"),h("label",{},"Frame rate",fpsSel),h("label",{},"Look",theme)),
@@ -1561,7 +1598,7 @@ function renderNotes(){
     notes.append(h("label",{},l,t)); requestAnimationFrame(()=>autosize(t));
   }
   body.append(h("section",{class:"nvwhat"},pics,info),h("section",{},h("h3",{},"Takes"),takes),h("section",{},h("h3",{},"Notes"),notes),h("section",{},h("h3",{},"Scribble"),scribblePad(r)));
-  v.append(body);
+  v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
 }
 function fmtDur(ms){const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 // a drawing pad for finger or pencil; saved as a picture on the shot
@@ -2075,8 +2112,15 @@ if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel
 $("#shareBtn").onclick=openShare;
 $("#slateBtn").onclick=openSlate; $("#notesBtn").onclick=openNotes;
 document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("input,textarea,select"))return;
-  if($("#slateView").classList.contains("open")){ if(e.key==="Escape")closeSlate(); else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "){e.preventDefault();clap()} }
-  else if($("#noteView").classList.contains("open")){ if(e.key==="Escape")closeNotes(); else if(e.key==="ArrowRight")notesStep(1); else if(e.key==="ArrowLeft")notesStep(-1); } });
+  const k=e.key.toLowerCase();
+  if($("#slateView").classList.contains("open")){ if(e.key==="Escape"){if($("#slSet").classList.contains("open"))$("#slSet").classList.remove("open");else closeSlate()} else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "||k==="c"){e.preventDefault();clap()} else if(k==="f")toggleFull($("#slateView")); }
+  else if($("#noteView").classList.contains("open")){ const r=NV.id&&R(NV.id);
+    if(e.key==="Escape")closeNotes(); else if(e.key==="ArrowRight")notesStep(1); else if(e.key==="ArrowLeft")notesStep(-1);
+    else if(k==="r"){const b=$$("#noteView .nvtakes .btn").find(x=>/Roll|Cut/.test(x.textContent));if(b)b.click()}
+    else if(k==="t"&&r){logTake(r.id);renderNotes()}
+    else if(["g","n","h","s"].includes(k)&&r){const a=takeList(r);const last=a[a.length-1];if(last){const m={g:"good",n:"ng",h:"hero",s:"safety"}[k];last.mark=last.mark===m?"":m;setTakeList(r,a);syncMarks(r);commit();renderNotes()}}
+    else if(k==="f")toggleFull($("#noteView")); } });
+function toggleFull(el){ if(!document.fullscreenEnabled) return; document.fullscreenElement?document.exitFullscreen().catch(()=>{}):el.requestFullscreen().catch(()=>{}); }
 $("#keyGo").onclick=submitKey; $("#keyInput").addEventListener("keydown",e=>{if(e.key==="Enter")submitKey()});
 $("#archDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Archive "+d.name+"?","The tab is put away for everyone. Nothing is deleted: restore it any time from the Archived tab at the end of the day tabs.","Archive day")))return;d.archived=true;P.activeByProject[pid()]=null;commit();savePrefs();renderAll();toast("Archived "+d.name+" - restore it from Archived")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}
