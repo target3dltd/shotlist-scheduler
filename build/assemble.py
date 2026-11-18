@@ -43,6 +43,14 @@ vendor = ROOT / "vendor" / "exceljs.min.js"
 if vendor.exists():
     (repo / "public" / "vendor").mkdir(exist_ok=True)
     shutil.copy(vendor, repo / "public" / "vendor" / "exceljs.min.js")
+for extra in ("fflate.min.js",):                # fflate 0.8 (MIT): reads pictures out of .xlsx files
+    if (ROOT / "vendor" / extra).exists():
+        (repo / "public" / "vendor").mkdir(exist_ok=True); shutil.copy(ROOT / "vendor" / extra, repo / "public" / "vendor" / extra)
+pdfjs = ROOT / "vendor" / "pdfjs"            # pdf.js 4.10 (Apache-2.0), only loaded when importing a PDF
+if pdfjs.exists():
+    dst = repo / "public" / "vendor" / "pdfjs"
+    if dst.exists(): shutil.rmtree(dst)
+    shutil.copytree(pdfjs, dst)
 fonts = ROOT / "vendor" / "fonts"
 if fonts.exists():
     dst = repo / "public" / "vendor" / "fonts"
@@ -71,6 +79,11 @@ for d in ("src", "build", "vendor", "icon"):
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+[[headers]]
+  for = "/vendor/pdfjs/*"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
 
 [[headers]]
   for = "/*"
@@ -115,7 +128,7 @@ Bump `VERSION` and add a `CHANGELOG` line in `src/app.js` with every change (Sem
 - Never rename the store, an entity type or an existing field; only add new ones (unknown fields are ignored by older copies).
 - Changes not yet sent are kept in each browser and sent after the update. Open copies see a "new version" bar and save before refreshing.
 - Deploy previews and branch deploys use their own store (`shotlist-<context>`), so testing can't touch live data.
-- `public/vendor/exceljs.min.js` is ExcelJS 4.4.0 (MIT) and `public/vendor/fonts/` holds Atkinson Hyperlegible and Lexend (SIL OFL 1.1), hosted here so nothing loads from a third-party CDN.
+- `public/vendor/exceljs.min.js` is ExcelJS 4.4.0 (MIT) and `public/vendor/fonts/` holds Atkinson Hyperlegible and Lexend (SIL OFL 1.1), and `public/vendor/pdfjs/` is pdf.js 4.10 (Apache-2.0, used for importing storyboard PDFs), hosted here so nothing loads from a third-party CDN.
 """
 (repo / "README.md").write_text(readme)
 

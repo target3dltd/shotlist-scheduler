@@ -1,4 +1,4 @@
-# Shotlist Scheduler v2.12.1
+# Shotlist Scheduler v2.13.0
 
 Shoot scheduler and DIT shot-naming tool. Projects with cast and crew, schedule and capture days,
 timings that cascade, shot names with take numbers, and live team editing.
@@ -29,4 +29,4 @@ Bump `VERSION` and add a `CHANGELOG` line in `src/app.js` with every change (Sem
 - Never rename the store, an entity type or an existing field; only add new ones (unknown fields are ignored by older copies).
 - Changes not yet sent are kept in each browser and sent after the update. Open copies see a "new version" bar and save before refreshing.
 - Deploy previews and branch deploys use their own store (`shotlist-<context>`), so testing can't touch live data.
-- `public/vendor/exceljs.min.js` is ExcelJS 4.4.0 (MIT) and `public/vendor/fonts/` holds Atkinson Hyperlegible and Lexend (SIL OFL 1.1), hosted here so nothing loads from a third-party CDN.
+- `public/vendor/exceljs.min.js` is ExcelJS 4.4.0 (MIT) and `public/vendor/fonts/` holds Atkinson Hyperlegible and Lexend (SIL OFL 1.1), and `public/vendor/pdfjs/` is pdf.js 4.10 (Apache-2.0, used for importing storyboard PDFs), hosted here so nothing loads from a third-party CDN.

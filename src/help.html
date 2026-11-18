@@ -80,7 +80,7 @@
 
   <h3>Spreadsheets</h3>
   <ul>
-    <li><b>Import sheet</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>Import</b> (under More on small screens, or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
     <li><b>Group retakes</b> merges consecutive rows with the same Shot # and Action into one shot with a take count. Hero / Safety / NG marks per take are noted in Director notes, e.g. <code>Hero: T7</code>.</li>
     <li>Tick <b>Rows are takes already recorded</b> when importing a log of what was shot. Leave it off for a plan, so the first take you log is T1.</li>
     <li>Headings that don't match anything are set to <b>+ New column</b>, which creates a project column named after the heading. Its type is worked out from the values: tick box, number, dropdown or text. Change any of them to Ignore if you don't want them.</li>
@@ -112,6 +112,15 @@
     <li><b>Work offline instead</b> on the join screen opens a separate copy saved only in this browser; it doesn't sync. Your team schedule is untouched.</li>
     <li>To get back, click <b>Rejoin team project</b> next to the status in the header, or in Settings &gt; Team &amp; sync. Adding <code>?team</code> to the end of the site address does the same.</li>
     <li>If you lose signal on set without choosing offline, you don't need to do anything: changes queue on the device and send when the connection is back.</li>
+  </ul>
+
+  <h3>Storyboard pictures</h3>
+  <ul>
+    <li>Each shot holds up to <b>3 pictures</b> in the Storyboard column. Click an empty box to add one, click a picture to see it large, ✕ to remove it. A third box appears once the second is filled.</li>
+    <li><b>From a PDF:</b> Import (or drop the file on the page) takes a shot tracker or storyboard PDF, such as a Google Sheets export. It needs a column headed <b>Shot No</b> (or Shot #) with the pictures on the same rows. Rows with a picture but no shot number are extra frames for the shot above, even across a page break. A wide sheet printed as several pages with the same rows is only read once.</li>
+    <li>You see every shot with its pictures before anything changes. Choose whether to match shots on every day or just this one, whether to keep pictures a shot already has (filling empty boxes) or replace them, and whether to add shots that aren't in the project yet. Shot numbers match ignoring leading zeros (005 = 5). One Undo takes the whole import back.</li>
+    <li><b>Keeping pictures when you export:</b> the .xlsx export puts each shot's pictures in Storyboard 1-3 columns on its first take row, and the project file (Settings &gt; Projects &gt; Export project file) packs them in too. Importing either one, into this project, another project or another site, brings the pictures with it. Pictures placed on the rows of a sheet from elsewhere (Excel, Google Sheets) come in the same way.</li>
+    <li>Pictures belong to their project: with project keys on, only people holding that project's key can see them.</li>
   </ul>
 
   <h3>Tablets and phones</h3>

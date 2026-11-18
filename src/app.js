@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.12.1";
+const VERSION = "2.13.0";
 const CHANGELOG = [
+  ["2.13.0","2026-11-18","Storyboard pictures from a PDF: Import reads a shot tracker PDF (e.g. a Google Sheets export), matches each picture to its shot number, including extra frames on rows below and across page breaks, and adds them after a preview. Shots now hold 3 pictures. Pictures now survive exports: the .xlsx export puts them in Storyboard columns and the project file packs them in, and importing either brings them back into whichever project receives them. Pictures on rows of sheets from elsewhere come in too."],
   ["2.12.1","2026-11-18","Fix: renaming a project in Settings > Project now also renames it in the project list (Settings > Projects, the project key prompt), for everyone."],
   ["2.12.0","2026-11-18","Project keys: with ADMIN_KEY set on the site, each project has its own key, people only see and open the projects whose keys they hold, and the server enforces it for the schedule, saves, activity and images. The admin opens everything. Change a key to cut someone off one job without touching the others; devices using the old key drop the project at once. Share includes the key, and Remove from this device takes a project off a machine."],
   ["2.11.1","2026-11-18","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
@@ -766,7 +767,7 @@ async function imgSrc(ref){
 }
 let imgTarget=null;
 function refBox(r,key){
-  const d=h("div",{class:"ref"+(r[key]||r.ref1||r.ref2?"":" empty"),title:r[key]?"Click to enlarge":"Click to add image"});
+  const d=h("div",{class:"ref"+(r[key]||r.ref1||r.ref2||r.ref3?"":" empty"),title:r[key]?"Click to enlarge":"Click to add image"});
   if(r[key]){
     const img=h("img",{alt:"reference"}); imgSrc(r[key]).then(s=>{img.src=s}); d.append(img);
     const x=h("button",{class:"x",title:"Remove image"},"✕");
@@ -821,7 +822,7 @@ function renderBody(){
       else if(k==="start"){ td.className+=" num"; td.append(h("div",{class:"time","data-t":"start"}),h("div",{class:"orig","data-t":"setupfrom"})); }
       else if(k==="end"){ td.className+=" num"; td.append(h("div",{class:"time end","data-t":"end"})); }
       else if(k==="orig"){ td.className+=" num"; td.append(h("div",{class:"orig"},r.origStart||"-"),h("div",{class:"delta","data-t":"delta"})); }
-      else if(k==="refs"){ if(!isBreak){const rf=h("div",{class:"refs"});rf.append(refBox(r,"ref1"),refBox(r,"ref2"));td.append(rf)} }
+      else if(k==="refs"){ if(!isBreak){const rf=h("div",{class:"refs"});rf.append(refBox(r,"ref1"),refBox(r,"ref2"));if(r.ref2||r.ref3)rf.append(refBox(r,"ref3"));td.append(rf)} }
       else if(k==="takes"){ td.className+=" num"; if(!isBreak) td.append(takesCell(r)); }
       else if(k==="actions"){
         const b=h("div",{class:"rowbtns"});
@@ -1233,7 +1234,7 @@ function renderAllKeepFocus(){
 function newShot(extra={}){
   const c=cfg(); const d=D(); const prev=[...d.rows].reverse().find(r=>r.type!=="break")||{};
   const r={id:uid("r"),type:"shot",shot:"",label:"",duration:"",setup:c.newSetup,shoot:c.newShoot,origStart:"",origSetup:0,origShoot:0,
-    location:prev.location||"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,
+    location:prev.location||"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",ref3:"",done:false,
     priority:"",perfCount:d.kind==="capture"?(prev.perfCount||1):"",performers:d.kind==="capture"?(prev.performers||""):"",genre:"",action:"",body:d.kind==="capture",face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
   return Object.assign(r,extra);
 }
@@ -1517,7 +1518,13 @@ async function renderProjectsTab(b){
 /* ===================== import / export ===================== */
 let importMode="new";
 function fileBase(){return (S.project.name||"Shotlist").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_")+"_"+new Date().toISOString().slice(0,10)}
-function saveFile(){commit();download(fileBase()+".shotlist.json",JSON.stringify({app:"shotlist-scheduler",version:VERSION,saved:new Date().toISOString(),doc:S}),"application/json");toast("Exported "+fileBase()+".shotlist.json")}
+// the project file carries its storyboard pictures too, so it can be opened in another project or site
+async function saveFile(){
+  commit(); const refs=new Set(); S.days.forEach(d=>d.rows.forEach(r=>["ref1","ref2","ref3"].forEach(k=>{if(String(r[k]||"").startsWith("img:"))refs.add(r[k])})));
+  const pictures={}; let n=0; for(const ref of refs){ toast(`Packing pictures: ${++n} of ${refs.size}…`); const du=await refToDataUrl(ref); if(du) pictures[ref]=du; }
+  download(fileBase()+".shotlist.json",JSON.stringify({app:"shotlist-scheduler",version:VERSION,saved:new Date().toISOString(),doc:S,pictures}),"application/json");
+  toast("Exported "+fileBase()+".shotlist.json"+(refs.size?` with ${Object.keys(pictures).length} picture${Object.keys(pictures).length===1?"":"s"}`:""));
+}
 function csvEsc(v){v=v==null?"":String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function exportCSV(){
   commit();
@@ -1531,7 +1538,7 @@ function exportCSV(){
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
-const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
+const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",ref3:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
 const DAY_BLANK={kind:"schedule",status:"",dayNo:null,date:"",call:"09:00",wrap:"18:00",setupPct:100,shootPct:100,minSetup:0,origWrap:null};
 function normDoc(doc){
   const out={project:Object.assign({name:"",client:"",prodId:"",fps:"",dates:"",location:"",system:"",lead:"",notes:""},doc.project||{}),cfg:Object.assign({},CFG_DEFAULTS,doc.cfg||{}),people:(doc.people||[]).map(p=>Object.assign({id:uid("p"),group:"Crew",name:"",role:"",phone:"",email:"",notes:""},p)),cols:(doc.cols||[]).map(c=>Object.assign({id:uid("k").replace(/[^a-z0-9]/gi,""),label:"Column",type:"text",options:""},c)),days:[]};
@@ -1565,15 +1572,19 @@ function parseProjectFile(j){
   return null;
 }
 async function importFile(file){
-  let doc=null;
-  try{doc=parseProjectFile(JSON.parse(await file.text()))}catch(e){}
+  let doc=null, pictures={};
+  try{const raw=JSON.parse(await file.text());doc=parseProjectFile(raw);pictures=(raw&&raw.pictures)||{}}catch(e){}
   if(!doc){toast("That isn't a project file this tool can read");return}
+  // pictures packed in the file go back on their shots as data, then into whichever project receives them
+  for(const d of doc.days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3"]) if(r[k]&&pictures[r[k]]) r[k]=pictures[r[k]];
   if(importMode==="replace"){
     if(!(await ask("Replace this project?",MODE==="team"?"Everything in "+(S.project.name||"this project")+" is replaced for the whole team. You can Undo straight afterwards.":"Everything in "+(S.project.name||"this project")+" is replaced. You can Undo straight afterwards.","Replace")))return;
+    { const pend=[]; for(const d of doc.days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3"]) if(String(r[k]||"").startsWith("data:")) pend.push([r,k]);
+      let n=0; for(const [r,k] of pend){ toast(`Adding pictures: ${++n} of ${pend.length}…`); try{ r[k]=await storePicture(r[k]); }catch(e){ r[k]=""; } } }
     commit(); S.project=doc.project; S.cfg=doc.cfg; S.people=doc.people; S.cols=doc.cols; S.days=doc.days; commit(); P.activeByProject[pid()]=S.days[0]&&S.days[0].id; renderAll(); toast("Imported into this project");
   }else{
     const name=doc.project.name||file.name.replace(/\..*$/,"");
-    try{const id=await createProject(name,docToSeed(doc));await openProject(id);$("#setModal").classList.remove("open");toast("Imported "+name)}catch(e){toast("Couldn't import: "+e.message)}
+    try{const pend=takeDataRefs(doc.days);const id=await createProject(name,docToSeed(doc));await openProject(id);$("#setModal").classList.remove("open");await putDataRefs(pend);toast("Imported "+name)}catch(e){toast("Couldn't import: "+e.message)}
   }
 }
 
@@ -1733,7 +1744,7 @@ $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=
 $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
 $("#csvBtn").onclick=exportCSV;
 $("#impBtn").onclick=()=>{commit();$("#sheetInput").value="";$("#sheetInput").click()};
-$("#sheetInput").addEventListener("change",e=>{const f=e.target.files[0];if(f)openImport(f)});
+$("#sheetInput").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;if(/\.pdf$/i.test(f.name)||f.type==="application/pdf")openPdfImport(f);else openImport(f)});
 $("#impSheet").addEventListener("change",e=>setImpSheet(e.target.value));
 $("#impHeader").addEventListener("change",e=>{IMP.header=Math.max(0,Math.min(IMP.rows.length-1,(Number(e.target.value)||1)-1));buildImpMap()});
 ["impGroup","impTakes","impDest"].forEach(id=>$("#"+id).addEventListener("change",updImpInfo));
@@ -1742,7 +1753,7 @@ $("#xlsxBtn").onclick=()=>{commit();openExport()};
 $("#expGo").onclick=exportXlsx;
 $("#updateGo").onclick=refreshForUpdate; $("#updateLater").onclick=()=>$("#updateBar").classList.remove("show");
 document.addEventListener("dragover",e=>{if([...(e.dataTransfer||{}).types||[]].includes("Files"))e.preventDefault()});
-document.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();if(/\.json$/i.test(f.name)){importMode="new";importFile(f)}else openImport(f)}); $("#printBtn").onclick=()=>window.print();
+document.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();if(/\.json$/i.test(f.name)){importMode="new";importFile(f)}else if(/\.pdf$/i.test(f.name)||f.type==="application/pdf")openPdfImport(f);else openImport(f)}); $("#printBtn").onclick=()=>window.print();
 // on paper, show cell values as plain text so nothing is clipped and long rows can run onto the next page
 function printText(on){
   $$("#grid .pv").forEach(x=>x.remove());

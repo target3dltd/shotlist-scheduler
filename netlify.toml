@@ -7,6 +7,11 @@
   node_bundler = "esbuild"
 
 [[headers]]
+  for = "/vendor/pdfjs/*"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+
+[[headers]]
   for = "/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"

@@ -251,6 +251,10 @@ input.shotno{font-weight:700;font-size:1.08em}
 .sid .copy{float:right;margin-left:.3em}
 .chip{display:inline-block;font-family:var(--mono);font-size:.82em;border:1px solid var(--line2);border-radius:4px;padding:0 .3em;color:var(--muted)}
 .refs{display:flex;gap:6px}
+.refs .ref{flex:1 1 0;min-width:0}
+.pdfprev td{vertical-align:middle} .pdfprev .refs img{height:56px;width:auto;max-width:96px;border:1px solid var(--line);border-radius:3px;background:#fff}
+.pdfprev .refs img.over{opacity:.35} .pdfprev tr.nomatch td{opacity:.55}
+#pdfBody .form{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .ref{width:150px;height:92px;border:1px dashed var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--ref-bg);color:var(--muted);font-size:.85em;cursor:pointer}
 .ref.empty{height:2.3em}
 .ref img{max-width:100%;max-height:100%;display:block}
@@ -437,7 +441,7 @@ body.nosteps .mins.timing input{width:4.5em}
       <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
       <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
       <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
-      <button class="btn small opt" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder)">Import sheet</button>
+      <button class="btn small opt" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import</button>
       <button class="btn small opt" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
       <button class="btn small opt" id="csvBtn">Export CSV</button>
       <button class="btn small opt" id="printBtn">Print / PDF</button>
@@ -581,6 +585,12 @@ body.nosteps .mins.timing input{width:4.5em}
   <p class="note">Each project has its own key, so you only see the projects you've been given. The key is kept on this device.</p>
 </div></div>
 
+<div class="modal" id="pdfModal"><div class="box">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Storyboard pictures from a PDF</h2>
+  <div id="pdfBody"></div>
+</div></div>
+
 <div class="modal" id="shareModal"><div class="box narrow">
   <button class="btn small close" data-close>Close</button>
   <h2>Share this project</h2>
@@ -628,5 +638,5 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="modal lightbox" id="lightbox"><div class="box"><img id="lightImg" alt=""></div></div>
 <input type="file" id="imgInput" accept="image/*" hidden>
 <input type="file" id="fileInput" accept=".json,application/json" hidden>
-<input type="file" id="sheetInput" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden>
+<input type="file" id="sheetInput" accept=".xlsx,.xlsm,.csv,.tsv,.txt,.pdf" hidden>
 <div class="toast" id="toast"></div>

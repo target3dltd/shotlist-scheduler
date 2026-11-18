@@ -42,15 +42,100 @@ function parseCSV(text){
   if(cur!==""||row.length){row.push(cur);rows.push(row)}
   return rows.filter(r=>r.some(x=>String(x).trim()!==""));
 }
+let fflateLoading=null;
+function loadFflate(){
+  if(window.fflate) return Promise.resolve(window.fflate);
+  if(!fflateLoading) fflateLoading=new Promise((res,rej)=>{const s=document.createElement("script");s.src="vendor/fflate.min.js";s.onload=()=>res(window.fflate);
+    s.onerror=()=>{const t=document.createElement("script");t.src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.js";t.onload=()=>res(window.fflate);t.onerror=()=>{fflateLoading=null;rej(new Error("couldn't load"))};document.head.append(t)};document.head.append(s)});
+  return fflateLoading;
+}
+// { sheetName: [{row, col, data}] } for every picture anchored on a sheet (rows and columns counted from 1)
+async function xlsxPictures(buf){
+  const ff=await loadFflate(); const z=ff.unzipSync(buf), td=new TextDecoder();
+  const txt=p=>z[p]?td.decode(z[p]):"", xml=p=>new DOMParser().parseFromString(txt(p)||"<x/>","application/xml");
+  const rels=p=>{const out={};const d=xml(p);for(const r of d.getElementsByTagName("Relationship"))out[r.getAttribute("Id")]=r.getAttribute("Target");return out};
+  const resolve=(base,t)=>{if(t.startsWith("/"))return t.slice(1);const parts=base.split("/");parts.pop();for(const seg of t.split("/")){if(seg==="..")parts.pop();else if(seg!==".")parts.push(seg)}return parts.join("/")};
+  const relsOf=p=>{const i=p.lastIndexOf("/");return p.slice(0,i)+"/_rels/"+p.slice(i+1)+".rels"};
+  const wbRels=rels("xl/_rels/workbook.xml.rels"), out={};
+  for(const sh of xml("xl/workbook.xml").getElementsByTagName("sheet")){
+    const rid=sh.getAttribute("r:id")||sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id"); if(!wbRels[rid]) continue;
+    const sp=resolve("xl/workbook.xml",wbRels[rid]), sr=rels(relsOf(sp)), list=[];
+    for(const dr of xml(sp).getElementsByTagName("drawing")){
+      const drid=dr.getAttribute("r:id")||dr.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id"); if(!sr[drid]) continue;
+      const dp=resolve(sp,sr[drid]), drel=rels(relsOf(dp)), dd=xml(dp);
+      for(const a of [...dd.getElementsByTagNameNS("*","oneCellAnchor"),...dd.getElementsByTagNameNS("*","twoCellAnchor"),...dd.getElementsByTagNameNS("*","absoluteAnchor")]){
+        const from=a.getElementsByTagNameNS("*","from")[0]; const blip=a.getElementsByTagNameNS("*","blip")[0]; if(!blip) continue;
+        const emb=blip.getAttribute("r:embed")||blip.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","embed"); if(!drel[emb]) continue;
+        const mp=resolve(dp,drel[emb]); if(!z[mp]) continue;
+        const row=from?Number(from.getElementsByTagNameNS("*","row")[0].textContent)+1:1, col=from?Number(from.getElementsByTagNameNS("*","col")[0].textContent)+1:1;
+        list.push({row,col,data:bytesToDataUrl(z[mp],(mp.split(".").pop()||"png"))});
+      }
+    }
+    list.sort((a,b)=>a.row-b.row||a.col-b.col); out[sh.getAttribute("name")]=list;
+  }
+  return out;
+}
+// the same workbook with its drawings removed, for when the spreadsheet library can't cope with them
+async function xlsxWithoutDrawings(buf){
+  const ff=await loadFflate(); const z=ff.unzipSync(buf), td=new TextDecoder(), te=new TextEncoder(); const out={};
+  for(const [p,v] of Object.entries(z)){
+    if(/^xl\/drawings\//.test(p)||/^xl\/media\//.test(p)) continue;
+    if(/^xl\/worksheets\/sheet[^/]*\.xml$/.test(p)){ out[p]=te.encode(td.decode(v).replace(/<(\w+:)?drawing\b[^>]*\/>/g,"").replace(/<(\w+:)?legacyDrawing\b[^>]*\/>/g,"")); continue; }
+    if(/^xl\/worksheets\/_rels\//.test(p)){ out[p]=te.encode(td.decode(v).replace(/<Relationship\b[^>]*Type="[^"]*\/(drawing|vmlDrawing)"[^>]*\/>/g,"")); continue; }
+    if(p==="[Content_Types].xml"){ out[p]=te.encode(td.decode(v).replace(/<Override\b[^>]*PartName="\/xl\/drawings\/[^"]*"[^>]*\/>/g,"")); continue; }
+    out[p]=v;
+  }
+  return ff.zipSync(out);
+}
+function bytesToDataUrl(buf,ext){
+  const u=buf instanceof Uint8Array?buf:new Uint8Array(buf.buffer?buf.buffer.slice(buf.byteOffset||0,(buf.byteOffset||0)+buf.byteLength):buf);
+  let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+  const e=String(ext||"png").toLowerCase().replace("jpg","jpeg"); return `data:image/${e};base64,`+btoa(s);
+}
+// any picture reference as a data: URL (an uploaded picture is fetched from this project)
+async function refToDataUrl(ref){
+  ref=String(ref||""); if(!ref) return ""; if(ref.startsWith("data:")) return ref;
+  if(!ref.startsWith("img:")) return "";
+  try{ const r=await fetch("/api/image?k="+encodeURIComponent(ref.slice(4))+"&p="+encodeURIComponent(pid()),{headers:keyHeaders()}); if(!r.ok) return "";
+    const b=await r.blob(); return await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>res("");fr.readAsDataURL(b)}); }catch(e){ return ""; }
+}
+async function shrinkDataUrl(du){
+  try{ const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=du}); return finishPicture(img).data; }catch(e){ return du; }
+}
+// a picture brought in from a file: shrunk, and uploaded to the open project on the team site
+async function storePicture(du){ const s=await shrinkDataUrl(du); return MODE==="team"?(await api("/api/image",{data:s})).ref:s; }
+// pictures waiting in a not-yet-created project are taken out, then put back once it's open
+function takeDataRefs(days){ const pend=[]; for(const d of days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3"]) if(String(r[k]||"").startsWith("data:")){pend.push({rid:r.id,k,data:r[k]});r[k]="";} return pend; }
+async function putDataRefs(pend){
+  if(!pend.length) return; let n=0, failed=0;
+  // upload them all first, then set them in one go (the project may still be loading while they upload)
+  for(const p of pend){ toast(`Adding pictures: ${++n} of ${pend.length}…`); try{ p.ref=await storePicture(p.data); }catch(e){ failed++; } }
+  for(const p of pend){ if(!p.ref) continue; const x=R(p.rid); if(x) x[p.k]=p.ref; }
+  commit(); renderAll(); toast(`Added ${pend.length-failed} picture${pend.length-failed===1?"":"s"}`+(failed?`; ${failed} couldn't be added`:""));
+}
 async function readSheets(file){
   const name=file.name.toLowerCase();
   if(/\.(csv|tsv|txt)$/.test(name)) return [{name:file.name.replace(/\.[^.]+$/,""),rows:parseCSV(await file.text())}];
   if(!/\.(xlsx|xlsm)$/.test(name)) throw new Error("Save it as .xlsx or .csv first (from Google Sheets: File > Download).");
   await loadExcel();
-  const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+  const buf=new Uint8Array(await file.arrayBuffer());
+  // pictures are read straight from the file (sturdier than the spreadsheet library, which can trip over drawings)
+  let pics=null; try{ pics=await xlsxPictures(buf); }catch(e){ pics=null; }
+  const wb=new ExcelJS.Workbook();
+  try{ await wb.xlsx.load(buf); }
+  catch(e){ // try again without the drawings; the pictures were already read above
+    let stripped=null; try{ stripped=await xlsxWithoutDrawings(buf); }catch(e2){}
+    if(!stripped) throw e; await wb.xlsx.load(stripped);
+  }
   return wb.worksheets.map(ws=>{
-    const rows=[]; ws.eachRow({includeEmpty:false},(row)=>{const vals=row.values.slice(1).map(cellText);rows.push(vals)});
-    return {name:ws.name,rows:rows.filter(r=>r.some(x=>String(x).trim()!==""))};
+    const rows=[], nums=[]; ws.eachRow({includeEmpty:false},(row)=>{const vals=row.values.slice(1).map(cellText);if(vals.some(x=>String(x).trim()!=="")){rows.push(vals);nums.push(row.number)}});
+    // pictures placed on the sheet go with their row (a picture on a row of its own goes with the row above)
+    for(const p of (pics&&pics[ws.name])||[]){
+      let idx=-1; for(let i=0;i<nums.length;i++) if(nums[i]<=p.row) idx=i; if(idx<0) continue;
+      (rows[idx].__imgs=rows[idx].__imgs||[]).push(p);
+    }
+    rows.forEach(r=>{if(r.__imgs)r.__imgs.sort((a,b)=>a.row-b.row||a.col-b.col)});
+    return {name:ws.name,rows};
   });
 }
 
@@ -166,8 +251,8 @@ function updImpInfo(){
 function impRecords(){
   const out=[];
   for(const r of impDataRows()){
-    const rec={f:{},take:null,day:null,brk:false};
-    let any=false;
+    const rec={f:{},take:null,day:null,brk:false,imgs:(r.__imgs||[]).map(x=>x.data)};
+    let any=rec.imgs.length>0;
     IMP.map.forEach((m,c)=>{
       if(m.t==="ignore") return; const raw=r[c]; const v=typeof raw==="string"?raw.trim():raw;
       if(v===""||v==null) return;
@@ -204,6 +289,7 @@ function groupImport(recs){
 function groupToRow(g,recorded,kindCapture){
   const first=g.recs[0].f, row=Object.assign({},ROW_BLANK,{id:uid("r")});
   for(const k of Object.keys(first)) row[k]=first[k];
+  [...new Set(g.recs.flatMap(r=>r.imgs||[]).filter(Boolean))].slice(0,3).forEach((d,i)=>{row["ref"+(i+1)]=d});
   // merge text from later takes, collect per-take hero / safety / NG marks
   const tn=(r,i)=>r.take!=null?r.take:i+1;
   const marks={hero:[],safety:[],ng:[],test:[]};
@@ -252,6 +338,7 @@ function restoreDays(recs,recorded,colRemap){
       // fields that were emptied in the sheet come back empty
       for(const m of IMP.map){ if(["ignore","rid","take","shootDay","rowType","new","origStart","label"].includes(m.t)) continue; if(!(m.t in f)&&typeof row[m.t]==="string") row[m.t]=""; }
       if(got.some(r=>r.f.done)) row.done=true; else if("done" in f) row.done=false;
+      { const im=[...new Set(got.flatMap(r=>r.imgs||[]).filter(Boolean))]; if(im.length) ["ref1","ref2","ref3"].forEach((k,i)=>{row[k]=im[i]||""}); }
       d.rows.push(row);
     }
     days.push(d);
@@ -294,6 +381,12 @@ async function runImport(){
     S.cols.push({id,label:m.h,type,options}); m.t="c_"+id; made++; });
   if(made){ invalidateCols(); }
   const recs=impRecords(); if(!recs.length) return;
+  // pictures from the sheet: into this project now, or into the new project once it exists
+  if(dest!=="newproject"){
+    const all=recs.flatMap(r=>r.imgs.map((d,i)=>[r,i])); let n=0, failed=0;
+    for(const [r,i] of all){ $("#impInfo")&&($("#impInfo").textContent=`Adding pictures: ${++n} of ${all.length}…`); try{ r.imgs[i]=await storePicture(r.imgs[i]); }catch(e){ r.imgs[i]=""; failed++; } }
+    if(failed) toast(failed+" picture(s) couldn't be added");
+  }
   const groups=groupImport(recs);
   const has=k=>IMP.map.some(m=>m.t===k);
   const capture=has("action")||has("performers")||has("body")||has("take");
@@ -310,7 +403,7 @@ async function runImport(){
       const used=new Set(Object.values(colRemap)); const added=newCols();
       const doc=normDoc({project,cols:[...added,...clone(colsBefore.filter(x=>used.has("c_"+x.id)))],days}); commit();
       $("#impModal").classList.remove("open");
-      try{const id=await createProject(project.name,docToSeed(doc));await openProject(id);toast(`Imported ${days.length} day${days.length>1?"s":""} into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
+      try{const pend=takeDataRefs(doc.days);const id=await createProject(project.name,docToSeed(doc));await openProject(id);await putDataRefs(pend);toast(`Imported ${days.length} day${days.length>1?"s":""} into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
       return;
     }
     days.forEach(d=>S.days.push(d)); if(made||Object.keys(colRemap).length) invalidateCols();
@@ -328,7 +421,7 @@ async function runImport(){
       if(pr[0]&&String(pr[0][0]).trim())project.name=String(pr[0][0]).trim();pr.slice(1).forEach(r=>{const k=lk[normH(r[0])];if(k&&String(r[1]??"").trim())project[k]=String(r[1])})}
     const doc=normDoc({project,cols:newCols(),days}); commit();
     $("#impModal").classList.remove("open");
-    try{const id=await createProject(project.name,docToSeed(doc));await openProject(id);toast(`Imported ${groups.length} shots into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
+    try{const pend=takeDataRefs(doc.days);const id=await createProject(project.name,docToSeed(doc));await openProject(id);await putDataRefs(pend);toast(`Imported ${groups.length} shots into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
     return;
   }
   if(dest==="bydays"&&has("shootDay")){
@@ -402,6 +495,10 @@ async function buildTracker(days,opt){
   if(opt.withTiming) tcols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
   { const cm=colMap(); const keymap={done:null,start:null,setup:"setup",shoot:"shoot",shot:"shot",priority:"priority",perfCount:"perfCount",props:"props",performers:"performers",genre:"genre",action:"action",body:"body",face:"face",glove:"glove",hero:"hero",safety:"safety",description:"description",location:"location",shotType:"shotType",camera:"camera",vfx:"vfx",director:"director"};
     tcols.forEach(x=>{const k=keymap[x.k];const c=k&&cm[k];if(c&&c.label!==c.base)x.h=c.label}); }
+  const refKeys=opt.withPictures===false?[]:["ref1","ref2","ref3"].filter(k=>days.some(d=>d.rows.some(r=>r.type!=="break"&&!r.cut&&r[k])));
+  refKeys.forEach((k,i)=>tcols.push({k,h:"Storyboard "+(i+1),w:24}));
+  const pics=new Map();
+  for(const d of days) for(const r of d.rows) if(r.type!=="break"&&!r.cut) for(const k of refKeys) if(r[k]&&!pics.has(r[k])) pics.set(r[k],await refToDataUrl(r[k]));
   tcols.push({k:"rid",h:"App row ID",w:12});
   tcols.forEach((x,i)=>{x.i=i+1;x.L=colLetter(i+1)});
   const L=k=>(tcols.find(x=>x.k===k)||{}).L;
@@ -421,7 +518,7 @@ async function buildTracker(days,opt){
     for(const r of d.rows){
       if(r.type==="break"||r.cut) continue;   // cut shots stay out of the tracker; the App data tab keeps them
       const base=takeBase(r,d), n=Math.max(1,Number(r.takes)||0);
-      for(let t=1;t<=n;t++) data.push({d,r,take:base+t,logged:t<=(Number(r.takes)||0),start:C.rows[r.id].start});
+      for(let t=1;t<=n;t++) data.push({d,r,take:base+t,first:t===1,logged:t<=(Number(r.takes)||0),start:C.rows[r.id].start});
     }
   }
   // ID Settings rows: one per name part, in the app's order
@@ -452,7 +549,11 @@ async function buildTracker(days,opt){
     const put=(k,v)=>{const col=tcols.find(y=>y.k===k);if(col)row.getCell(col.i).value=v};
     if(x){
       const r=x.r, d=x.d;
-      put("rid",r.id); put("shot",shotNumber(r,d)); put("take",x.take); put("app",shotName(r,d,x.take));
+      put("rid",r.id); put("shot",shotNumber(r,d)); put("take",x.take);
+      if(x.first) for(const k of refKeys){ const du=pics.get(r[k]); const col=tcols.find(y=>y.k===k); if(!du||!col) continue;
+        const m=du.match(/^data:image\/(png|jpe?g|gif);base64,(.*)$/i); if(!m) continue;
+        const id=wb.addImage({base64:m[2],extension:m[1].toLowerCase().replace("jpg","jpeg")});
+        sl.addImage(id,{tl:{col:col.i-1+0.08,row:rn-1+0.08},ext:{width:160,height:90},editAs:"oneCell"}); row.height=72; } put("app",shotName(r,d,x.take));
       const pid_=String(S.project.prodId||"").trim(); put("prod",pid_===""?null:(isNaN(Number(pid_))?pid_:Number(pid_)));
       put("day",d.dayNo||dayIndex(d)+1);
       for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","lighting","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
@@ -550,4 +651,156 @@ async function refreshForUpdate(){
   const b=$("#updateGo"); b.disabled=true; b.textContent="Saving…";
   commit(); if(MODE==="team"&&pending.length){try{await flush()}catch(e){}}
   location.reload();
+}
+
+/* ===================== storyboard pictures from a PDF ===================== */
+// Reads a shot tracker / storyboard PDF (e.g. a Google Sheets export) in the browser: finds the "Shot No" column,
+// takes every picture in the table, and gives each one to the shot on its row. Rows with no shot number carry on the
+// shot above (extra frames), including across a page break. Pages that repeat the same rows (a wide sheet printed
+// as several pages) are only read once.
+let pdfLib=null;
+async function loadPdfJs(){
+  if(pdfLib) return pdfLib;
+  const tryLib=async base=>{const m=await import(base+"pdf.min.mjs");m.GlobalWorkerOptions.workerSrc=base+"pdf.worker.min.mjs";return m};
+  try{ pdfLib=await tryLib(new URL("vendor/pdfjs/",location.href).href); }
+  catch(e){ try{ pdfLib=await tryLib("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/"); }catch(e2){ throw new Error("The PDF reader couldn't load. Check the connection and try again."); } }
+  return pdfLib;
+}
+const SHOT_LABEL=/^\d{1,4}[A-Za-z]{0,2}$/;
+function normShot(s){return String(s??"").trim().toLowerCase().replace(/\s+/g,"").replace(/^0+(?=\d)/,"")}
+async function pdfObj(page,id){const store=String(id).startsWith("g_")?page.commonObjs:page.objs;return await new Promise((res,rej)=>{try{store.get(id,res)}catch(e){rej(e)}})}
+function objToCanvas(o){
+  const c=document.createElement("canvas"); c.width=o.width; c.height=o.height; const x=c.getContext("2d");
+  if(o.bitmap){ x.drawImage(o.bitmap,0,0); return c; }
+  const im=x.createImageData(o.width,o.height), d=o.data, D=im.data;
+  if(o.kind===3) D.set(d.subarray?d.subarray(0,D.length):d);
+  else if(o.kind===2){ for(let i=0,j=0;j<D.length;i+=3,j+=4){D[j]=d[i];D[j+1]=d[i+1];D[j+2]=d[i+2];D[j+3]=255} }
+  else { const rb=Math.ceil(o.width/8); for(let y=0;y<o.height;y++)for(let xx=0;xx<o.width;xx++){const v=(d[y*rb+(xx>>3)]>>(7-(xx&7)))&1?255:0,j=(y*o.width+xx)*4;D[j]=D[j+1]=D[j+2]=v;D[j+3]=255} }
+  x.putImageData(im,0,0); return c;
+}
+// shrink onto white (no transparency), as a JPEG ready to upload, plus a small fingerprint to spot repeats
+function finishPicture(src){
+  const sc=Math.min(1,640/src.width,420/src.height), c=document.createElement("canvas");
+  c.width=Math.max(1,Math.round(src.width*sc)); c.height=Math.max(1,Math.round(src.height*sc));
+  const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height); x.drawImage(src,0,0,c.width,c.height);
+  const f=document.createElement("canvas"); f.width=12; f.height=8; const fx=f.getContext("2d"); fx.fillStyle="#fff"; fx.fillRect(0,0,12,8); fx.drawImage(src,0,0,12,8);
+  const px=fx.getImageData(0,0,12,8).data; let hash=src.width+"x"+src.height+":"; for(let i=0;i<px.length;i+=4) hash+=((px[i]+px[i+1]+px[i+2])/48|0).toString(16);
+  return {data:c.toDataURL("image/jpeg",.8),hash};
+}
+async function readStoryboardPdf(file,progress){
+  const lib=await loadPdfJs(), OPS=lib.OPS, U=lib.Util;
+  const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const shots=new Map(); let prevLast=null, lastKey=null, headerPages=0, pagesRead=0;
+  for(let pn=1;pn<=doc.numPages;pn++){
+    progress&&progress(pn,doc.numPages);
+    const page=await doc.getPage(pn), vp=page.getViewport({scale:1});
+    const tc=await page.getTextContent();
+    const items=tc.items.filter(i=>i.str&&i.str.trim()).map(i=>{const [x,y]=vp.convertToViewportPoint(i.transform[4],i.transform[5]);const ht=Math.abs(i.transform[3])||i.height||8;return {s:i.str.trim(),x0:x,x1:x+(i.width||0),top:y-ht,bottom:y,cy:y-ht/2}});
+    // the "Shot No" heading: one item ("Shot No", "Shot #", "Shot number") or "Shot" with "No" just after it
+    let hx0=null,hx1=null,hb=null;
+    for(let i=0;i<items.length&&hb==null;i++){const it=items[i];
+      if(/^shot\s*(no\.?|#|number|num)$/i.test(it.s)){hx0=it.x0;hx1=it.x1;hb=it.bottom}
+      else if(/^shot$/i.test(it.s)){const n=items.find(j=>j!==it&&Math.abs(j.cy-it.cy)<3&&j.x0>=it.x1-1&&j.x0-it.x1<14&&/^(no\.?|#|number|num)$/i.test(j.s));if(n){hx0=it.x0;hx1=n.x1;hb=Math.max(it.bottom,n.bottom)}}}
+    if(hb==null){ page.cleanup(); continue; }
+    headerPages++;
+    const labels=items.filter(it=>SHOT_LABEL.test(it.s)&&it.top>hb&&it.x0>=hx0-24&&it.x1<=hx1+24).sort((a,b)=>a.cy-b.cy);
+    // pictures and where they're drawn
+    const ol=await page.getOperatorList(); let ctm=[1,0,0,1,0,0]; const st=[], pics=[];
+    for(let i=0;i<ol.fnArray.length;i++){const fn=ol.fnArray[i],a=ol.argsArray[i];
+      if(fn===OPS.save) st.push(ctm.slice());
+      else if(fn===OPS.restore) ctm=st.pop()||[1,0,0,1,0,0];
+      else if(fn===OPS.transform) ctm=U.transform(ctm,a);
+      else if(fn===OPS.paintFormXObjectBegin){st.push(ctm.slice());if(a&&Array.isArray(a[0])&&a[0].length===6)ctm=U.transform(ctm,a[0])}
+      else if(fn===OPS.paintFormXObjectEnd) ctm=st.pop()||[1,0,0,1,0,0];
+      else if(fn===OPS.paintImageXObject||fn===OPS.paintInlineImageXObject){
+        const pts=[[0,0],[1,0],[0,1],[1,1]].map(p=>vp.convertToViewportPoint(...U.applyTransform(p,ctm)));
+        const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+        const b={x0:Math.min(...xs),x1:Math.max(...xs),top:Math.min(...ys),bottom:Math.max(...ys)};
+        if(b.x1-b.x0>=30&&b.bottom-b.top>=20&&b.top>=hb-2) pics.push(Object.assign(b,{id:fn===OPS.paintImageXObject?a[0]:null,inline:fn===OPS.paintInlineImageXObject?a[0]:null}));
+      }}
+    pics.sort((a,b)=>a.top-b.top||a.x0-b.x0);
+    const done=[];
+    for(const p of pics){
+      let cv=null;
+      try{ cv=objToCanvas(p.inline||await pdfObj(page,p.id)); }catch(e){}
+      if(!cv){ // fall back to cutting it out of the rendered page
+        if(!p.page){const sc=2,v2=page.getViewport({scale:sc}),pc=document.createElement("canvas");pc.width=v2.width;pc.height=v2.height;await page.render({canvasContext:pc.getContext("2d"),viewport:v2}).promise;p.page=pc}
+        cv=document.createElement("canvas");cv.width=Math.round((p.x1-p.x0)*2);cv.height=Math.round((p.bottom-p.top)*2);cv.getContext("2d").drawImage(p.page,p.x0*2,p.top*2,cv.width,cv.height,0,0,cv.width,cv.height);
+      }
+      done.push(Object.assign(p,finishPicture(cv)));
+    }
+    // a wide sheet prints the same rows several times: only read them once
+    const key=labels.map(l=>l.s).join(",")+"|"+done.map(p=>p.hash).join(",");
+    if(key===lastKey){ page.cleanup(); continue; }
+    lastKey=key; pagesRead++;
+    for(const p of done){
+      let owner=null; for(const l of labels) if(l.cy<=p.bottom) owner=l.s;
+      owner=owner||prevLast; if(!owner) continue;          // pictures above the first shot of the document
+      if(!shots.has(owner)) shots.set(owner,{shot:owner,pics:[]});
+      const g=shots.get(owner); if(!g.pics.some(x=>x.hash===p.hash)) g.pics.push({data:p.data,hash:p.hash});
+    }
+    if(labels.length) prevLast=labels[labels.length-1].s;
+    page.cleanup();
+  }
+  await doc.destroy();
+  return {pages:doc.numPages,headerPages,pagesRead,shots:[...shots.values()]};
+}
+/* ---------- the PDF import window ---------- */
+let PDFIMP=null;
+async function openPdfImport(file){
+  const m=$("#pdfModal"), b=$("#pdfBody"); b.innerHTML=""; m.classList.add("open");
+  const prog=h("p",{class:"note"},"Reading "+file.name+"…"); b.append(prog);
+  let res; try{ res=await readStoryboardPdf(file,(i,n)=>{prog.textContent=`Reading page ${i} of ${n}…`}); }
+  catch(e){ prog.textContent="Couldn't read that PDF: "+e.message; return; }
+  if(!res.headerPages){ prog.textContent="Couldn't find a \"Shot No\" column in this PDF. It needs a table with the shot number in a column headed Shot No (or Shot #) and the pictures on the same rows."; return; }
+  PDFIMP={file:file.name,res}; renderPdfImport();
+}
+function pdfMatches(shot,scope){const k=normShot(shot);const days=scope==="day"?[D()]:live();const out=[];for(const d of days)for(const r of d.rows)if(r.type!=="break"&&!r.cut&&k&&normShot(r.shot)===k)out.push({d,r});return out}
+function renderPdfImport(){
+  const b=$("#pdfBody"); b.innerHTML=""; const {res}=PDFIMP; const n=res.shots.reduce((a,g)=>a+g.pics.length,0);
+  const scope=h("select",{},h("option",{value:"all"},"Every day in this project"),h("option",{value:"day"},"This day only ("+(D()||{}).name+")"));
+  const mode=h("select",{},h("option",{value:"fill"},"Keep them, add into empty slots"),h("option",{value:"replace"},"Replace them with the PDF's"));
+  const addNew=h("input",{type:"checkbox"});
+  scope.value=PDFIMP.scope||"all"; mode.value=PDFIMP.mode||"fill"; addNew.checked=!!PDFIMP.addNew;
+  const redo=()=>{PDFIMP.scope=scope.value;PDFIMP.mode=mode.value;PDFIMP.addNew=addNew.checked;renderPdfImport()};
+  [scope,mode,addNew].forEach(x=>x.addEventListener("change",redo));
+  const matched=res.shots.filter(g=>pdfMatches(g.shot,scope.value).length), missing=res.shots.filter(g=>!pdfMatches(g.shot,scope.value).length);
+  b.append(h("p",{},h("b",{},`${n} picture${n===1?"":"s"} for ${res.shots.length} shot${res.shots.length===1?"":"s"}`),` found in ${PDFIMP.file} (${res.pages} pages${res.pagesRead<res.headerPages?`; repeated pages read once`:""}). `,
+    matched.length?`${matched.length} match shots in this project`:"None match shots in this project yet","",missing.length?`, ${missing.length} don't.`:"."));
+  b.append(h("div",{class:"form"},h("label",{},"Match shot numbers on",scope),h("label",{},"When a shot already has pictures",mode),
+    missing.length?h("label",{class:"inline"},addNew,`Add the ${missing.length} shot${missing.length>1?"s":""} that aren't in the project to ${(D()||{}).name}`):null));
+  const t=h("table",{class:"plain pdfprev"}); t.append(h("thead",{},h("tr",{},h("th",{},"Shot"),h("th",{},"Pictures"),h("th",{},"Goes to"))));
+  const tb=h("tbody",{});
+  for(const g of res.shots){
+    const ms=pdfMatches(g.shot,scope.value);
+    const pics=h("div",{class:"refs"}); g.pics.forEach((p,i)=>pics.append(h("img",{src:p.data,class:i>=3?"over":"",title:i>=3?"Only 3 pictures fit a shot: this one is left out":"Picture "+(i+1)})));
+    tb.append(h("tr",{class:ms.length||addNew.checked?"":"nomatch"},h("td",{},h("b",{},g.shot)),h("td",{},pics),
+      h("td",{class:"note"},ms.length?ms.map(x=>`${x.d.name}: shot ${x.r.shot}`).join("; "):addNew.checked?`New shot on ${(D()||{}).name}`:"No shot "+g.shot+" in the project: skipped")));
+  }
+  t.append(tb);
+  const go=h("button",{class:"btn primary",onclick:()=>runPdfImport()},"Import pictures");
+  b.append(t,h("div",{class:"toolbar",style:"margin-top:.8rem"},go,h("span",{class:"note",id:"pdfProg"})),
+    h("p",{class:"note"},"Shot numbers match ignoring leading zeros (005 = 5). Up to 3 pictures go on each shot, in the PDF's order. The pictures are uploaded to this project, so everyone on it sees them."));
+}
+async function runPdfImport(){
+  const {res,scope="all",mode="fill",addNew=false}=PDFIMP; const pr=$("#pdfProg"); const btn=$("#pdfBody .btn.primary"); btn.disabled=true;
+  const groups=res.shots.filter(g=>pdfMatches(g.shot,scope).length||(addNew&&D()));
+  // 1) upload every picture first...
+  const total=groups.reduce((a,g)=>a+Math.min(3,g.pics.length),0); let up=0, failed=0; const refsFor=new Map();
+  for(const g of groups){ const refs=[];
+    for(const p of g.pics.slice(0,3)){ pr.textContent=`Uploading picture ${++up} of ${total}…`;
+      try{ refs.push(MODE==="team"?(await api("/api/image",{data:p.data})).ref:p.data); }catch(e){ failed++; } }
+    refsFor.set(g,refs); }
+  // 2) ...then change the schedule in one go, so a single Undo takes the whole import back
+  let added=0, placed=0, shotsDone=0; const d0=D();
+  for(const g of groups){
+    let ms=pdfMatches(g.shot,scope);
+    if(!ms.length&&addNew&&d0){ const r=Object.assign({},ROW_BLANK,{id:uid("r"),shot:g.shot}); d0.rows.push(r); ms=[{d:d0,r}]; added++; }
+    const refs=refsFor.get(g)||[]; if(refs.length) shotsDone++;
+    for(const {r} of ms){ const slots=["ref1","ref2","ref3"];
+      if(mode==="replace"&&refs.length) slots.forEach(k=>r[k]="");
+      for(const ref of refs){ const k=slots.find(k=>!r[k]); if(!k) break; r[k]=ref; placed++; } }
+  }
+  commit(); renderAll(); $("#pdfModal").classList.remove("open");
+  toast(`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload, try again`:""} - Undo to take them back`);
 }
