@@ -252,6 +252,8 @@ input.shotno{font-weight:700;font-size:1.08em}
 .chip{display:inline-block;font-family:var(--mono);font-size:.82em;border:1px solid var(--line2);border-radius:4px;padding:0 .3em;color:var(--muted)}
 .refs{display:flex;gap:6px}
 .refs .ref{flex:1 1 0;min-width:0}
+.ref.broken{border-color:var(--bad);color:var(--bad);text-align:center;font-size:.8em;line-height:1.2;padding:2px}
+.ref .refmsg small{color:var(--muted);word-break:break-word}
 .pdfprev td{vertical-align:middle} .pdfprev .refs img{height:56px;width:auto;max-width:96px;border:1px solid var(--line);border-radius:3px;background:#fff}
 .pdfprev .refs img.over{opacity:.35} .pdfprev tr.nomatch td{opacity:.55}
 #pdfBody .form{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}

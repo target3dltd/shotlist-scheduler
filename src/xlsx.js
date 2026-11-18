@@ -802,5 +802,10 @@ async function runPdfImport(){
       for(const ref of refs){ const k=slots.find(k=>!r[k]); if(!k) break; r[k]=ref; placed++; } }
   }
   commit(); renderAll(); $("#pdfModal").classList.remove("open");
-  toast(`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload, try again`:""} - Undo to take them back`);
+  let check="";
+  const first=[...refsFor.values()].flat().find(x=>String(x).startsWith("img:"));
+  if(first){ imgCache.delete(first); const ok=await imgSrc(first); if(!ok) check=` - but they won't load back from the site (${imgErrors.get(first)||"unknown"}). Please send this message to whoever set up the site.`; }
+  const where=[...new Set(groups.flatMap(g=>pdfMatches(g.shot,scope).map(x=>x.d.name)))];
+  toast(placed?`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}${where.length?" on "+where.join(", "):""}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload`:""}${check||" - Undo to take them back"}`
+    :`No pictures were added: ${failed?failed+" couldn't upload":"no shot numbers matched this project"}.`);
 }

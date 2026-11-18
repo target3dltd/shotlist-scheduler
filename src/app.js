@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.13.0";
+const VERSION = "2.13.1";
 const CHANGELOG = [
+  ["2.13.1","2026-11-18","A storyboard picture that won't load now says why in its box (click to retry) instead of staying blank, and the PDF import checks its pictures load back and says which days they went on."],
   ["2.13.0","2026-11-18","Storyboard pictures from a PDF: Import reads a shot tracker PDF (e.g. a Google Sheets export), matches each picture to its shot number, including extra frames on rows below and across page breaks, and adds them after a preview. Shots now hold 3 pictures. Pictures now survive exports: the .xlsx export puts them in Storyboard columns and the project file packs them in, and importing either brings them back into whichever project receives them. Pictures on rows of sheets from elsewhere come in too."],
   ["2.12.1","2026-11-18","Fix: renaming a project in Settings > Project now also renames it in the project list (Settings > Projects, the project key prompt), for everyone."],
   ["2.12.0","2026-11-18","Project keys: with ADMIN_KEY set on the site, each project has its own key, people only see and open the projects whose keys they hold, and the server enforces it for the schedule, saves, activity and images. The admin opens everything. Change a key to cut someone off one job without touching the others; devices using the old key drop the project at once. Share includes the key, and Remove from this device takes a project off a machine."],
@@ -757,23 +758,31 @@ function takesCell(r){
   box.append(h("button",{title:"One take fewer",onclick:()=>bump(-1)},"−"),out,h("button",{title:"One more take",onclick:()=>bump(1)},"+"));
   return box;
 }
-const imgCache=new Map();
+const imgCache=new Map(), imgErrors=new Map();
 async function imgSrc(ref){
   if(!ref) return "";
   if(!String(ref).startsWith("img:")) return ref;
   if(imgCache.has(ref)) return imgCache.get(ref);
-  const p=(async()=>{try{const r=await fetch("/api/image?k="+encodeURIComponent(ref.slice(4))+"&p="+encodeURIComponent(pid()),{headers:keyHeaders()});if(!r.ok)return"";return URL.createObjectURL(await r.blob())}catch(e){return""}})();
+  // a picture that won't load says why, instead of leaving a blank box
+  const p=(async()=>{try{const r=await fetch("/api/image?k="+encodeURIComponent(ref.slice(4))+"&p="+encodeURIComponent(pid()),{headers:keyHeaders(),cache:"no-store"});
+      if(!r.ok){let why="";try{why=(await r.text()).slice(0,80)}catch(e){}imgErrors.set(ref,`error ${r.status}${why?": "+why:""}`);imgCache.delete(ref);return""}
+      const b=await r.blob(); if(!/^image\//.test(b.type)&&b.size<200){imgErrors.set(ref,"not a picture ("+(b.type||"unknown")+")");imgCache.delete(ref);return""}
+      return URL.createObjectURL(b)}catch(e){imgErrors.set(ref,"couldn't reach the site ("+e.message+")");imgCache.delete(ref);return""}})();
   imgCache.set(ref,p); return p;
 }
 let imgTarget=null;
 function refBox(r,key){
   const d=h("div",{class:"ref"+(r[key]||r.ref1||r.ref2||r.ref3?"":" empty"),title:r[key]?"Click to enlarge":"Click to add image"});
   if(r[key]){
-    const img=h("img",{alt:"reference"}); imgSrc(r[key]).then(s=>{img.src=s}); d.append(img);
+    const img=h("img",{alt:"reference"}); const ref=r[key];
+    imgSrc(ref).then(s=>{ if(s){img.src=s;return}
+      d.classList.add("broken"); d.title="This picture didn't load: "+(imgErrors.get(ref)||"unknown reason")+". Click to try again.";
+      img.replaceWith(h("span",{class:"refmsg"},"Didn't load",h("br"),h("small",{},imgErrors.get(ref)||""))); });
+    d.append(img);
     const x=h("button",{class:"x",title:"Remove image"},"✕");
     x.addEventListener("click",ev=>{ev.stopPropagation();const y=R(r.id);if(!y)return;y[key]="";commit();renderBody()});
     d.append(x);
-    d.addEventListener("click",async()=>{$("#lightImg").src=await imgSrc(r[key]);$("#lightbox").classList.add("open")});
+    d.addEventListener("click",async()=>{ if(d.classList.contains("broken")){imgCache.delete(ref);imgErrors.delete(ref);renderBody();return} $("#lightImg").src=await imgSrc(r[key]);$("#lightbox").classList.add("open")});
   }else{
     d.textContent="+ image";
     d.addEventListener("click",()=>{imgTarget={id:r.id,key};$("#imgInput").value="";$("#imgInput").click()});
