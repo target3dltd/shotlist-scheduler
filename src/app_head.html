@@ -229,7 +229,14 @@ tr.break:not(.tech) .kindtag{border-color:var(--break);color:color-mix(in srgb,v
 .viewer{display:none;position:fixed;inset:0;z-index:55;overflow:auto;-webkit-overflow-scrolling:touch}
 .viewer.open{display:flex;flex-direction:column}
 body.viewopen{overflow:hidden}
-.btn.onset{font-weight:600}
+/* Slate and Notes stand out at the end of the header */
+.onsetgroup{display:inline-flex;gap:.35rem;margin-left:.35rem;padding-left:.6rem;border-left:1px solid var(--line2)}
+.btn.onset{font-weight:700;letter-spacing:.01em;border-width:2px;box-shadow:0 1px 0 rgba(0,0,0,.08),0 2px 8px -2px color-mix(in srgb,var(--obg) 55%,transparent);transition:transform .08s ease,box-shadow .12s ease}
+.btn.onset.slate{--obg:#e2563d;background:#e2563d;border-color:#c4432c;color:#fff}
+.btn.onset.notes{--obg:#2f6fb0;background:#2f6fb0;border-color:#245a90;color:#fff}
+.btn.onset:hover{transform:translateY(-1px);box-shadow:0 3px 12px -2px color-mix(in srgb,var(--obg) 70%,transparent)}
+.btn.onset:active{transform:translateY(0)}
+@media (max-width:900px){.onsetgroup{margin-left:0;padding-left:0;border-left:none}}
 .slate{--sb:#000;--sf:#fff;--sm:#9a9a9a;--sline:#fff;background:var(--sb);color:var(--sf);padding:clamp(.5rem,2vw,1.4rem);gap:clamp(.3rem,1.2vh,.8rem);font-family:var(--font)}
 .slate.theme-light{--sb:#fff;--sf:#000;--sm:#666;--sline:#000}
 .slate.theme-contrast{--sb:#000;--sf:#ffeb3b;--sm:#fff;--sline:#ffeb3b}
@@ -538,11 +545,13 @@ body.nosteps .mins.timing input{width:4.5em}
       <button class="btn small" id="moreBtn" aria-expanded="false" title="Import, export, print and activity">More ▾</button>
       <button class="btn small opt" id="actBtn" title="Who changed what">Activity</button>
       <button class="btn small icon" id="themeBtn" title="Switch light / dark">◐</button>
-      <button class="btn small onset" id="slateBtn" title="Full-screen slate for the next shot, with timecode">Slate</button>
-      <button class="btn small onset" id="notesBtn" title="The current shot full screen: notes, scribbles, takes">Notes</button>
       <button class="btn small" id="shareBtn" title="Invite someone to this project">Share</button>
       <button class="btn small" id="setBtn">Settings</button>
       <button class="btn small primary" id="helpBtn">Help</button>
+      <span class="onsetgroup">
+        <button class="btn small onset slate" id="slateBtn" title="Full-screen slate for the next shot, with timecode"><span aria-hidden="true">🎬</span> Slate</button>
+        <button class="btn small onset notes" id="notesBtn" title="The current shot full screen: notes, scribbles, takes"><span aria-hidden="true">✎</span> Notes</button>
+      </span>
     </div>
   </div>
   <div class="daytabs" id="dayTabs"></div>

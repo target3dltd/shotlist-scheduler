@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.17.1";
+const VERSION = "2.18.0";
 const CHANGELOG = [
+  ["2.18.0","2026-11-18","Clap sound in Slate View: a clap by default, or clapper sticks, a 1 kHz sync beep, your own sound file or none, with a volume control. Slate and Notes now sit at the end of the header as red and blue buttons."],
   ["2.17.1","2026-11-18","Laptops: choose which audio input carries the LTC, open the slate in its own window for a second screen, and keyboard shortcuts in Slate View and Note View."],
   ["2.17.0","2026-11-18","Slate View: a full-screen, customisable slate for the next shot, with time of day timecode or timecode jammed from LTC audio (e.g. a Tentacle Sync into the mic input) or typed in, free-running after the jam; clapping logs the take with its timecode. Note View: the current shot full screen with its pictures and script, editable notes, a scribble pad saved to the shot, a take logger (Roll / Cut, Good / NG / Hero / Safety) and Shot done. Both work on phones and tablets."],
   ["2.16.1","2026-11-18","The jump-to-time box always opens fully on screen (above the row when there's no room below)."],
@@ -1373,7 +1374,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&($("#slat
 
 /* ===================== timecode ===================== */
 // Time of day, or jammed (from LTC audio or typed in) and then free-running from this device's clock, like a hardware slate.
-function slateCfg(){return Object.assign({show:{prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},dir:"",dop:"",roll:"A001",custom:"",theme:"dark",tcSource:"tod",fps:"",jam:null,logOnClap:true},P.slate||{},{show:Object.assign({prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},(P.slate||{}).show||{})})}
+function slateCfg(){return Object.assign({show:{prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},dir:"",dop:"",roll:"A001",custom:"",theme:"dark",tcSource:"tod",fps:"",jam:null,logOnClap:true,sound:"clap",volume:0.9},P.slate||{},{show:Object.assign({prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},(P.slate||{}).show||{})})}
 function setSlate(ch){P.slate=Object.assign(slateCfg(),ch);savePrefs()}
 // timecode runs at a standard rate; a capture rate like 120 fps falls back to 25
 const TC_RATES=[23.976,24,25,29.97,30,48,50,60];
@@ -1465,6 +1466,46 @@ function bootView(){
     else if(n>40) clearInterval(t); },250);
 }
 
+/* ===================== clap sound ===================== */
+// built in (made on the fly, nothing to download) or your own file, kept on this device
+let sfxCtx=null, customClap=null;
+function sfx(){ if(!sfxCtx) sfxCtx=new (window.AudioContext||window.webkitAudioContext)(); if(sfxCtx.state==="suspended") sfxCtx.resume(); return sfxCtx; }
+function idbSounds(){ return new Promise((res,rej)=>{ const q=indexedDB.open("shotlist-sounds",1); q.onupgradeneeded=()=>q.result.createObjectStore("files"); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function soundGet(){ try{ const db=await idbSounds(); return await new Promise(r=>{const t=db.transaction("files").objectStore("files").get("clap");t.onsuccess=()=>r(t.result||null);t.onerror=()=>r(null)}); }catch(e){ return null; } }
+async function soundPut(v){ const db=await idbSounds(); await new Promise((r,j)=>{const t=db.transaction("files","readwrite");v?t.objectStore("files").put(v,"clap"):t.objectStore("files").delete("clap");t.oncomplete=r;t.onerror=()=>j(t.error)}); customClap=null; }
+function noiseBuf(ctx,secs,shape){ const n=Math.floor(secs*ctx.sampleRate), b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*shape(i/ctx.sampleRate); return b; }
+async function playClap(kind,vol){
+  kind=kind||slateCfg().sound; vol=vol==null?Number(slateCfg().volume):vol; if(kind==="none"||!vol) return;
+  const ctx=sfx(), out=ctx.createGain(); out.gain.value=Math.max(0,Math.min(1,vol)); out.connect(ctx.destination); const t=ctx.currentTime+0.005;
+  if(kind==="custom"){ try{ if(!customClap){ const f=await soundGet(); if(!f) return playClap("clap",vol); customClap=await ctx.decodeAudioData(f.data.slice(0)); }
+      const s=ctx.createBufferSource(); s.buffer=customClap; s.connect(out); s.start(t); }catch(e){ toast("Couldn't play that sound file: try another (MP3, WAV or M4A)"); } return; }
+  if(kind==="beep"){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=1000; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.8,t+.003); g.gain.setValueAtTime(.8,t+.1); g.gain.linearRampToValueAtTime(0,t+.104); o.connect(g).connect(out); o.start(t); o.stop(t+.12); return; }
+  if(kind==="sticks"){ for(const [dt,f] of [[0,2600],[0.018,2100]]){ const o=ctx.createOscillator(), g=ctx.createGain(); o.type="triangle"; o.frequency.value=f; g.gain.setValueAtTime(.9,t+dt); g.gain.exponentialRampToValueAtTime(.001,t+dt+.07); o.connect(g).connect(out); o.start(t+dt); o.stop(t+dt+.08); }
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf(ctx,.04,x=>Math.exp(-x*160)); const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=3000; n.connect(hp).connect(out); n.start(t); return; }
+  // "clap": a sharp clapper-board crack, a few bursts of filtered noise close together
+  const n=ctx.createBufferSource(); n.buffer=noiseBuf(ctx,.3,x=>[0,.009,.019].reduce((a,o,i)=>a+(x>=o?Math.exp(-(x-o)*(i<2?260:24)):0),0)*.7);
+  const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1700; bp.Q.value=.7;
+  const body=ctx.createOscillator(), bg=ctx.createGain(); body.frequency.value=210; bg.gain.setValueAtTime(.5,t); bg.gain.exponentialRampToValueAtTime(.001,t+.06); body.connect(bg).connect(out); body.start(t); body.stop(t+.07);
+  n.connect(bp).connect(out); n.start(t);
+}
+function soundPicker(c){
+  const sel=h("select",{},...[["clap","Clap (default)"],["sticks","Clapper sticks"],["beep","Sync beep (1 kHz)"],["custom","My own sound file"],["none","No sound"]].map(([v,l])=>h("option",{value:v},l)));
+  sel.value=c.sound||"clap";
+  const vol=h("input",{type:"range",min:"0",max:"1",step:"0.05",value:String(c.volume==null?0.9:c.volume)});
+  const file=h("input",{type:"file",accept:"audio/*,.mp3,.wav,.m4a,.aac,.ogg",hidden:true});
+  const fname=h("span",{class:"note"}); soundGet().then(f=>{fname.textContent=f?"Your sound: "+f.name:"No file chosen yet"});
+  const pickBtn=h("button",{class:"btn small",onclick:()=>file.click()},"Choose a sound file…");
+  const clearBtn=h("button",{class:"btn small",onclick:async()=>{await soundPut(null);fname.textContent="No file chosen yet";if(slateCfg().sound==="custom"){setSlate({sound:"clap"});sel.value="clap"}toast("Back to the built-in clap")}},"Remove");
+  const showFile=()=>{const on=sel.value==="custom";pickBtn.style.display=clearBtn.style.display=fname.style.display=on?"":"none"};
+  sel.addEventListener("change",()=>{setSlate({sound:sel.value});showFile();if(sel.value==="custom"){soundGet().then(f=>{if(!f)file.click();else playClap()})}else playClap()});
+  vol.addEventListener("change",()=>{setSlate({volume:Number(vol.value)});playClap()});
+  file.addEventListener("change",async()=>{const f=file.files[0];if(!f)return;if(f.size>5e6){toast("That file is over 5 MB: pick a short clip");return}
+    try{const data=await f.arrayBuffer();await sfx().decodeAudioData(data.slice(0));await soundPut({name:f.name,type:f.type,data});setSlate({sound:"custom"});sel.value="custom";fname.textContent="Your sound: "+f.name;showFile();playClap()}
+    catch(e){toast("This browser can't play that file: try MP3, WAV or M4A")}});
+  showFile();
+  return h("div",{class:"slsound"},h("div",{class:"form"},h("label",{},"Clap sound",sel),h("label",{},"Volume",vol)),h("div",{class:"toolbar"},pickBtn,clearBtn,h("button",{class:"btn small",onclick:()=>playClap()},"▶ Play"),fname),file);
+}
+
 /* ===================== Slate View ===================== */
 const SLV={id:null,raf:0};
 function openSlate(){const d=D();if(!d)return;const r=upNext(d);SLV.id=r&&r.id;$("#slateView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderSlate();tickSlate()}
@@ -1514,6 +1555,7 @@ window.addEventListener("resize",()=>{ if($("#slateView").classList.contains("op
 function bumpRoll(v){const m=String(v||"A000").match(/^(.*?)(\d+)$/);return m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):String(v||"")+"2"}
 function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+"h ago"}
 function clap(){
+  playClap();
   const v=$("#slateView"); v.classList.remove("flash"); void v.offsetWidth; v.classList.add("flash");
   if(!SLV.id) return; const c=slateCfg();
   if(c.logOnClap){const t=logTake(SLV.id);if(t){renderSlate();$("#slMsg").textContent=`Take ${t.n} logged at ${t.tc}`;renderBody()}}
@@ -1537,6 +1579,8 @@ function slateSettings(){
     h("div",{class:"toolbar"},manual,h("button",{class:"btn small",onclick:()=>{const ms=parseTc(manual.value,slateFps());if(ms==null){say("Type a timecode like 14:02:10:00");return}jamTo(ms,"typed");renderSlate();slateSettings()}},"Jam now")),
     audioInputPicker(c),
     h("p",{class:"note"},"LTC: plug the Tentacle (or any LTC source) into the phone or tablet's mic input with a TRRS adaptor cable (on a laptop: the headset socket, or a USB audio interface or USB-C headset adaptor, then pick it as the audio input above), set it to output audio timecode, and keep the volume up. The slate jams in a second or two (within about a frame), then free-runs from the device clock: jam again every few hours, like a hardware slate. Or type the timecode and press Jam now on the beat."),
+    h("h3",{},"Sound"),
+    soundPicker(c),
     h("h3",{},"Second screen"),
     h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:popOutSlate},"Open the slate in its own window")),
     h("p",{class:"note"},"Drag that window onto a second monitor or projector facing camera (⛶ or F for full screen), and keep the schedule open on the laptop. Both stay in step."),
