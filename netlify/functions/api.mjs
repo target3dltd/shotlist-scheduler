@@ -7,7 +7,13 @@
 //   p/<pid>/ops/<stamp>       one batch of edits per save; written once with onlyIfNew, never changed
 //   p/<pid>/acks/<cid>-<bid>  marks a batch as received, so a retried save isn't stored twice
 //   p/<pid>/presence/<cid>    who has the project open
-//   img/<id>                  uploaded reference images
+//   img/<id>                  uploaded reference images (metadata.pid = the project that owns it)
+//   keys/<pid>                {key, ver, set} the project's access key (only ever returned to the admin)
+//   imgown/<id>               {pid} owner of an image uploaded before project keys existed
+//
+// Project keys: when the ADMIN_KEY environment variable is set, every request for a project's data
+// (sync, saves, activity, original, images) needs that project's key or the admin key, and the project
+// list only shows projects you hold a key for. Without ADMIN_KEY everything works as before.
 //
 // Saving an edit never rewrites a shared record, so people saving at the same moment
 // can't overwrite each other's work. The per-field merge in model-core decides what
@@ -16,6 +22,31 @@
 import { getStore } from "@netlify/blobs";
 import * as M from "../../shared/model-core.mjs";
 import SEED from "../../shared/seed-data.mjs";
+import { createHash, timingSafeEqual, randomBytes } from "node:crypto";
+
+const sha = s => createHash("sha256").update(String(s)).digest();
+const same = (a, b) => timingSafeEqual(sha(a), sha(b));          // constant-time compare of any lengths
+const adminKey = () => process.env.ADMIN_KEY || "";
+const locked = () => !!adminKey();
+const isAdmin = req => locked() && same(req.headers.get("x-admin-key") || "", adminKey());
+function newProjectKey(){                                          // 4 groups of 4 (~80 bits), easy to read out
+  const a = "abcdefghjkmnpqrstuvwxyz23456789", b = randomBytes(16);
+  return Array.from({ length: 16 }, (_, i) => a[b[i] % a.length]).join("").match(/.{4}/g).join("-");
+}
+function heldKeys(req){
+  const out = {};
+  try { const j = JSON.parse(req.headers.get("x-project-keys") || "{}"); for (const [k, v] of Object.entries(j).slice(0, 200)) out[String(k)] = String(v).slice(0, 100); } catch (e) {}
+  return out;
+}
+async function keyRec(st, pid){ return await st.get("keys/" + pid, { type: "json" }); }
+async function canOpen(st, req, pid, given){
+  if (!locked() || isAdmin(req)) return true;
+  const rec = await keyRec(st, pid);
+  if (!rec || !rec.key) return false;                              // no key yet: only the admin can open it
+  const k = given !== undefined ? given : (req.headers.get("x-project-key") || "");
+  return !!k && same(k.trim().toLowerCase(), rec.key);
+}
+const noKey = () => json({ error: "This project needs its project key.", code: "project-key" }, 403);
 
 export const config = { path: ["/api/ping", "/api/projects", "/api/sync", "/api/ops", "/api/image", "/api/seed", "/api/activity"] };
 
@@ -71,6 +102,19 @@ function validOps(ops){
   return ops.every(o => o && ["doc", "day", "row", "person", "col"].includes(o.e) && typeof o.id === "string" && o.id.length <= 80
     && o.set && typeof o.set === "object" && !Array.isArray(o.set));
 }
+// an image may only be read through the project it belongs to
+async function imageBelongs(st, pid, id, meta){
+  if (meta && meta.pid) return meta.pid === pid;
+  const own = await st.get("imgown/" + id, { type: "json" });
+  if (own) return own.pid === pid;
+  // uploaded before project keys: it belongs to the project whose schedule refers to it
+  const needle = "img:" + id;
+  const snap = await st.get(`p/${pid}/snapshot`, { type: "text" });
+  let found = !!(snap && snap.includes(needle));
+  if (!found){ for (const k of await listKeys(st, `p/${pid}/ops/`)){ const t = await st.get(k, { type: "text" }); if (t && t.includes(needle)){ found = true; break; } } }
+  if (found) await st.setJSON("imgown/" + id, { pid }, { onlyIfNew: true });
+  return found;
+}
 async function compact(st, pid, snap, etag, keys){
   const cutoff = M.pad13(Date.now() - COMPACT_AGE_MS);
   const base = `p/${pid}/ops/`;
@@ -92,7 +136,7 @@ export default async (req, context) => {
   // Access: Netlify's site password protects every request, including these functions.
   // TEAM_KEY is an optional second key; when it isn't set, the site password is the only gate.
   const teamKey = process.env.TEAM_KEY || "";
-  if (path === "/api/ping") return json({ app: "shotlist-scheduler", ok: true, needsKey: !!teamKey, data: STORE_NAME === "shotlist" ? "live" : "preview" });
+  if (path === "/api/ping") return json({ app: "shotlist-scheduler", ok: true, needsKey: !!teamKey, data: STORE_NAME === "shotlist" ? "live" : "preview", projectKeys: locked(), admin: isAdmin(req) });
   if (teamKey && req.headers.get("x-team-key") !== teamKey) return json({ error: "That team key isn't right." }, 401);
 
   const st = store();
@@ -102,9 +146,31 @@ export default async (req, context) => {
       await ensureDefaultProject(st);
       if (req.method === "POST"){
         const body = await readBody(req);
+        if (body.action === "redeem"){                     // find the project a key belongs to
+          const given = String(body.key || "").trim().toLowerCase().slice(0, 100);
+          if (!given) return json({ error: "Enter a project key" }, 400);
+          for (const k of await listKeys(st, "keys/")){
+            const rec = await st.get(k, { type: "json" }); const id = k.slice(5);
+            if (rec && rec.key && same(given, rec.key)){ const meta = await st.get("projects/" + id, { type: "json" }); if (meta) return json({ id, name: meta.name, key: rec.key }); }
+          }
+          return json({ error: "That key doesn't match a project. Check it with whoever sent it." }, 404);
+        }
+        if (body.action === "setKey" || body.action === "getKeys"){
+          if (!isAdmin(req)) return json({ error: "Only the admin can do that." }, 403);
+          if (body.action === "getKeys"){
+            const out = {}; for (const k of await listKeys(st, "keys/")){ const rec = await st.get(k, { type: "json" }); if (rec) out[k.slice(5)] = rec.key; }
+            return json({ keys: out });
+          }
+          const id = cleanPid(body.id); if (!id || !(await st.get("projects/" + id, { type: "json" }))) return json({ error: "No such project" }, 404);
+          const prev = await keyRec(st, id);
+          const key = newProjectKey();
+          await st.setJSON("keys/" + id, { key, ver: ((prev && prev.ver) || 0) + 1, set: Date.now() });
+          return json({ id, key });
+        }
         if (body.action === "archive" || body.action === "restore"){
           const id = cleanPid(body.id), meta = await st.get("projects/" + id, { type: "json" });
           if (!meta) return json({ error: "No such project" }, 404);
+          if (!(await canOpen(st, req, id, heldKeys(req)[id] || ""))) return noKey();
           meta.archived = body.action === "archive";
           await st.setJSON("projects/" + id, meta);
           return json({ ok: true });
@@ -114,12 +180,28 @@ export default async (req, context) => {
         const id = (cleanPid(String(body.name || "project").toLowerCase().replace(/\s+/g, "-")) || "project") + "-" + rand(4);
         await st.setJSON(`p/${id}/seed`, seed, { onlyIfNew: true });
         await st.setJSON("projects/" + id, { id, name: String(body.name || "Untitled project").slice(0, 80), created: Date.now() }, { onlyIfNew: true });
+        if (locked()){ const key = newProjectKey(); await st.setJSON("keys/" + id, { key, ver: 1, set: Date.now() }); return json({ id, key }); }
         return json({ id });
       }
       const keys = await listKeys(st, "projects/");
-      const list = (await Promise.all(keys.map(k => st.get(k, { type: "json" })))).filter(Boolean);
+      let list = (await Promise.all(keys.map(k => st.get(k, { type: "json" })))).filter(Boolean);
+      if (locked()){
+        const admin = isAdmin(req), held = heldKeys(req), out = [];
+        for (const p of list){
+          const rec = await keyRec(st, p.id);
+          if (admin) out.push(Object.assign({}, p, { hasKey: !!(rec && rec.key) }));
+          else if (rec && rec.key && held[p.id] && same(held[p.id].trim().toLowerCase(), rec.key)) out.push(p);
+        }
+        // any key this device holds that doesn't open a project is reported the same way, whether or not
+        // that project exists, so this can't be used to find out which projects are on the site
+        if (!admin){ const ok = new Set(out.map(p => p.id)); for (const id of Object.keys(held)) if (!ok.has(id)) out.push({ id, revoked: true }); }
+        list = out;
+      }
       return json({ projects: list.sort((a, b) => (a.created || 0) - (b.created || 0)) });
     }
+
+    // everything below reads or writes one project's data: it needs that project's key
+    if (!(await canOpen(st, req, pid))) return noKey();
 
     if (path === "/api/sync" && req.method === "POST"){
       const body = await readBody(req);
@@ -189,12 +271,13 @@ export default async (req, context) => {
         if (!m) return json({ error: "Not an image" }, 400);
         const id = Date.now().toString(36) + rand(8);
         const bytes = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0));
-        await st.set("img/" + id, bytes, { metadata: { type: m[1] } });
+        await st.set("img/" + id, bytes, { metadata: { type: m[1], pid } });
         return json({ ref: "img:" + id });
       }
       const id = (url.searchParams.get("k") || "").replace(/[^a-z0-9]/gi, "");
       const r = id && await st.getWithMetadata("img/" + id, { type: "arrayBuffer" });
       if (!r) return new Response("Not found", { status: 404 });
+      if (locked() && !isAdmin(req) && !(await imageBelongs(st, pid, id, r.metadata))) return new Response("Not found", { status: 404 });
       return new Response(r.data, { headers: { "content-type": (r.metadata && r.metadata.type) || "image/jpeg", "cache-control": "private, max-age=31536000, immutable" } });
     }
 

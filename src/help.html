@@ -159,9 +159,14 @@
 
   <h3>Separate teams and private projects</h3>
   <ul>
-    <li>Everyone who can open a site can see <b>every</b> project on it (Settings &gt; Projects). The site password and the team key are for the whole site, not one project. So projects for different teams or clients, which mustn't be seen by each other, go on <b>separate sites</b>.</li>
-    <li><b>To set up a site for another team:</b> in Netlify, Add new site &gt; Import an existing project &gt; GitHub, and pick the same repository. Give it its own name (e.g. <code>clientname-shotlist</code>), then turn on its own site password (Site configuration &gt; Access control). It starts empty: create the project there, or Import a project file. Optionally set a different <code>TEAM_KEY</code> on that site.</li>
-    <li>Each site has its own separate data store, password and link, so the two teams never see each other's projects. Both run the same tool, and every update pushed to GitHub reaches both sites automatically.</li>
-    <li>On one device you can use both sites. Each keeps its own projects, name and settings, because they're different web addresses.</li>
-    <li>To move a project from one site to another: Settings &gt; Projects &gt; Export project file on the first site, then Import it on the other. Remember this hands its contents to whoever can open the second site.</li>
+    <li><b>Project keys</b> keep jobs for different teams or clients private from each other inside one site, so you can still jump between them. They're off until you switch them on.</li>
+    <li><b>Switching them on (once):</b> in Netlify, Site configuration &gt; Environment variables, add <code>ADMIN_KEY</code> with a long random value (20 or more characters; a password manager can make one), then redeploy. Then open the site, go to Settings &gt; Team &amp; sync and enter the admin key, or paste it into the Project key box when you join. Keep the admin key to yourself: it opens every project.</li>
+    <li><b>Give each project a key:</b> Settings &gt; Projects lists every project with a <b>Create key</b> button. Until a project has a key, only the admin can open it, so give one to each project as soon as keys are on and send it to that project's team. New projects get a key straight away.</li>
+    <li><b>What each person sees:</b> only the projects whose keys they've entered. Everything for a project (schedule, edits, activity, storyboard images) is only handed over by the server to someone holding its key or the admin key. People without the key don't see its name in the project list.</li>
+    <li><b>Joining:</b> people enter the key once per device, when they join or from Settings &gt; Projects &gt; Add project. Share includes the key, or reminds you to send it separately.</li>
+    <li><b>When someone leaves a job:</b> Settings &gt; Projects &gt; <b>Change</b> on that project. The old key stops working at once, and devices still using it drop the project and its copy straight away. Send the new key to the people staying on. Other projects aren't affected.</li>
+    <li><b>Remove from this device</b> takes a project and its key off a laptop or tablet, e.g. a shared machine.</li>
+    <li>Everyone still needs the Netlify site password to reach the site at all; the project keys decide what they can open once they're in. Anyone with access to your Netlify account can see all the data.</li>
+    <li><b>Separate sites</b> are the alternative for a client who needs complete separation: in Netlify, Add new site &gt; Import an existing project &gt; GitHub, pick the same repository, give it its own name and its own site password. It has its own data, starts empty, and gets every update automatically.</li>
+    <li>To move a project between sites: Settings &gt; Projects &gt; Export project file, then Import on the other site.</li>
   </ul>

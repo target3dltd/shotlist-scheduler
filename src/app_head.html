@@ -294,6 +294,7 @@ input.shotno{font-weight:700;font-size:1.08em}
 #helpBody section{scroll-margin-top:8.5rem}
 #changelog li.older{display:none} #changelog.all li.older{display:list-item} #changelog.all li.more{display:none}
 #changelog li.more{list-style:none;margin-top:.4rem}
+body.keylocked > *:not(.modal):not(.toast){visibility:hidden}
 #shareBody .form{grid-template-columns:1fr}
 #shareBody textarea{width:100%;min-height:9rem;font-family:inherit;border:1px solid var(--line);border-radius:6px;padding:.5rem}
 .sharelink{display:flex;gap:.4rem;align-items:center} .sharelink input{flex:1;min-width:0;font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-radius:6px;padding:.35rem .5rem}
@@ -563,12 +564,23 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="form" style="grid-template-columns:1fr">
     <label>Your name (shown to the team)<input id="joinName" autocomplete="name"></label>
     <label id="joinKeyRow">Team key<input id="joinKey" type="password" autocomplete="current-password"></label>
+    <label id="joinPKeyRow" style="display:none">Project key (from whoever invited you)<input id="joinPKey" autocomplete="off" spellcheck="false" placeholder="e.g. abcd-efgh-jkmn-pqrs"></label>
   </div>
   <div class="err" id="joinErr"></div>
   <div class="toolbar"><button class="btn primary" id="joinGo">Join</button><button class="btn" id="joinLocal" title="Use a separate copy saved only in this browser. You can rejoin any time from the header or Settings > Team &amp; sync">Work offline instead</button></div>
 </div></div>
 
 <!-- Confirm -->
+<div class="modal" id="keyModal"><div class="box narrow">
+  <h2>Project key</h2>
+  <p id="keyMsg"></p>
+  <div class="form" style="grid-template-columns:1fr"><label>Project key<input id="keyInput" autocomplete="off" spellcheck="false" placeholder="e.g. abcd-efgh-jkmn-pqrs"></label></div>
+  <div class="err" id="keyErr"></div>
+  <div class="toolbar"><button class="btn primary" id="keyGo">Open project</button></div>
+  <div class="toolbar" id="keyOthers" style="margin-top:.6rem"></div>
+  <p class="note">Each project has its own key, so you only see the projects you've been given. The key is kept on this device.</p>
+</div></div>
+
 <div class="modal" id="shareModal"><div class="box narrow">
   <button class="btn small close" data-close>Close</button>
   <h2>Share this project</h2>

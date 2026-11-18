@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.11.1";
+const VERSION = "2.12.0";
 const CHANGELOG = [
+  ["2.12.0","2026-11-18","Project keys: with ADMIN_KEY set on the site, each project has its own key, people only see and open the projects whose keys they hold, and the server enforces it for the schedule, saves, activity and images. The admin opens everything. Change a key to cut someone off one job without touching the others; devices using the old key drop the project at once. Share includes the key, and Remove from this device takes a project off a machine."],
   ["2.11.1","2026-11-18","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
   ["2.11.0","2026-11-18","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
   ["2.10.0","2026-11-17","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
@@ -173,6 +174,18 @@ let projects=[];             // [{id,name,archived}]
 let localSeq=0;
 
 const PKEY=(pid,part)=>`shotlist2-p-${pid}-${part}`;
+/* ===================== project keys ===================== */
+// With ADMIN_KEY set on the site, each project has its own key and the server only hands a project's data to
+// someone holding that key (or the admin key). Keys are kept on this device so they're entered once.
+let PROJECT_KEYS=false, IS_ADMIN=false;
+let KEYS=(()=>{try{return JSON.parse(localStorage.getItem("shotlist2-pkeys")||"{}")||{}}catch(e){return {}}})();
+function saveKeys(){try{localStorage.setItem("shotlist2-pkeys",JSON.stringify(KEYS))}catch(e){}}
+function adminKey(){try{return localStorage.getItem("shotlist2-admin")||""}catch(e){return ""}}
+function setAdminKey(k){try{k?localStorage.setItem("shotlist2-admin",k):localStorage.removeItem("shotlist2-admin")}catch(e){}}
+function keyHeaders(extra={}){const id=(typeof P!=="undefined"&&P.projectId)||"";return Object.assign({"x-team-key":(typeof P!=="undefined"&&P.teamKey)||"","x-admin-key":adminKey(),"x-project-key":KEYS[id]||"","x-project-keys":JSON.stringify(KEYS)},extra)}
+// take a project off this device: its cached schedule, unsent edits and key
+function forgetLocal(id){try{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.startsWith(PKEY(id,"")))localStorage.removeItem(k)}}catch(e){} delete KEYS[id]; saveKeys();}
+async function redeemKey(key){const r=await api("/api/projects",{action:"redeem",key:String(key).trim()},{noProject:true});KEYS[r.id]=r.key;saveKeys();return r}
 function pid(){return P.projectId}
 
 /* view = agreed document + my unconfirmed changes on top */
@@ -246,9 +259,9 @@ async function api(path,body,opts={}){
   try{
     const sep=path.includes("?")?"&":"?";
     const url=path+(opts.noProject?"":sep+"p="+encodeURIComponent(pid()||""));
-    const r=await fetch(url,{method:body===undefined?"GET":"POST",headers:{"content-type":"application/json","x-team-key":P.teamKey||""},body:body===undefined?undefined:JSON.stringify(body),signal:ctl.signal,cache:"no-store"});
+    const r=await fetch(url,{method:body===undefined?"GET":"POST",headers:keyHeaders({"content-type":"application/json"}),body:body===undefined?undefined:JSON.stringify(body),signal:ctl.signal,cache:"no-store"});
     const j=await r.json().catch(()=>({error:"Unexpected reply from the server"}));
-    if(!r.ok) throw Object.assign(new Error(j.error||("Error "+r.status)),{status:r.status});
+    if(!r.ok) throw Object.assign(new Error(j.error||("Error "+r.status)),{status:r.status,code:j.code});
     return j;
   }finally{clearTimeout(t)}
 }
@@ -269,6 +282,7 @@ async function flush(){
     backoff=0; netErr="";
   }catch(e){
     netErr=e.message; if(e.status===401) return needKey(e.message);
+    if(e.status===403&&e.code==="project-key") return projectLocked(pid());
     backoff=Math.min(30000,(backoff||1000)*2); scheduleFlush(backoff);
   }finally{flushing=false; updateStatus();}
   rebuild(false);
@@ -303,6 +317,7 @@ async function syncNow(){
     renderPresence(); applyPeerRows();
   }catch(e){
     netErr=e.message; if(e.status===401){syncing=false;return needKey(e.message)}
+    if(e.status===403&&e.code==="project-key"){syncing=false;return projectLocked(pid())}
     backoff=Math.min(30000,(backoff||2000)*2);
   }finally{syncing=false; updateStatus();}
   const every=(document.hidden?15:Math.max(2,Number(P.poll)||3))*1000;
@@ -353,7 +368,9 @@ function touchProject(){
   if(it){it.updated=Date.now(); if(S&&S.project&&S.project.name) it.name=S.project.name; lsSet("shotlist2-projects",list)}
 }
 async function loadProjects(){
-  if(MODE==="team"){const r=await api("/api/projects",undefined,{noProject:true});projects=r.projects||[]}
+  if(MODE==="team"){const r=await api("/api/projects",undefined,{noProject:true});projects=r.projects||[];
+    for(const p of projects.filter(x=>x.revoked)){forgetLocal(p.id);toast("A project key on this device no longer works, so that project has been taken off it")}
+    projects=projects.filter(x=>!x.revoked)}
   else{
     projects=lsGet("shotlist2-projects",[]);
     if(!projects.length&&SEED){projects=[{id:SEED.id||"main",name:SEED.project.name,updated:Date.now()}];lsSet("shotlist2-projects",projects);lsSet(PKEY(SEED.id||"main","seed"),SEED)}
@@ -369,7 +386,7 @@ function blankSeed(name,from){
 }
 function docToSeed(doc){return {project:clone(doc.project),people:clone(doc.people),cols:clone(doc.cols||[]),cfg:clone(doc.cfg),days:clone(doc.days)}}
 async function createProject(name,seed){
-  if(MODE==="team"){const r=await api("/api/projects",{name,seed},{noProject:true});await loadProjects();return r.id}
+  if(MODE==="team"){const r=await api("/api/projects",{name,seed},{noProject:true});if(r.key){KEYS[r.id]=r.key;saveKeys()}await loadProjects();return r.id}
   const id=(name||"project").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,24)+"-"+Math.random().toString(36).slice(2,6);
   lsSet(PKEY(id,"seed"),seed); lsSet(PKEY(id,"base"),seedModel(seed));
   const list=lsGet("shotlist2-projects",[]); list.push({id,name,updated:Date.now()}); lsSet("shotlist2-projects",list); projects=list;
@@ -378,7 +395,7 @@ async function createProject(name,seed){
 async function openProject(id){
   commit();
   if(MODE==="team"&&pending.length){await flush()}
-  P.projectId=id; savePrefs();
+  P.projectId=id; savePrefs(); document.body.classList.remove("keylocked");
   base=lsGet(PKEY(id,"base"),null); cursor=(lsGet(PKEY(id,"meta"),{})||{}).cursor||"";
   pending=MODE==="team"?lsGet(PKEY(id,"pending"),[]):[];
   seenKeys=new Map(); undoStack=[]; redoStack=[]; activity=[]; presence=[];
@@ -743,7 +760,7 @@ async function imgSrc(ref){
   if(!ref) return "";
   if(!String(ref).startsWith("img:")) return ref;
   if(imgCache.has(ref)) return imgCache.get(ref);
-  const p=(async()=>{try{const r=await fetch("/api/image?k="+encodeURIComponent(ref.slice(4)),{headers:{"x-team-key":P.teamKey||""}});if(!r.ok)return"";return URL.createObjectURL(await r.blob())}catch(e){return""}})();
+  const p=(async()=>{try{const r=await fetch("/api/image?k="+encodeURIComponent(ref.slice(4))+"&p="+encodeURIComponent(pid()),{headers:keyHeaders()});if(!r.ok)return"";return URL.createObjectURL(await r.blob())}catch(e){return""}})();
   imgCache.set(ref,p); return p;
 }
 let imgTarget=null;
@@ -1042,7 +1059,8 @@ function openShare(){
   const f=h("div",{class:"form"});
   const who=h("input",{placeholder:"e.g. Sam"}), role=h("input",{placeholder:"e.g. DIT"}), email=h("input",{type:"email",placeholder:"name@example.com"});
   const pw=h("input",{type:"password",placeholder:"Only if you choose to include it",autocomplete:"off"});
-  const incPw=h("input",{type:"checkbox"}), incKey=h("input",{type:"checkbox"}), addCrew=h("input",{type:"checkbox"});
+  const incPw=h("input",{type:"checkbox"}), incKey=h("input",{type:"checkbox"}), incPk=h("input",{type:"checkbox"}), addCrew=h("input",{type:"checkbox"});
+  const pkey=KEYS[pid()]||"";
   const link=h("input",{readonly:true,value:projectLink()});
   const msg=h("textarea",{});
   const pwRow=h("label",{},"Site password (not saved anywhere)",pw); pwRow.style.display="none";
@@ -1050,17 +1068,20 @@ function openShare(){
     const name=who.value.trim(), proj=S.project.name||"our shoot";
     const lines=[`Hi${name?" "+name:""},`,"",`You're invited to the ${proj} shot list and schedule. Everyone on the team edits the same live version.`,"",`Open it here: ${projectLink()}`,""];
     lines.push(incPw.checked&&pw.value?`Site password: ${pw.value}`:"The site is password protected. I'll send you the password separately.");
+    if(PROJECT_KEYS) lines.push(incPk.checked&&pkey?`Project key (enter it when it asks): ${pkey}`:"It also asks for a project key, which I'll send separately.");
     if(NEEDS_KEY) lines.push(incKey.checked&&P.teamKey?`Team key (asked for when you join): ${P.teamKey}`:"It also asks for a team key when you join. I'll send that separately too.");
     lines.push("","When it opens, add your name so the team can see who's editing. On a phone or tablet, Share > Add to Home Screen makes it open like an app.","",`Thanks${S.project.lead?", "+S.project.lead:""}`);
     msg.value=lines.join("\n");
     pwRow.style.display=incPw.checked?"":"none";
   };
-  [who,pw].forEach(x=>x.addEventListener("input",build)); [incPw,incKey].forEach(x=>x.addEventListener("change",build));
+  [who,pw].forEach(x=>x.addEventListener("input",build)); [incPw,incKey,incPk].forEach(x=>x.addEventListener("change",build));
   f.append(h("label",{},"Link to this project",h("div",{class:"sharelink"},link,h("button",{class:"btn small",onclick:async()=>{toast(await copyText(projectLink())?"Link copied":"Select the link and copy it")}},"Copy link"))),
     h("label",{},"Their name (for the message)",who));
   b.append(f,
-    h("div",{class:"safety"},h("b",{},"Safest: "),"send the link and the password in different ways, e.g. the link by email and the password by text or in person. If one message holds both, anyone who sees it (a forward, a shared screen, a hacked inbox) can get in. If you include them, send it only to that person directly, and change the Netlify password when people leave the production."),
-    h("div",{class:"form"},h("label",{class:"inline"},incPw,"Include the site password in the message"),pwRow,
+    h("div",{class:"safety"},h("b",{},"Safest: "),"send the link and the password"+(PROJECT_KEYS?" and project key":"")+" in different ways, e.g. the link by email and the password by text or in person. If one message holds both, anyone who sees it (a forward, a shared screen, a hacked inbox) can get in. If you include them, send it only to that person directly, and change the Netlify password when people leave the production."),
+    PROJECT_KEYS?(pkey?h("div",{class:"form"},h("label",{},"Project key (only opens this project)",h("div",{class:"sharelink"},h("input",{readonly:true,value:pkey}),h("button",{class:"btn small",onclick:async()=>toast(await copyText(pkey)?"Key copied":"Couldn't copy")},"Copy key"))))
+      :h("div",{class:"safety"},h("b",{},"No project key yet: "),"only the admin can open this project. Create its key in Settings > Projects, then share it.")):null,
+    h("div",{class:"form"},PROJECT_KEYS&&pkey?h("label",{class:"inline"},incPk,"Include the project key in the message"):null,h("label",{class:"inline"},incPw,"Include the site password in the message"),pwRow,
       NEEDS_KEY?h("label",{class:"inline"},incKey,"Include the team key in the message"):h("span",{}),
       h("label",{class:"inline"},addCrew,"Also add them to Cast & crew"),
       h("div",{class:"form",style:"display:none",id:"shareCrew"},h("label",{},"Role",role),h("label",{},"Email",email)),
@@ -1074,6 +1095,39 @@ function openShare(){
   if(navigator.share) tb.append(h("button",{class:"btn",onclick:async()=>{addPerson();try{await navigator.share({title:subject(),text:msg.value})}catch(e){}}},"Share…"));
   b.append(tb,h("p",{class:"note"},"The link opens this project. They'll need the site password, and their own name when they join. Nothing here changes who can get in: that's the Netlify password (and the team key, if you set one)."));
   build(); $("#shareModal").classList.add("open"); setTimeout(()=>who.focus(),50);
+}
+// a key typed by the user: a project key, or the admin key
+async function useKey(k){
+  k=String(k||"").trim(); if(!k) return false;
+  try{ const r=await redeemKey(k); P.projectId=r.id; savePrefs(); return r; }
+  catch(e){ if(e.status!==404) throw e; }
+  // not a project key: is it the admin key?
+  try{ const r=await fetch("/api/ping",{cache:"no-store",headers:{"x-admin-key":k}}); const j=await r.json(); if(j&&j.admin){ setAdminKey(k); IS_ADMIN=true; toast("Admin key saved on this device: you can open every project"); return {admin:true}; } }catch(e){}
+  return false;
+}
+// this device can't open a project: it never had the key, or the key was changed
+function projectLocked(id){
+  clearTimeout(syncTimer); clearTimeout(flushTimer);
+  const had=!!KEYS[id];
+  if(had) forgetLocal(id);
+  showKeyPrompt(id, had?"The key for this project has changed, so it's been taken off this device. Enter the new key from whoever runs the project.":"This project needs its project key. Ask whoever runs the project for it.");
+}
+function showKeyPrompt(id,msg){
+  $("#keyMsg").textContent=msg; $("#keyInput").value=""; $("#keyErr").textContent="";
+  const others=projects.filter(p=>!p.archived&&p.id!==id);
+  const ol=$("#keyOthers"); ol.innerHTML="";
+  if(others.length){ ol.append(h("span",{class:"note"},"Or open: ")); others.forEach(p=>ol.append(h("button",{class:"btn small",onclick:async()=>{$("#keyModal").classList.remove("open");await openProject(p.id)}},p.name||p.id))); }
+  // nothing from a project you can't open stays on screen
+  if(!id||(S&&P.projectId===id)){ S=null; base=null; pending=[]; $("#grid tbody")&&($("#grid tbody").innerHTML=""); }
+  document.body.classList.add("keylocked"); document.title="Shotlist Scheduler";
+  $("#keyModal").classList.add("open"); setTimeout(()=>$("#keyInput").focus(),50);
+}
+async function submitKey(){
+  $("#keyErr").textContent="Checking…";
+  try{ const r=await useKey($("#keyInput").value); if(!r){$("#keyErr").textContent="That key doesn't match a project. Check it with whoever sent it.";return}
+    $("#keyModal").classList.remove("open"); $("#keyErr").textContent="";
+    await loadProjects(); if(r.id){await openProject(r.id);toast("Opened "+r.name)} else await startTeam();
+  }catch(e){$("#keyErr").textContent=e.message}
 }
 function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
@@ -1375,7 +1429,12 @@ function renderSetTab(){
       const poll=h("select",{}); for(const s of [2,3,5,10,20]) poll.append(h("option",{value:s},"every "+s+" seconds")); poll.value=String(P.poll);
       poll.addEventListener("change",()=>{P.poll=Number(poll.value);savePrefs()});
       f.append(h("label",{},"Your name (shown to the team)",nm),h("label",{},"Check for teammates' changes",poll));
+      { const ak=h("input",{type:"password",autocomplete:"off",value:adminKey(),placeholder:"Only for whoever manages the site"});
+        const save=async()=>{const v=ak.value.trim();if(!v){setAdminKey("");IS_ADMIN=false;toast("Admin key removed from this device");renderSetTab();return}
+          try{const r=await fetch("/api/ping",{cache:"no-store",headers:{"x-admin-key":v}});const j=await r.json();if(j.admin){setAdminKey(v);IS_ADMIN=true;toast("Admin key saved: you can open every project");renderSetTab()}else toast(j.projectKeys?"That isn't the admin key":"Project keys are off on this site: set ADMIN_KEY in Netlify first")}catch(e){toast(e.message)}};
+        f.append(h("label",{},"Admin key"+(IS_ADMIN?" (saved: you can open every project)":""),h("span",{class:"toolbar"},ak,h("button",{class:"btn small",onclick:save},IS_ADMIN?"Update":"Save")))); }
       b.append(f,
+        h("p",{class:"note",style:"margin-top:1rem"},PROJECT_KEYS?"Project keys are on: each project has its own key, and you only see the projects you hold keys for.":"Project keys are off: everyone who can open the site sees every project. To turn them on, set ADMIN_KEY in Netlify (see Help > Separate teams)."),
         h("p",{class:"note",style:"margin-top:1rem"},`Status: ${$("#status").title||$("#status").textContent}. ${pending.length?pending.length+" change(s) waiting to send.":"Nothing waiting to send."}`),
         h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{syncNow();flush();toast("Checking now")}},"Sync now"),
           h("button",{class:"btn small danger",onclick:async()=>{if(pending.length&&!(await ask("Forget the team key?",`${pending.length} change(s) haven't reached the server yet. They stay on this device and send when you sign in again.`,"Forget key")))return;P.teamKey="";savePrefs();location.reload()}},"Forget team key on this device")));
@@ -1387,9 +1446,37 @@ function renderPrev(){
   const d=D(); const r=d&&(d.rows.find(x=>x.type!=="break"&&(x.action||x.shot))||d.rows.find(x=>x.type!=="break"));
   el.textContent=r?("Example (take "+nextTake(r,d)+"): "+(shotName(r,d,nextTake(r,d))||"(every part is switched off)")):"Add a shot to this day to see an example name.";
 }
+function keyCell(p,allKeys){
+  const w=h("div",{class:"toolbar"});
+  if(IS_ADMIN){
+    const k=allKeys[p.id];
+    if(k){ const shown=h("code",{},"••••-••••-••••-••••");
+      w.append(shown,h("button",{class:"btn small",onclick:()=>{shown.textContent=shown.textContent.includes("•")?k:"••••-••••-••••-••••"}},"Show"),
+        h("button",{class:"btn small",onclick:async()=>toast(await copyText(k)?"Key copied":"Couldn't copy")},"Copy"),
+        h("button",{class:"btn small danger",title:"Make a new key: everyone on this project needs the new one",onclick:()=>changeKey(p,true)},"Change")); }
+    else w.append(h("span",{class:"note"},"No key yet (only you can open it) "),h("button",{class:"btn small primary",onclick:()=>changeKey(p,false)},"Create key"));
+  } else w.append(h("span",{class:"note"},KEYS[p.id]?"Saved on this device ":""),h("button",{class:"btn small",title:"Take this project and its key off this device",onclick:async()=>{
+    if(!(await ask("Remove "+(p.name||p.id)+" from this device?","Its key and the copy on this device are removed. The project itself is untouched for the team; you'd need the key again to open it.","Remove from this device")))return;
+    if(p.id===pid()&&pending.length) await flush();
+    forgetLocal(p.id); await loadProjects(); const next=projects.find(x=>!x.archived);
+    if(p.id===pid()){ if(next) await openProject(next.id); else showKeyPrompt(null,"Enter a project key to open a project."); }
+    renderSetTab(); toast("Removed from this device")}},"Remove from this device"));
+  return w;
+}
+async function changeKey(p,existing){
+  if(existing&&!(await ask("Change the key for "+(p.name||p.id)+"?","The old key stops working straight away. Everyone on this project will need the new key, and devices still using the old one drop the project until they enter it. Use this when someone leaves the job.","Change key")))return;
+  try{const r=await api("/api/projects",{action:"setKey",id:p.id},{noProject:true});KEYS[p.id]=r.key;saveKeys();renderSetTab();
+    toast("New key: "+r.key+" (copied)");copyText(r.key)}catch(e){toast("Couldn't change it: "+e.message)}
+}
 async function renderProjectsTab(b){
-  b.append(h("p",{class:"note"},MODE==="team"?"Projects on the team site. Everyone with the team key can open them.":"Projects saved in this browser."));
-  const t=h("table",{class:"plain"}); t.append(h("thead",{},h("tr",{},h("th",{},"Project"),h("th",{},""),h("th",{},""))));
+  const keyed=MODE==="team"&&PROJECT_KEYS;
+  b.append(h("p",{class:"note"},MODE!=="team"?"Projects saved in this browser.":keyed?(IS_ADMIN?"Every project on the site (you're the admin). Each one has its own key: people only see the projects whose keys they've been given.":"The projects you hold keys for. Each project has its own key, so other projects on this site stay private to their teams."):"Projects on the team site. Everyone who can open the site can open them. To keep projects private from each other, see Help > Separate teams."));
+  if(keyed){ const ki=h("input",{placeholder:"Paste a project key",autocomplete:"off",spellcheck:"false",style:"max-width:16rem"});
+    const go=async()=>{try{const r=await useKey(ki.value);if(!r){toast("That key doesn't match a project");return}if(r.id){await openProject(r.id);toast("Added "+r.name)}renderSetTab()}catch(e){toast(e.message)}};
+    ki.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
+    b.append(h("div",{class:"toolbar",style:"margin-bottom:.6rem"},ki,h("button",{class:"btn small primary",onclick:go},"Add project"))); }
+  let allKeys={}; if(keyed&&IS_ADMIN){try{allKeys=(await api("/api/projects",{action:"getKeys"},{noProject:true})).keys||{};Object.assign(KEYS,allKeys);saveKeys()}catch(e){}}
+  const t=h("table",{class:"plain"}); t.append(h("thead",{},h("tr",{},h("th",{},"Project"),h("th",{},""),h("th",{},""),keyed?h("th",{},"Project key"):null)));
   const tb=h("tbody",{}); t.append(tb); b.append(t);
   try{await loadProjects()}catch(e){tb.append(h("tr",{},h("td",{colspan:3,class:"err"},"Couldn't load projects: "+e.message)))}
   const list=projects.filter(p=>!p.archived);
@@ -1399,7 +1486,8 @@ async function renderProjectsTab(b){
       h("td",{},cur?"":h("button",{class:"btn small",onclick:async()=>{await openProject(p.id);$("#setModal").classList.remove("open");toast("Opened "+(p.name||p.id))}},"Open")),
       h("td",{},cur?"":h("button",{class:"btn small danger",onclick:async()=>{if(!(await ask("Remove "+(p.name||p.id)+"?",MODE==="team"?"It's hidden for everyone, not erased: it can be restored from the archived list below.":"This deletes it from this browser. Export it first if you want a copy.","Remove")))return;
         if(MODE==="team"){await api("/api/projects",{action:"archive",id:p.id},{noProject:true})}else{const l=lsGet("shotlist2-projects",[]).filter(x=>x.id!==p.id);lsSet("shotlist2-projects",l);["base","seed","meta","pending"].forEach(k=>lsDel(PKEY(p.id,k)))}
-        renderSetTab()}},"Remove"))));
+        renderSetTab()}},"Remove")),
+      keyed?h("td",{},keyCell(p,allKeys)):null));
   }
   const arch=projects.filter(p=>p.archived);
   if(arch.length){b.append(h("h3",{},"Archived"));for(const p of arch)b.append(h("div",{class:"toolbar"},h("span",{},p.name||p.id),h("button",{class:"btn small",onclick:async()=>{await api("/api/projects",{action:"restore",id:p.id},{noProject:true});renderSetTab()}},"Restore")))}
@@ -1546,8 +1634,8 @@ if(mq&&mq.addEventListener) mq.addEventListener("change",applyDisplay);
 let NEEDS_KEY=false;
 async function detectTeam(){
   if(!/^https?:$/.test(location.protocol)) return "local";
-  try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),4000);const r=await fetch("/api/ping",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
-    if(r.ok){const j=await r.json().catch(()=>null);if(j&&j.app==="shotlist-scheduler"){NEEDS_KEY=!!j.needsKey;P.needsKey=NEEDS_KEY;return "team"}return "local"}
+  try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),4000);const r=await fetch("/api/ping",{signal:ctl.signal,cache:"no-store",headers:{"x-admin-key":adminKey()}});clearTimeout(t);
+    if(r.ok){const j=await r.json().catch(()=>null);if(j&&j.app==="shotlist-scheduler"){NEEDS_KEY=!!j.needsKey;P.needsKey=NEEDS_KEY;PROJECT_KEYS=!!j.projectKeys;IS_ADMIN=!!j.admin;return "team"}return "local"}
     return P.wasTeam?"unreachable":"local";
   }catch(e){return P.wasTeam?"unreachable":"local"}
 }
@@ -1555,13 +1643,15 @@ function needKey(msg){
   clearTimeout(syncTimer); clearTimeout(flushTimer);
   $("#joinName").value=P.name||""; $("#joinKey").value=""; $("#joinErr").textContent=msg||"";
   $("#joinKeyRow").style.display=NEEDS_KEY?"":"none"; $("#joinKeyNote").style.display=NEEDS_KEY?"":"none";
+  $("#joinPKeyRow").style.display=PROJECT_KEYS&&!IS_ADMIN&&!(P.projectId&&KEYS[P.projectId])&&!Object.keys(KEYS).length?"":"none";
   $("#joinModal").classList.add("open"); updateStatus();
 }
 async function startTeam(){
   try{
     await loadProjects();
     let ok=projects.filter(p=>!p.archived);
-    if(!ok.length){ await api("/api/projects",{name:"Untitled project",seed:blankSeed("Untitled project")},{noProject:true}); await loadProjects(); ok=projects.filter(p=>!p.archived); }
+    if(!ok.length&&PROJECT_KEYS&&!IS_ADMIN){ $("#joinModal").classList.remove("open"); P.wasTeam=true; savePrefs(); showKeyPrompt(null,"Enter the project key you were sent to open your project."); return; }
+    if(!ok.length){ await createProject("Untitled project",blankSeed("Untitled project")); ok=projects.filter(p=>!p.archived); }
     if(!P.projectId||!ok.some(p=>p.id===P.projectId)) P.projectId=(ok[0]||{}).id;
     $("#joinModal").classList.remove("open");
     P.wasTeam=true; savePrefs();
@@ -1595,7 +1685,7 @@ async function boot(){
     detectTeam().then(w=>{if(w==="team"){teamAvailable=true;showRejoin()}}).catch(()=>{});
     return;
   }
-  { const q=new URLSearchParams(location.search), pq=q.get("p"); if(pq){P.projectId=pq;savePrefs();q.delete("p");history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:""))} }
+  { const q=new URLSearchParams(location.search), pq=q.get("p"); const hk=new URLSearchParams(location.hash.slice(1)).get("k"); if(pq&&hk){KEYS[pq]=hk.trim().toLowerCase();saveKeys();history.replaceState(null,"",location.pathname+location.search)} if(pq){P.projectId=pq;savePrefs();q.delete("p");history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:""))} }
   const where=await detectTeam();
   if(where==="unreachable"&&P.projectId){
     // used the team site on this device before: start from the saved copy and keep retrying
@@ -1623,6 +1713,7 @@ $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.togg
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
 $("#shareBtn").onclick=openShare;
+$("#keyGo").onclick=submitKey; $("#keyInput").addEventListener("keydown",e=>{if(e.key==="Enter")submitKey()});
 $("#archDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Archive "+d.name+"?","The tab is put away for everyone. Nothing is deleted: restore it any time from the Archived tab at the end of the day tabs.","Archive day")))return;d.archived=true;P.activeByProject[pid()]=null;commit();savePrefs();renderAll();toast("Archived "+d.name+" - restore it from Archived")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}
   if(!(await ask("Reset "+d.name+"?","Puts this day back exactly as it was imported"+(MODE==="team"?", for everyone":"")+". Undo straight afterwards brings your version back.","Reset")))return;
@@ -1674,15 +1765,18 @@ $("#fileInput").addEventListener("change",e=>{const f=e.target.files[0];if(f)imp
 $("#imgInput").addEventListener("change",e=>{const f=e.target.files[0];if(!f||!imgTarget)return;const tgt=imgTarget;imgTarget=null;const img=new Image();const rd=new FileReader();
   rd.onload=()=>{img.onload=async()=>{const sc=Math.min(1,640/img.width,420/img.height);const cv=document.createElement("canvas");cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
     let ref=cv.toDataURL("image/jpeg",.78);
-    if(MODE==="team"){try{ref=(await api("/api/image",{data:ref},{noProject:true})).ref}catch(err){toast("Couldn't upload the image: "+err.message);return}}
+    if(MODE==="team"){try{ref=(await api("/api/image",{data:ref})).ref}catch(err){toast("Couldn't upload the image: "+err.message);return}}
     const x=R(tgt.id);if(!x)return;x[tgt.key]=ref;commit();renderBody()};img.src=rd.result};rd.readAsDataURL(f)});
 $("#joinGo").onclick=async()=>{const name=$("#joinName").value.trim(),key=$("#joinKey").value.trim();if(!name){$("#joinErr").textContent="Add your name so the team can see who's editing.";return}if(NEEDS_KEY&&!key){$("#joinErr").textContent="Enter the team key.";return}
   P.name=name;P.teamKey=key;P.mode=null;savePrefs();$("#joinErr").textContent="Checking…";
-  try{await api("/api/projects",undefined,{noProject:true});$("#joinErr").textContent="";await startTeam()}catch(e){$("#joinErr").textContent=e.message}};
+  try{await api("/api/projects",undefined,{noProject:true});
+    const pk=$("#joinPKey").value.trim();
+    if(pk){ const ok=await useKey(pk); if(!ok){$("#joinErr").textContent="That key doesn't match a project. Check it with whoever sent it.";return} }
+    $("#joinErr").textContent="";await startTeam()}catch(e){$("#joinErr").textContent=e.message}};
 $("#joinKey").addEventListener("keydown",e=>{if(e.key==="Enter")$("#joinGo").click()});
 $("#joinLocal").onclick=async()=>{const nm=$("#joinName").value.trim();if(nm)P.name=nm;P.mode="local-forced";savePrefs();$("#joinModal").classList.remove("open");await startLocal();toast("Working offline in this browser. Settings > Team & sync explains how to join later.")};
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape") $$(".modal.open").forEach(m=>{if(!["joinModal"].includes(m.id))m.classList.remove("open")});
+  if(e.key==="Escape") $$(".modal.open").forEach(m=>{if(!["joinModal","keyModal"].includes(m.id))m.classList.remove("open")});
   const tag=(document.activeElement||{}).tagName; if(tag==="TEXTAREA"||tag==="INPUT"||tag==="SELECT") return;
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo()}
 });
