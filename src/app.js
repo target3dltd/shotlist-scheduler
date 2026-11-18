@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.21.0";
+const VERSION = "2.22.0";
 const CHANGELOG = [
-  ["2.21.0","2026-11-18","Version history shows a date on the latest update only. Hero selects card on Mocap days: the seconds in takes marked Hero, next to Captured. Tidier header: buttons grouped, with Import, Export, Print and Activity in a File menu. Display settings regrouped into Presets, Colours, Text, Layout, Table and on-set tools, and Timeline colours, with switches and compact colour swatches. Settings tabs scroll in one row on phones."],
+  ["2.22.0","2026-11-18","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
+  ["2.21.0","","Version history shows a date on the latest update only. Hero selects card on Mocap days: the seconds in takes marked Hero, next to Captured. Tidier header: buttons grouped, with Import, Export, Print and Activity in a File menu. Display settings regrouped into Presets, Colours, Text, Layout, Table and on-set tools, and Timeline colours, with switches and compact colour swatches. Settings tabs scroll in one row on phones."],
   ["2.20.0","","Takes and Captured / Raw footage cards: the day's logged takes and the seconds recorded between each take's timecode in and out (Captured on Mocap days, Raw footage on Live Action). Pace panel on shoot days: a big +/- score, each finished shot's minutes won back or lost, your on-pace streak and best streak, and where the day will wrap against the target."],
   ["2.19.0","","Cut in Slate View: Clap logs a take with its timecode in, Cut adds the timecode out and length. Note View shows in / out for every take (its Roll / Cut does the same), the slate shows the rolling take, and the .xlsx export fills TC IN / TC OUT from the logged takes. A jam is shared with the team, so every device on the project logs takes on the same timecode."],
   ["2.18.0","","Clap sound in Slate View: a clap by default, or clapper sticks, a 1 kHz sync beep, your own sound file or none, with a volume control. Slate and Notes now sit at the end of the header as red and blue buttons."],
@@ -182,7 +183,7 @@ let pending=[];              // my changes not yet confirmed: [{bid, ops}]
 let seenKeys=new Map();      // recently applied batch keys -> time
 let S=null, lastView=null;   // what's on screen, and the copy it was built from
 let undoStack=[], redoStack=[];
-let presence=[], activity=[];
+let presence=[], activity=[], recentPeople=[];
 let lastSyncOk=0, syncTimer=null, flushTimer=null, flushing=false, syncing=false, backoff=0, netErr="";
 let projects=[];             // [{id,name,archived}]
 let localSeq=0;
@@ -309,7 +310,7 @@ async function syncNow(){
     commit();
     const now=Date.now();
     for(const [k,t] of seenKeys) if(now-t>120000) seenKeys.delete(k);
-    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",since:cursor,seen:[...seenKeys.keys()],row:focusRow||""});
+    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",dayId:(D()||{}).id||"",dev:deviceKind(),view:currentView(),idle:isIdle(),since:cursor,seen:[...seenKeys.keys()],row:focusRow||""});
     if(r.snapshot){
       base=base?mergeModels(base,r.snapshot.model):cloneModel(r.snapshot.model);
       if(r.snapshot.upto>cursor) cursor=r.snapshot.upto;
@@ -323,7 +324,7 @@ async function syncNow(){
       activity.push(b);
     }
     if(activity.length>400) activity=activity.slice(-400);
-    presence=r.presence||[];
+    presence=r.presence||[]; recentPeople=r.recent||[];
     lastSyncOk=Date.now(); backoff=0; netErr="";
     persistLocalState();
     const changed=rebuild(false);
@@ -366,14 +367,148 @@ function updateStatus(){
   label.textContent="Live";el.title=lastSyncOk?`Synced ${ago}s ago`:"Connecting…";
 }
 setInterval(()=>{if(MODE==="team")updateStatus()},5000);
+/* ---------- who's online ---------- */
+let lastInput=Date.now();
+["pointerdown","keydown","wheel","touchstart"].forEach(ev=>addEventListener(ev,()=>{lastInput=Date.now()},{passive:true}));
+function isIdle(){return document.hidden||Date.now()-lastInput>180000}
+function deviceKind(){const w=Math.min(innerWidth,screen.width||innerWidth),coarse=matchMedia("(pointer:coarse)").matches;return w<600?"phone":coarse&&w<1300?"tablet":"computer"}
+function currentView(){return $("#slateView").classList.contains("open")?"slate":$("#noteView").classList.contains("open")?"notes":"schedule"}
+// one entry per person: several tabs or devices with the same name show as one, with the busiest first
+function peopleOnline(){
+  const by=new Map();
+  for(const p of presence.filter(p=>p.cid!==P.cid)){const k=(p.name||"").trim().toLowerCase()||p.cid;const g=by.get(k);
+    if(!g) by.set(k,Object.assign({},p,{n:1,devs:[p.dev].filter(Boolean)}));
+    else{g.n++;if(p.dev&&!g.devs.includes(p.dev))g.devs.push(p.dev);if(g.idle&&!p.idle||(!!g.idle===!!p.idle&&p.at>g.at))Object.assign(g,p,{n:g.n,devs:g.devs,since:Math.min(g.since||p.at,p.since||p.at)})}}
+  return [...by.values()].sort((a,b)=>(!!a.idle-!!b.idle)||(a.name||"").localeCompare(b.name||""));
+}
 function renderPresence(){
   const w=$("#who"); w.innerHTML="";
   if(MODE!=="team") return;
-  const others=presence.filter(p=>p.cid!==P.cid);
-  const me=h("span",{style:`background:${colorFor(P.name||P.cid)}`,title:`${P.name||"You"} (you)`},initials(P.name||"You"));
-  w.append(me,...others.slice(0,6).map(p=>h("span",{style:`background:${colorFor(p.name||p.cid)}`,title:`${p.name||"Someone"}${p.day?" - on "+p.day:""}`},initials(p.name))));
-  if(others.length>6) w.append(h("small",{class:"note"},"+"+(others.length-6)));
+  const others=peopleOnline();
+  const me=h("span",{style:`background:${colorFor(P.name||P.cid)}`},initials(P.name||"You"));
+  w.append(me,...others.slice(0,5).map(p=>h("span",{style:`background:${colorFor(p.name||p.cid)};${p.idle?"opacity:.55":""}`},initials(p.name))));
+  w.append(h("span",{class:"wn"},others.length?`${others.length+1} online`:"Just you"));
+  w.title=others.length?"Who's online: "+[P.name||"You",...others.map(p=>p.name||"Someone")].join(", "):"Only you have this project open right now";
+  if($("#whoPop").classList.contains("open")) renderWhoPop();
 }
+function presenceRow(p){if(!p.row||!S) return ""; for(const d of S.days){const r=d.rows.find(x=>x.id===p.row); if(r) return isBlock(r)?blockName(r):"Shot "+(r.shot||"?")+(r.action?" · "+String(r.action).slice(0,40):"")} return ""}
+function renderWhoPop(){
+  const pop=$("#whoPop"); pop.innerHTML="";
+  const devName={phone:"phone",tablet:"tablet",computer:"computer"}, viewName={slate:"in Slate View",notes:"in Note View"};
+  const dur=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just joined":m<60?`on for ${m} min`:`on for ${Math.floor(m/60)}h ${m%60}m`};
+  const line=(p,me)=>{
+    const where=[p.day,presenceRow(p)].filter(Boolean).join(" · ");
+    const bits=[(p.devs&&p.devs.length?p.devs:[p.dev]).filter(Boolean).map(d=>devName[d]||d).join(" + "),viewName[p.view]||"",p.n>1?p.n+" tabs":""].filter(Boolean).join(", ");
+    const go=!me&&p.dayId&&S&&S.days.some(d=>d.id===p.dayId&&!d.archived)?h("button",{class:"go",onclick:()=>{P.activeByProject[pid()]=p.dayId;savePrefs();renderAll();pop.classList.remove("open");$("#who").setAttribute("aria-expanded","false");
+      setTimeout(()=>{const tr=p.row&&$(`#grid tbody tr[data-id="${p.row}"]`);if(tr){tr.scrollIntoView({block:"center",behavior:"smooth"});tr.classList.remove("flash");void tr.offsetWidth;tr.style.setProperty("--flash",colorFor(p.name||p.cid));tr.classList.add("flash")}},80)}},"Go there"):null;
+    return h("div",{class:"wp"},h("span",{class:"av",style:`background:${colorFor(p.name||p.cid)}`},initials(p.name||"You"),h("i",{class:p.idle?"idle":""})),
+      h("div",{class:"wb"},h("b",{},me?(P.name||"You")+" (you)":p.name||"Someone"),
+        h("small",{},(p.idle?"Away (no activity for a few minutes)":me?"Online":dur(p.since||p.at))+(bits?" · "+bits:"")),
+        where?h("small",{},where," ",go):null));
+  };
+  const others=peopleOnline();
+  pop.append(h("h4",{},`Online now (${others.length+1})`),line({name:P.name,day:(D()||{}).name,row:focusRow,dev:deviceKind(),view:currentView()},true),...others.map(p=>line(p)));
+  if(!others.length) pop.append(h("p",{class:"note",style:"margin:.3rem .4rem .5rem"},"Nobody else has this project open. When they do, you'll see their name, which day and shot they're on, and the device they're using."));
+  if(recentPeople.length){
+    pop.append(h("h4",{style:"margin-top:.8rem"},"Earlier today"));
+    for(const p of recentPeople) pop.append(h("div",{class:"wp off"},h("span",{class:"av",style:`background:${colorFor(p.name||"?")}`},initials(p.name),h("i",{class:"off"})),
+      h("div",{class:"wb"},h("b",{},p.name||"Someone"),h("small",{},"Last seen "+ago(p.at)+(p.day?" · "+p.day:"")+(p.dev?" · "+p.dev:"")))));
+  }
+}
+$("#who").onclick=e=>{e.stopPropagation();const pop=$("#whoPop");const o=!pop.classList.contains("open");pop.classList.toggle("open",o);$("#who").setAttribute("aria-expanded",o);
+  if(o){renderWhoPop();const r=$("#who").getBoundingClientRect();pop.style.top=(r.bottom+6)+"px";pop.style.left=Math.max(8,Math.min(r.left,innerWidth-pop.offsetWidth-8))+"px"}};
+document.addEventListener("click",e=>{if(e.target.isConnected&&!e.target.closest("#whoPop,#who")&&$("#whoPop").classList.contains("open")){$("#whoPop").classList.remove("open");$("#who").setAttribute("aria-expanded","false")}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("#whoPop").classList.contains("open")){$("#whoPop").classList.remove("open");$("#who").setAttribute("aria-expanded","false")} if($("#fbPanel").classList.contains("open")) closeFeedback(true)}});
+
+/* ---------- feedback: bug reports, feature requests, questions ---------- */
+const FB={type:"bug",tab:"send",canRead:false,items:null,latest:[]};
+const FB_LABEL={bug:"Bug report",feature:"Feature request",question:"Question"};
+function fbSeen(){try{return Number(localStorage.getItem("shotlist2-fbseen"))||0}catch(e){return 0}}
+function setFbSeen(t){try{localStorage.setItem("shotlist2-fbseen",String(t))}catch(e){}}
+function fbContext(){const d=D();return {version:VERSION,project:(S&&S.project&&S.project.name)||"",day:d?d.name:"",view:currentView(),mode:MODE,
+  browser:navigator.userAgent.replace(/^Mozilla\/5\.0 /,"").slice(0,180),screen:`${innerWidth}x${innerHeight} (${deviceKind()})`}}
+function openFeedback(){const p=$("#fbPanel");p.classList.add("open");$("#fbBtn").setAttribute("aria-expanded","true");renderFeedback();setTimeout(()=>{const t=$("#fbTitle");t&&t.focus()},50)}
+function closeFeedback(focus){$("#fbPanel").classList.remove("open");$("#fbBtn").setAttribute("aria-expanded","false");if(focus)$("#fbBtn").focus()}
+$("#fbBtn").onclick=e=>{e.stopPropagation();$("#fbPanel").classList.contains("open")?closeFeedback():openFeedback()};
+document.addEventListener("click",e=>{if(e.target.isConnected&&$("#fbPanel").classList.contains("open")&&!e.target.closest("#fbPanel,#fbBtn"))closeFeedback()});
+function renderFeedback(){
+  const p=$("#fbPanel"); p.innerHTML="";
+  p.append(h("div",{class:"toolbar",style:"justify-content:space-between;align-items:center;margin-bottom:.4rem"},h("h3",{style:"margin:0"},"Feedback and help"),h("button",{class:"btn small",onclick:()=>closeFeedback(true)},"Close")));
+  if(FB.canRead){const nNew=FB.latest.filter(i=>i.status==="new").length;
+    p.append(h("div",{class:"tabsx",role:"tablist"},h("button",{role:"tab","aria-selected":String(FB.tab==="send"),onclick:()=>{FB.tab="send";renderFeedback()}},"Send"),
+      h("button",{role:"tab","aria-selected":String(FB.tab==="inbox"),onclick:()=>{FB.tab="inbox";renderFeedback();loadInbox()}},"Inbox"+(nNew?` (${nNew} new)`:""))))}
+  if(FB.canRead&&FB.tab==="inbox") return renderInbox(p);
+  const segBtn=(k,l)=>h("button",{type:"button","aria-pressed":String(FB.type===k),onclick:()=>{FB.type=k;keep();renderFeedback()}},l);
+  const ph={bug:["What went wrong, in a few words","What were you doing, what did you expect, and what happened instead? Steps to make it happen again help a lot."],
+            feature:["What would you like it to do?","What's the problem it would solve on set or in prep? How would you like it to work?"],
+            question:["Your question, in a few words","Anything that helps explain it."]}[FB.type];
+  const title=h("input",{type:"text",id:"fbTitle",maxlength:"140",placeholder:ph[0],value:FB.draftTitle||""});
+  const det=h("textarea",{id:"fbDetails",placeholder:ph[1]}); det.value=FB.draftDetails||"";
+  const from=h("input",{type:"text",id:"fbFrom",maxlength:"60",value:FB.draftFrom!=null?FB.draftFrom:(P.name||"")});
+  const contact=h("input",{type:"text",id:"fbContact",maxlength:"120",placeholder:"Optional: email or phone if you'd like a reply",value:FB.draftContact||""});
+  const incl=h("input",{type:"checkbox",role:"switch"}); incl.checked=FB.incl!==false;
+  const ctx=fbContext(); const ctxBox=h("div",{class:"ctx"},`Version ${ctx.version} · ${ctx.mode==="team"?"team site":"this device only"}\nProject: ${ctx.project||"-"} · Day: ${ctx.day||"-"}\nScreen: ${ctx.screen}\n${ctx.browser}`);
+  ctxBox.style.display=incl.checked?"":"none"; incl.onchange=()=>{FB.incl=incl.checked;ctxBox.style.display=incl.checked?"":"none"};
+  function keep(){FB.draftTitle=title.value;FB.draftDetails=det.value;FB.draftFrom=from.value;FB.draftContact=contact.value}
+  [title,det,from,contact].forEach(x=>x.addEventListener("input",keep));
+  const send=h("button",{class:"btn primary",type:"submit"},"Send "+FB_LABEL[FB.type].toLowerCase());
+  const msg=h("p",{class:"note",style:"margin:.5rem 0 0"});
+  const form=h("form",{},h("div",{class:"seg",role:"group","aria-label":"Type"},segBtn("bug","Bug"),segBtn("feature","Feature idea"),segBtn("question","Question")),
+    h("label",{},"Title",title),h("label",{},FB.type==="bug"?"What happened":"Details",det),
+    h("div",{class:"dgrid",style:"grid-template-columns:1fr 1fr;gap:.5rem"},h("label",{},"Your name",from),h("label",{},"Contact",contact)),
+    h("label",{class:"sw",style:"flex-direction:row;color:var(--ink)"},incl,h("span",{},"Include technical details",h("small",{},"version, browser, screen size, project and day: helps track bugs down"))),ctxBox,
+    h("div",{class:"toolbar",style:"align-items:center"},send,h("button",{class:"btn small",type:"button",onclick:()=>{closeFeedback();$("#helpBtn").click()}},"Open Help")),msg);
+  form.onsubmit=async e=>{e.preventDefault();keep();
+    if(!title.value.trim()){title.focus();msg.textContent="Add a short title first.";return}
+    const item={type:FB.type,title:title.value.trim(),details:det.value.trim(),from:from.value.trim(),contact:contact.value.trim(),ctx:incl.checked?ctx:{version:ctx.version}};
+    if(MODE!=="team"){const txt=`${FB_LABEL[item.type]}: ${item.title}\n\n${item.details}\n\nFrom: ${item.from}${item.contact?" ("+item.contact+")":""}\n${incl.checked?ctxBox.textContent:"Version "+VERSION}`;
+      try{await navigator.clipboard.writeText(txt);msg.textContent="This device isn't connected to the team site, so the report was copied: paste it into an email or message."}catch(err){msg.textContent="This device isn't connected to the team site. Copy this and send it on:\n\n"+txt;msg.style.whiteSpace="pre-wrap"}return}
+    send.disabled=true;send.textContent="Sending…";
+    try{
+      const r=await api("/api/feedback",item,{noProject:true});
+      // Netlify Forms copy, for email notifications; quietly skipped where forms aren't set up
+      try{const f=new URLSearchParams({"form-name":"feedback",type:FB_LABEL[item.type],title:item.title,details:item.details,from:item.from,contact:item.contact,project:item.ctx.project||"",context:incl.checked?ctxBox.textContent:"Version "+VERSION});
+        fetch("/",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:f.toString()}).catch(()=>{})}catch(err){}
+      FB.draftTitle=FB.draftDetails="";
+      p.innerHTML=""; p.append(h("h3",{},"Thanks, that's been sent"),h("p",{class:"note"},FB.type==="bug"?"If it keeps happening, send another with anything new you notice.":"It's in the list for the next round of updates."),
+        h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>renderFeedback()},"Send another"),h("button",{class:"btn small primary",onclick:()=>closeFeedback(true)},"Done")));
+      if(FB.canRead) checkFeedback();
+    }catch(err){send.disabled=false;send.textContent="Send "+FB_LABEL[FB.type].toLowerCase();msg.textContent="Couldn't send: "+err.message+". Your text is kept, so try again in a moment."}
+  };
+  p.append(form);
+}
+async function loadInbox(){try{const r=await api("/api/feedback",undefined,{noProject:true});FB.items=r.items||[];FB.hook=!!r.hook;if(FB.tab==="inbox"&&$("#fbPanel").classList.contains("open"))renderFeedback()}catch(e){toast("Couldn't load the inbox: "+e.message)}}
+function renderInbox(p){
+  if(!FB.items){p.append(h("p",{class:"note"},"Loading…"));return}
+  if(FB.items.length){const newest=FB.items[0].at;if(newest>fbSeen()){setFbSeen(newest);updateFbDot()}}
+  p.append(h("p",{class:"note",style:"margin:0 0 .6rem"},FB.items.length?`${FB.items.length} report${FB.items.length>1?"s":""}, newest first.`:"Nothing yet. Reports from anyone on the team site land here.",
+    FB.hook?"":" Phone or email alerts: see Help, Feedback."));
+  if("Notification" in window&&Notification.permission==="default") p.append(h("button",{class:"btn small",style:"margin:0 0 .6rem",onclick:async()=>{try{await Notification.requestPermission()}catch(e){}renderFeedback()}},"Alert me on this computer when a new one arrives"));
+  const setStatus=async(i,st)=>{try{await api("/api/feedback",{action:"status",id:i.id,status:st},{noProject:true});i.status=st;FB.latest.forEach(x=>{if(x.id===i.id)x.status=st});renderFeedback();updateFbDot()}catch(e){toast(e.message)}};
+  for(const i of FB.items){
+    const del=h("button",{class:"btn small",onclick:async()=>{if(del.dataset.sure!=="1"){del.dataset.sure="1";del.textContent="Sure? Delete";return}
+      try{await api("/api/feedback",{action:"delete",id:i.id},{noProject:true});FB.items=FB.items.filter(x=>x.id!==i.id);FB.latest=FB.latest.filter(x=>x.id!==i.id);renderFeedback();updateFbDot()}catch(e){toast(e.message)}}},"Delete");
+    const c=i.ctx||{}; const ctxLine=[c.version&&"v"+c.version,c.project,c.day,c.view&&c.view!=="schedule"?c.view+" view":"",c.screen].filter(Boolean).join(" · ");
+    p.append(h("div",{class:"fbi "+(i.status||"new")},
+      h("div",{class:"t"},h("span",{class:"tag "+i.type},FB_LABEL[i.type]||i.type),h("b",{},i.title)),
+      h("small",{},(i.from||"Someone")+(i.contact?" ("+i.contact+")":"")+" · "+new Date(i.at).toLocaleString([], {dateStyle:"medium",timeStyle:"short"})+(i.status&&i.status!=="new"?" · "+(i.status==="planned"?"Planned":"Done"):"")),
+      i.details?h("p",{},i.details):null, ctxLine?h("small",{style:"display:block"},ctxLine):null, c.browser?h("small",{style:"display:block;opacity:.8"},c.browser):null,
+      h("div",{class:"acts"},...[["new","New"],["planned","Planned"],["done","Done"]].filter(([k])=>k!==(i.status||"new")).map(([k,l])=>h("button",{class:"btn small",onclick:()=>setStatus(i,k)},"Mark "+l.toLowerCase())),del)));
+  }
+}
+function updateFbDot(){const n=FB.latest.filter(i=>i.at>fbSeen()).length;const dot=$("#fbDot");dot.hidden=!n;dot.textContent=n>9?"9+":String(n||"");
+  $("#fbBtn").title=n?`${n} new report${n>1?"s":""} in the feedback inbox`:"Report a bug, request a feature or ask a question"}
+async function checkFeedback(){
+  if(MODE!=="team"||document.hidden) return;
+  try{const r=await api("/api/feedback?count=1",undefined,{noProject:true,timeout:8000});FB.canRead=!!r.canRead;if(!FB.canRead)return;
+    const before=new Set(FB.latest.map(i=>i.id)); const first=!FB.checked; FB.checked=true; FB.latest=r.latest||[];
+    const fresh=FB.latest.filter(i=>!before.has(i.id)&&i.at>fbSeen()&&i.from!==P.name);
+    if(!first&&fresh.length){const i=fresh[0];toast(`New ${FB_LABEL[i.type].toLowerCase()} from ${i.from||"someone"}: ${i.title}`);
+      try{if("Notification" in window&&Notification.permission==="granted")new Notification("Shotlist: "+FB_LABEL[i.type],{body:`${i.from||"Someone"}: ${i.title}`,tag:"fb-"+i.id})}catch(e){}}
+    updateFbDot(); if(FB.tab==="inbox"&&$("#fbPanel").classList.contains("open")) loadInbox();
+  }catch(e){}
+}
+setInterval(checkFeedback,120000);
 
 /* ===================== projects ===================== */
 function touchProject(){
@@ -2193,6 +2328,7 @@ async function startTeam(){
     $("#joinModal").classList.remove("open");
     P.wasTeam=true; savePrefs();
     await openProject(P.projectId);
+    checkFeedback();
   }catch(e){ if(e.status===401) needKey(e.message); else { netErr=e.message; backoff=4000; updateStatus(); toast("Can't reach the team site: "+e.message); setTimeout(startTeam,5000) } }
 }
 let teamAvailable=false;

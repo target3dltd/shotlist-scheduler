@@ -91,7 +91,45 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .status{display:inline-flex;align-items:center;gap:.4rem;font-size:.88rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.1rem .6rem;background:var(--panel);cursor:default;white-space:nowrap}
 .status i{width:.55rem;height:.55rem;border-radius:50%;background:var(--muted);display:inline-block}
 .status.live i{background:var(--ok)} .status.busy i{background:var(--warn)} .status.off i{background:var(--bad)}
-.who{display:flex;gap:.25rem;align-items:center}
+.who{display:flex;gap:.25rem;align-items:center;background:none;border:1px solid transparent;border-radius:999px;padding:.1rem .3rem .1rem .15rem;cursor:pointer;font:inherit;color:var(--ink)}
+.who:empty{display:none} .who:hover,.who[aria-expanded=true]{border-color:var(--line);background:var(--panel)}
+.who .wn{font-size:.78rem;color:var(--muted);margin-left:.35rem;white-space:nowrap}
+.whopop{display:none;position:fixed;z-index:60;width:min(22rem,calc(100vw - 1rem));max-height:min(70vh,32rem);overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 36px -10px rgba(0,0,0,.35);padding:.6rem}
+.whopop.open{display:block}
+.whopop h4{margin:.3rem .3rem .4rem;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.wp{display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .35rem;border-radius:8px}
+.wp+.wp{border-top:1px solid var(--line)}
+.wp .av{flex:0 0 auto;width:2rem;height:2rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff;position:relative}
+.wp .av i{position:absolute;right:-1px;bottom:-1px;width:.65rem;height:.65rem;border-radius:50%;border:2px solid var(--panel);background:#2e9d5b} .wp .av i.idle{background:#d39b22} .wp .av i.off{background:var(--line2)}
+.wp .wb{flex:1;min-width:0;font-size:.88em;line-height:1.35} .wp .wb b{font-weight:600} .wp .wb small{display:block;color:var(--muted)}
+.wp .wb .go{background:none;border:none;padding:0;color:var(--accent,#2f6fb0);cursor:pointer;font:inherit;text-decoration:underline}
+.wp.off{opacity:.75}
+/* feedback button, bottom left */
+.fbbtn{position:fixed;left:max(.8rem,env(safe-area-inset-left));bottom:max(.8rem,env(safe-area-inset-bottom));z-index:50;width:2.6rem;height:2.6rem;border-radius:50%;border:1px solid var(--line2);background:var(--panel);color:var(--ink);font:700 1.15rem/1 inherit;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px -4px rgba(0,0,0,.35)}
+.fbbtn:hover,.fbbtn[aria-expanded=true]{background:var(--ink);color:var(--bg)}
+.fbbtn i{position:absolute;top:-.1rem;right:-.1rem;min-width:1.05rem;height:1.05rem;padding:0 .2rem;border-radius:999px;background:#c2412d;color:#fff;font:700 .65rem/1.05rem system-ui,sans-serif;font-style:normal;border:2px solid var(--bg)}
+body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
+.fbpanel{display:none;position:fixed;left:max(.8rem,env(safe-area-inset-left));bottom:calc(max(.8rem,env(safe-area-inset-bottom)) + 3.2rem);z-index:60;width:min(25rem,calc(100vw - 1.6rem));max-height:calc(100vh - 5rem);overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 44px -12px rgba(0,0,0,.4);padding:.9rem}
+.fbpanel.open{display:block}
+.fbpanel h3{margin:0 0 .5rem;font-size:1.05rem}
+.fbpanel .seg{display:flex;gap:.3rem;margin:.2rem 0 .7rem}
+.fbpanel .seg button{flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;padding:.45rem .3rem;font:inherit;font-size:.86em;cursor:pointer}
+.fbpanel .seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fbpanel label{display:flex;flex-direction:column;gap:.25rem;font-size:.86em;color:var(--muted);margin:0 0 .6rem}
+.fbpanel input[type=text],.fbpanel textarea{border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;color:var(--ink);background:var(--field,var(--bg));font:inherit;font-size:.95em}
+.fbpanel textarea{min-height:6.5rem;resize:vertical}
+.fbpanel .ctx{font-size:.78em;color:var(--muted);background:var(--panel2);border-radius:6px;padding:.4rem .55rem;margin:-.2rem 0 .6rem;white-space:pre-wrap;word-break:break-word}
+.fbpanel .tabsx{display:flex;gap:.2rem;border-bottom:1px solid var(--line);margin:-.2rem 0 .7rem}
+.fbpanel .tabsx button{background:none;border:none;border-bottom:2px solid transparent;padding:.35rem .5rem;color:var(--muted);font:inherit;font-size:.9em;cursor:pointer}
+.fbpanel .tabsx button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.fbi{border:1px solid var(--line);border-radius:8px;padding:.5rem .6rem;margin:0 0 .5rem;font-size:.88em}
+.fbi .t{display:flex;gap:.4rem;align-items:baseline;flex-wrap:wrap} .fbi .t b{font-weight:600}
+.fbi .tag{font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:4px;padding:.05rem .3rem;background:var(--panel2)}
+.fbi .tag.bug{background:#c2412d;color:#fff} .fbi .tag.feature{background:#2f6fb0;color:#fff} .fbi .tag.question{background:#7a5ea8;color:#fff}
+.fbi.done{opacity:.6} .fbi.new{border-left:3px solid #c2412d}
+.fbi p{margin:.35rem 0;white-space:pre-wrap} .fbi small{color:var(--muted)}
+.fbi .acts{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
+@media print{.fbbtn,.fbpanel,.whopop{display:none!important}}
 .who span{width:1.7rem;height:1.7rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;border:2px solid var(--bg)}
 .controls{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-end;margin-top:.8rem}
 /* the day's banner: settings and filters sit on a tinted band that joins the open tab */
@@ -591,7 +629,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="titlebar">
     <h1><span id="projTitle" title="Project name - change it in Settings">Shotlist</span> <small>Shotlist Scheduler <span id="verLabel"></span></small></h1>
     <span class="status noprint" id="status" title=""><i></i><span>Local</span></span>
-    <span class="who noprint" id="who"></span>
+    <button class="who noprint" id="who" type="button" aria-haspopup="dialog" aria-expanded="false" title="Who's online"></button>
     <span class="spacer"></span>
     <div class="toolbar noprint">
       <span class="tgroup">
@@ -758,6 +796,11 @@ body.nosteps .mins.timing input{width:4.5em}
   <p class="note">Each project has its own key, so you only see the projects you've been given. The key is kept on this device.</p>
 </div></div>
 
+<div class="whopop" id="whoPop" role="dialog" aria-label="Who's online"></div>
+<button class="fbbtn noprint" id="fbBtn" type="button" aria-haspopup="dialog" aria-expanded="false" title="Report a bug, request a feature or ask a question" aria-label="Feedback and help">?<i id="fbDot" hidden></i></button>
+<div class="fbpanel noprint" id="fbPanel" role="dialog" aria-label="Feedback"></div>
+<!-- Netlify Forms: lets the site owner get an email for each report (Forms > Form notifications). Never shown. -->
+<form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden><input name="type"><input name="title"><textarea name="details"></textarea><input name="from"><input name="contact"><input name="project"><textarea name="context"></textarea><input name="bot-field"></form>
 <div class="viewer" id="slateView" role="dialog" aria-label="Slate"></div>
 <div class="viewer" id="noteView" role="dialog" aria-label="Shot notes"></div>
 

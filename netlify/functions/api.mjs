@@ -48,7 +48,7 @@ async function canOpen(st, req, pid, given){
 }
 const noKey = () => json({ error: "This project needs its project key.", code: "project-key" }, 403);
 
-export const config = { path: ["/api/ping", "/api/projects", "/api/sync", "/api/ops", "/api/image", "/api/seed", "/api/activity"] };
+export const config = { path: ["/api/ping", "/api/projects", "/api/sync", "/api/ops", "/api/image", "/api/seed", "/api/activity", "/api/feedback"] };
 
 const WINDOW_MS = 30_000;        // re-offer batches this recent, to cover saves still in flight
 const COMPACT_AT = 250;          // fold old batches into the snapshot once there are this many
@@ -128,6 +128,57 @@ async function compact(st, pid, snap, etag, keys){
   if (res.modified) await Promise.all(old.map(k => st.delete(k)));   // only the winner of a race deletes
 }
 
+/* ---------- feedback: bug reports, feature requests and questions ----------
+   Kept at feedback/<time>-<id> for the whole site. With ADMIN_KEY set only the admin can read them;
+   without it anyone on the team site can. FEEDBACK_WEBHOOK (optional) gets a short notice for each one:
+   an ntfy.sh topic URL (phone push), a Slack or Google Chat webhook ({text}) or a Discord webhook ({content}). */
+const FB_TYPES = { bug: "Bug report", feature: "Feature request", question: "Question" };
+const canReadFeedback = req => !locked() || isAdmin(req);
+async function notify(item){
+  const hook = process.env.FEEDBACK_WEBHOOK || ""; if (!/^https:\/\//.test(hook)) return false;
+  const head = `${FB_TYPES[item.type] || "Feedback"} from ${item.from || "someone"}`;
+  const text = `${head}: ${item.title}${item.details ? "\n\n" + item.details.slice(0, 900) : ""}${item.ctx && item.ctx.project ? "\n\nProject: " + item.ctx.project : ""}`;
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+  try {
+    const r = /ntfy/i.test(hook)
+      ? await fetch(hook, { method: "POST", body: text, headers: { Title: head, Tags: item.type === "bug" ? "bug" : item.type === "feature" ? "bulb" : "question", Priority: item.type === "bug" ? "high" : "default" }, signal: ctl.signal })
+      : await fetch(hook, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(/discord/i.test(hook) ? { content: text.slice(0, 1900) } : { text }), signal: ctl.signal });
+    return r.ok;
+  } catch (e) { return false; } finally { clearTimeout(t); }
+}
+async function feedback(st, req, url){
+  try {
+    if (req.method === "GET"){
+      if (!canReadFeedback(req)) return json({ canRead: false });
+      const keys = (await listKeys(st, "feedback/")).sort().reverse();
+      if (url.searchParams.get("count")){
+        const newest = keys.slice(0, 30); const items = (await Promise.all(newest.map(k => st.get(k, { type: "json" })))).filter(Boolean);
+        return json({ canRead: true, total: keys.length, latest: items.map(i => ({ id: i.id, at: i.at, type: i.type, from: i.from, title: i.title, status: i.status })) });
+      }
+      const items = (await Promise.all(keys.slice(0, 200).map(k => st.get(k, { type: "json" })))).filter(Boolean);
+      return json({ canRead: true, items, hook: !!process.env.FEEDBACK_WEBHOOK });
+    }
+    const body = await readBody(req);
+    if (body.action === "status" || body.action === "delete"){
+      if (!canReadFeedback(req)) return json({ error: "Only the admin can do that." }, 403);
+      const id = String(body.id || "").replace(/[^a-z0-9-]/gi, "").slice(0, 40); const k = "feedback/" + id;
+      const item = await st.get(k, { type: "json" }); if (!item) return json({ error: "Not found" }, 404);
+      if (body.action === "delete"){ await st.delete(k); return json({ ok: true }); }
+      item.status = ["new", "planned", "done"].includes(body.status) ? body.status : "new"; await st.setJSON(k, item); return json({ ok: true, item });
+    }
+    const type = FB_TYPES[body.type] ? body.type : "bug";
+    const title = String(body.title || "").trim().slice(0, 140);
+    if (!title) return json({ error: "Add a short title" }, 400);
+    const at = Date.now(), id = String(at).padStart(13, "0") + "-" + rand(4);
+    const c = body.ctx && typeof body.ctx === "object" ? body.ctx : {};
+    const ctx = {}; for (const k of ["version", "project", "day", "browser", "screen", "mode", "view"]) if (c[k]) ctx[k] = String(c[k]).slice(0, 200);
+    const item = { id, at, type, title, details: String(body.details || "").slice(0, 5000), from: String(body.from || "").slice(0, 60), contact: String(body.contact || "").slice(0, 120), ctx, status: "new" };
+    await st.setJSON("feedback/" + id, item);
+    const pushed = await notify(item);
+    return json({ ok: true, id, pushed });
+  } catch (e) { return json({ error: "Couldn't save that: " + (e && e.message || e) }, 500); }
+}
+
 export default async (req, context) => {
   const ctx = (context && context.deploy && context.deploy.context) || process.env.CONTEXT || "production";
   STORE_NAME = ctx === "production" ? "shotlist" : "shotlist-" + String(ctx).replace(/[^a-z0-9-]/gi, "-");
@@ -141,6 +192,7 @@ export default async (req, context) => {
 
   const st = store();
   const pid = cleanPid(url.searchParams.get("p")) || DEFAULT_PID;
+  if (path === "/api/feedback") return feedback(st, req, url);
   try {
     if (path === "/api/projects"){
       await ensureDefaultProject(st);
@@ -229,17 +281,25 @@ export default async (req, context) => {
       });
       const batches = (await Promise.all(want.map(k => st.get(k, { type: "json" })))).filter(Boolean);
 
-      let presence = [];
+      let presence = [], recent = [];
       if (cid){
         const pbase = `p/${pid}/presence/`;
-        await st.setJSON(pbase + cid, { cid, name: String(body.name || "").slice(0, 40), day: String(body.day || "").slice(0, 60), row: String(body.row || "").slice(0, 40), at: Date.now() });
+        const prev = await st.get(pbase + cid, { type: "json" });
+        const since = prev && Date.now() - prev.at < PRESENCE_TTL_MS ? (prev.since || prev.at) : Date.now();
+        await st.setJSON(pbase + cid, { cid, name: String(body.name || "").slice(0, 40), day: String(body.day || "").slice(0, 60), dayId: String(body.dayId || "").slice(0, 40),
+          row: String(body.row || "").slice(0, 40), dev: String(body.dev || "").slice(0, 20), view: String(body.view || "").slice(0, 20), idle: !!body.idle, at: Date.now(), since });
         const ps = (await Promise.all((await listKeys(st, pbase)).map(k => st.get(k, { type: "json" })))).filter(Boolean);
         presence = ps.filter(p => Date.now() - p.at < PRESENCE_TTL_MS);
+        // people seen in the last 12 hours who aren't on now, newest first, once per name
+        const onNames = new Set(presence.map(p => p.name)), seenNames = new Set();
+        recent = ps.filter(p => Date.now() - p.at >= PRESENCE_TTL_MS && Date.now() - p.at < 12 * 3600_000).sort((a, b) => b.at - a.at)
+          .filter(p => { const n = p.name || p.cid; if (onNames.has(p.name) || seenNames.has(n)) return false; seenNames.add(n); return true; })
+          .slice(0, 20).map(p => ({ name: p.name, day: p.day, at: p.at, dev: p.dev }));
         const stale = ps.filter(p => Date.now() - p.at > 86_400_000);
         if (stale.length) await Promise.all(stale.map(p => st.delete(pbase + p.cid)));
       }
       if (keys.length > COMPACT_AT){ try { await compact(st, pid, snap, etag, keys); } catch (e) { /* the next sync tries again */ } }
-      return json({ now: Date.now(), snapshot: needSnap ? snap : null, batches, presence });
+      return json({ now: Date.now(), snapshot: needSnap ? snap : null, batches, presence, recent });
     }
 
     if (path === "/api/ops" && req.method === "POST"){

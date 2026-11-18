@@ -157,6 +157,27 @@
     <li>Pictures belong to their project: with project keys on, only people holding that project's key can see them.</li>
   </ul>
 
+  <h3>Who's online</h3>
+  <ul>
+    <li>The coloured letters next to <b>Live</b> are the people with this project open, with a count beside them. A faded letter means that person has been away for a few minutes.</li>
+    <li>Click them for the full list: each person's name, the day and shot they're working in, whether they're on a phone, tablet or computer, whether they're in Slate View or Note View, and how long they've been on. <b>Go there</b> jumps to their day and highlights their row.</li>
+    <li><b>Earlier today</b> lists people who had the project open in the last 12 hours, with when they were last seen.</li>
+    <li>Only shown on the team site; names come from <b>Settings → Team &amp; sync</b>.</li>
+  </ul>
+
+  <h3>Feedback: bugs, ideas and questions</h3>
+  <ul>
+    <li>The <b>?</b> button in the bottom left opens a short form. Pick <b>Bug</b>, <b>Feature idea</b> or <b>Question</b>, add a title and the details, and send. <b>Include technical details</b> (on by default) adds the version, browser, screen size, project and day, which makes bugs much easier to track down; you can see exactly what's sent before sending.</li>
+    <li>Reports are kept on your own site. Whoever holds the admin key sees an <b>Inbox</b> tab in the same panel, with a red badge on the <b>?</b> for new ones, and can mark each New, Planned or Done, or delete it. Without an admin key set, everyone on the team site can see the inbox.</li>
+    <li>The admin also gets a pop-up note when a new one arrives while the app is open, and can allow alerts on that computer from the inbox.</li>
+    <li><b>Alerts when the app is closed</b> (site owner, set up once in Netlify):
+      <ul>
+        <li><b>Phone push</b>: install the free ntfy app, subscribe to a long, hard-to-guess topic name, then add an environment variable <code>FEEDBACK_WEBHOOK</code> = <code>https://ntfy.sh/your-topic-name</code> in Netlify (Site configuration → Environment variables) and redeploy. Slack, Discord and Google Chat incoming-webhook URLs work too.</li>
+        <li><b>Email</b>: in Netlify open <b>Forms</b>, enable form detection, redeploy, then under <b>Form notifications</b> add an email notification for the <b>feedback</b> form.</li>
+      </ul></li>
+    <li>On a device working offline the report is copied so you can paste it into an email or message.</li>
+  </ul>
+
   <h3>The header</h3>
   <ul>
     <li>From the left: <b>↶ ↷</b> undo and redo; <b>Columns</b>, <b>DIT names</b> and the <b>File ▾</b> menu (Import, Export .xlsx, Export CSV, Print / PDF, Activity); <b>◐</b> light / dark, <b>Share</b>, <b>Settings</b>, <b>Help</b>; then <b>Slate</b> and <b>Notes</b>.</li>
