@@ -259,7 +259,7 @@ function impRecords(){
       if(m.t==="rid"){rec.rid=String(v);return}
       if(m.t==="take"){const n=parseInt(v,10);if(!isNaN(n))rec.take=n;return}
       if(m.t==="shootDay"){rec.day=String(v);return}
-      if(m.t==="rowType"){rec.brk=/break|move|lunch/i.test(String(v));return}
+      if(m.t==="rowType"){const t=String(v);rec.tech=/tech|turn\s*-?around|reset|re-?rig/i.test(t);rec.brk=rec.tech||/break|move|lunch/i.test(t);return}
       // a row only counts if it carries real content: pre-built blank tracker rows have just a number and 0/FALSE ticks
       if(!["shot","perfCount","body","face","glove","done","setup","shoot"].includes(m.t)) any=true;
       if(["setup","shoot"].includes(m.t)&&parseMinutes(v)>0) any=true;
@@ -310,7 +310,7 @@ function groupToRow(g,recorded,kindCapture){
   if(recorded&&!("done" in first)) row.done=true;
   if(row.setup==null) row.setup=0; if(row.shoot==null) row.shoot=0;
   for(const k of Object.keys(row)) if(k.startsWith("new:")) delete row[k];
-  if(g.recs[0].brk||(row.label&&!row.action&&!row.shot&&!row.description)){row.type="break";row.label=row.label||row.shot||"Break";row.shot="";row.takes=0;row.done=false;}
+  if(g.recs[0].brk||(row.label&&!row.action&&!row.shot&&!row.description)){row.type=g.recs[0].tech||/\b(tech|turn\s*-?around|reset)\b/i.test(row.label||row.shot||"")?"tech":"break";row.label=row.label||row.shot||"Break";row.shot="";row.takes=0;row.done=false;}
   if(!kindCapture&&!row.description&&row.action) row.description=row.action;
   return row;
 }
@@ -326,7 +326,7 @@ function restoreDays(recs,recorded,colRemap){
     for(const k of DAY_FIELDS) if(ad[k]!==undefined&&ad[k]!==null) d[k]=ad[k];
     d.id=uid("d"); d.archived=null; d.rows=[];
     for(const sr of ad.rows||[]){
-      if(sr.type==="break"){ d.rows.push(Object.assign(remapKeys(sr),{id:uid("r")})); continue; }
+      if(isBlock(sr)){ d.rows.push(Object.assign(remapKeys(sr),{id:uid("r")})); continue; }
       const got=byRid.get(sr.id);
       if(!got){ if(sr.cut) d.rows.push(Object.assign({},ROW_BLANK,remapKeys(sr),{id:uid("r")})); continue; }   // cut shots aren't in the sheet; anything else missing was deleted there
       byRid.delete(sr.id);
@@ -443,7 +443,7 @@ async function runImport(){
 /* ---------- export: tracker workbook in the Shotlist Builder format ---------- */
 function openExport(){
   const box=$("#expDays"); box.innerHTML="";
-  S.days.filter(d=>!d.archived).forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>r.type!=="break").length} shots)`)))});
+  S.days.filter(d=>!d.archived).forEach(d=>{const cb=h("input",{type:"checkbox",value:d.id});cb.checked=true;box.append(h("label",{class:"inline"},cb,`${d.name} `,h("span",{class:"note"},`(${d.rows.filter(r=>!isBlock(r)).length} shots)`)))});
   $("#expModal").classList.add("open");
 }
 const XC={ink:"FF1D1D1F",paper:"FFF6F5F2",muted:"FF6B6B70",rule:"FFE2E0DB",stage:"FFE9EEF2",accent:"FFC2412D",soft:"FFF6E3DF",signal:"FF2F4858",white:"FFFFFFFF",note:"FFF2F6EE",done:"FFE8F1EA",break:"FFFBF3E2"};
@@ -495,10 +495,10 @@ async function buildTracker(days,opt){
   if(opt.withTiming) tcols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
   { const cm=colMap(); const keymap={done:null,start:null,setup:"setup",shoot:"shoot",shot:"shot",priority:"priority",perfCount:"perfCount",props:"props",performers:"performers",genre:"genre",action:"action",body:"body",face:"face",glove:"glove",hero:"hero",safety:"safety",description:"description",location:"location",shotType:"shotType",camera:"camera",vfx:"vfx",director:"director"};
     tcols.forEach(x=>{const k=keymap[x.k];const c=k&&cm[k];if(c&&c.label!==c.base)x.h=c.label}); }
-  const refKeys=opt.withPictures===false?[]:["ref1","ref2","ref3"].filter(k=>days.some(d=>d.rows.some(r=>r.type!=="break"&&!r.cut&&r[k])));
+  const refKeys=opt.withPictures===false?[]:["ref1","ref2","ref3"].filter(k=>days.some(d=>d.rows.some(r=>!isBlock(r)&&!r.cut&&r[k])));
   refKeys.forEach((k,i)=>tcols.push({k,h:"Storyboard "+(i+1),w:24}));
   const pics=new Map();
-  for(const d of days) for(const r of d.rows) if(r.type!=="break"&&!r.cut) for(const k of refKeys) if(r[k]&&!pics.has(r[k])) pics.set(r[k],await refToDataUrl(r[k]));
+  for(const d of days) for(const r of d.rows) if(!isBlock(r)&&!r.cut) for(const k of refKeys) if(r[k]&&!pics.has(r[k])) pics.set(r[k],await refToDataUrl(r[k]));
   tcols.push({k:"rid",h:"App row ID",w:12});
   tcols.forEach((x,i)=>{x.i=i+1;x.L=colLetter(i+1)});
   const L=k=>(tcols.find(x=>x.k===k)||{}).L;
@@ -516,7 +516,7 @@ async function buildTracker(days,opt){
   for(const d of days){
     const C=compute(d);
     for(const r of d.rows){
-      if(r.type==="break"||r.cut) continue;   // cut shots stay out of the tracker; the App data tab keeps them
+      if(isBlock(r)||r.cut) continue;   // cut shots stay out of the tracker; the App data tab keeps them
       const base=takeBase(r,d), n=Math.max(1,Number(r.takes)||0);
       for(let t=1;t<=n;t++) data.push({d,r,take:base+t,first:t===1,logged:t<=(Number(r.takes)||0),start:C.rows[r.id].start});
     }
@@ -611,8 +611,8 @@ async function buildTracker(days,opt){
       const C=compute(d);
       const t=sc.getRow(rn); t.getCell(1).value=`${d.name}${d.date?" · "+d.date:""} · call ${hhmm(toMin(d.call))} · wrap ${hhmm(C.wrap)} (target ${hhmm(toMin(d.wrap))})`; t.getCell(1).font=F({size:13,bold:true}); rn++;
       const hd=sc.getRow(rn); ["#","Type","Shot #","Action / description","Setup from","Setup","Start","Shoot","End","Done"].forEach((v,i)=>{const cell=hd.getCell(i+1);cell.value=v;cell.fill=fill(XC.ink);cell.font=F({bold:true,color:{argb:XC.white}})}); rn++;
-      d.rows.forEach((r,i)=>{const c2=C.rows[r.id];const br=r.type==="break";const row=sc.getRow(rn++);
-        [i+1,br?"Break":"Shot",br?(r.label||"Break"):shotNumber(r,d),br?(r.description||""):(r.action||r.description||""),hhmm(c2.setupStart),Math.round(c2.su),hhmm(c2.start),Math.round(c2.sh),hhmm(c2.end),br?"":(r.done?"Y":"")].forEach((v,j)=>{const cell=row.getCell(j+1);cell.value=v;cell.border=box;cell.font=F();if(br)cell.fill=fill(XC.break);else if(r.done)cell.fill=fill(XC.done)})});
+      d.rows.forEach((r,i)=>{const c2=C.rows[r.id];const br=isBlock(r);const row=sc.getRow(rn++);
+        [i+1,br?(r.type==="tech"?"Tech":"Break"):"Shot",br?blockName(r):shotNumber(r,d),br?(r.description||""):(r.action||r.description||""),hhmm(c2.setupStart),Math.round(c2.su),hhmm(c2.start),Math.round(c2.sh),hhmm(c2.end),br?"":(r.done?"Y":"")].forEach((v,j)=>{const cell=row.getCell(j+1);cell.value=v;cell.border=box;cell.font=F();if(br)cell.fill=fill(XC.break);else if(r.done)cell.fill=fill(XC.done)})});
       rn++;
     }
   }
@@ -755,7 +755,7 @@ async function openPdfImport(file){
   if(!res.headerPages){ prog.textContent="Couldn't find a \"Shot No\" column in this PDF. It needs a table with the shot number in a column headed Shot No (or Shot #) and the pictures on the same rows."; return; }
   PDFIMP={file:file.name,res}; renderPdfImport();
 }
-function pdfMatches(shot,scope){const k=normShot(shot);const days=scope==="day"?[D()]:live();const out=[];for(const d of days)for(const r of d.rows)if(r.type!=="break"&&!r.cut&&k&&normShot(r.shot)===k)out.push({d,r});return out}
+function pdfMatches(shot,scope){const k=normShot(shot);const days=scope==="day"?[D()]:live();const out=[];for(const d of days)for(const r of d.rows)if(!isBlock(r)&&!r.cut&&k&&normShot(r.shot)===k)out.push({d,r});return out}
 function renderPdfImport(){
   const b=$("#pdfBody"); b.innerHTML=""; const {res}=PDFIMP; const n=res.shots.reduce((a,g)=>a+g.pics.length,0);
   const scope=h("select",{},h("option",{value:"all"},"Every day in this project"),h("option",{value:"day"},"This day only ("+(D()||{}).name+")"));

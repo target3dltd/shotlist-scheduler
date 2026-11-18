@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.13.1";
+const VERSION = "2.14.0";
 const CHANGELOG = [
+  ["2.14.0","2026-11-18","Tech / turnaround rows: a purple row type for technical setups, resets and turnarounds, added with + Tech / turnaround or +Tech on a row. They take time like a break but have their own colour, total and timeline colour, and a tag on the row switches between Break and Tech."],
   ["2.13.1","2026-11-18","A storyboard picture that won't load now says why in its box (click to retry) instead of staying blank, and the PDF import checks its pictures load back and says which days they went on."],
   ["2.13.0","2026-11-18","Storyboard pictures from a PDF: Import reads a shot tracker PDF (e.g. a Google Sheets export), matches each picture to its shot number, including extra frames on rows below and across page breaks, and adds them after a preview. Shots now hold 3 pictures. Pictures now survive exports: the .xlsx export puts them in Storyboard columns and the project file packs them in, and importing either brings them back into whichever project receives them. Pictures on rows of sheets from elsewhere come in too."],
   ["2.12.1","2026-11-18","Fix: renaming a project in Settings > Project now also renames it in the project list (Settings > Projects, the project key prompt), for everyone."],
@@ -420,7 +421,7 @@ function todayISO(){ const n=new Date(); return n.getFullYear()+"-"+String(n.get
 function dayStatus(d){
   if(d.status==="ready"||d.status==="wrapped") return d.status;
   if(d.date&&d.date<todayISO()) return "wrapped";
-  const shots=d.rows.filter(r=>r.type!=="break");
+  const shots=d.rows.filter(r=>!isBlock(r));
   if(shots.length&&shots.every(r=>r.done)) return "wrapped";
   return "ready";
 }
@@ -447,10 +448,10 @@ function shotNumber(r,d){
   if(c.shotSource!=="running"&&r.shot&&String(r.shot).trim()){
     const s=String(r.shot).trim(); return /^\d+$/.test(s)?s.padStart(pad,"0"):s;
   }
-  const shots=d.rows.filter(x=>x.type!=="break"); return String(shots.indexOf(r)+1).padStart(pad,"0");
+  const shots=d.rows.filter(x=>!isBlock(x)); return String(shots.indexOf(r)+1).padStart(pad,"0");
 }
 function shotName(r,d,take){
-  if(!r||r.type==="break") return "";
+  if(!r||isBlock(r)) return "";
   const c=cfg(); const parts=[];
   if(!String(r.action||"").trim()&&!String(r.shot||"").trim()&&!String(r.description||"").trim()) return "";
   for(const p of (c.idParts||[])){
@@ -477,20 +478,23 @@ function shotName(r,d,take){
 /* takes continue across rows that repeat the same shot and action on a day, like retakes in the Shotlist Builder */
 function sameKey(r){ return String(r.shot||"").trim().toLowerCase()+"|"+String(r.action||"").trim().toLowerCase(); }
 function takeBase(r,d){ d=d||D(); let n=0; const k=sameKey(r); if(k==="|") return 0;
-  for(const x of d.rows){ if(x.id===r.id) break; if(x.type!=="break"&&sameKey(x)===k) n+=Number(x.takes)||0; } return n; }
+  for(const x of d.rows){ if(x.id===r.id) break; if(!isBlock(x)&&sameKey(x)===k) n+=Number(x.takes)||0; } return n; }
 function lastTake(r,d){ return takeBase(r,d)+(Number(r.takes)||0); }
 function nextTake(r,d){ return lastTake(r,d)+1; }
 
 /* ===================== schedule maths ===================== */
-function effSetup(r,d){ d=d||D(); if(r.type==="break") return 0; const b=Math.max(Number(r.setup)||0, Number(d.minSetup)||0); return b*(Number(d.setupPct)||100)/100; }
-function effShoot(r,d){ d=d||D(); if(r.type==="break") return Number(r.shoot)||0; return (Number(r.shoot)||0)*(Number(d.shootPct)||100)/100; }
+// breaks and tech / turnaround time are blocks: they take time but aren't shots
+function isBlock(r){return !!r&&(r.type==="break"||r.type==="tech")}
+function blockName(r){return r.label||(r.type==="tech"?"Tech / turnaround":"Break")}
+function effSetup(r,d){ d=d||D(); if(isBlock(r)) return 0; const b=Math.max(Number(r.setup)||0, Number(d.minSetup)||0); return b*(Number(d.setupPct)||100)/100; }
+function effShoot(r,d){ d=d||D(); if(isBlock(r)) return Number(r.shoot)||0; return (Number(r.shoot)||0)*(Number(d.shootPct)||100)/100; }
 // target wrap in minutes from the call day's midnight: a wrap earlier than the call is the next morning
 function wrapMin(d){const w=toMin(d.wrap||"18:00"),c=toMin(d.call||"09:00");return w<c?w+1440:w}
 function compute(d){
-  d=d||D(); let t=toMin(d.call||"09:00"); const out={}; let setupT=0, shootT=0, breakT=0;
+  d=d||D(); let t=toMin(d.call||"09:00"); const out={}; let setupT=0, shootT=0, breakT=0, techT=0;
   for(const r of d.rows){ const su=r.cut?0:effSetup(r,d), sh=r.cut?0:effShoot(r,d); const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
-    if(r.type==="break") breakT+=sh; else {setupT+=su; shootT+=sh;} t=end; }
-  return {rows:out, wrap:t, setupT, shootT, breakT};
+    if(r.type==="tech") techT+=sh; else if(isBlock(r)) breakT+=sh; else {setupT+=su; shootT+=sh;} t=end; }
+  return {rows:out, wrap:t, setupT, shootT, breakT, techT};
 }
 
 /* ===================== grid rendering ===================== */
@@ -523,9 +527,9 @@ function applyWidths(){
 function cellVal(r,key,C){
   const c=C.rows[r.id];
   switch(key){
-    case "shot": return r.type==="break"?(r.label||"Break"):(r.shot||"");
+    case "shot": return isBlock(r)?blockName(r):(r.shot||"");
     case "shotId": return shotName(r,D(),nextTake(r,D()));
-    case "setup": return r.type==="break"?0:c.su;
+    case "setup": return isBlock(r)?0:c.su;
     case "shoot": return c.sh;
     case "start": return c.start;
     case "end": return c.end;
@@ -714,7 +718,7 @@ function paintPrio(sel,tr,v){
 /* the Priority filter in the day controls (just for you): "" all, "=X" only X, ">=X" X and higher, "none" not set */
 function prioFilterOk(r){
   const f=P.prioFilter||""; if(!f) return true;
-  if(r.type==="break") return false;
+  if(isBlock(r)) return false;
   const opts=priorityOptions(), v=r.priority||"";
   if(f==="none") return !v||!opts.includes(v);
   if(f.startsWith(">=")){ const lim=opts.indexOf(f.slice(2)), i=opts.indexOf(v); return lim>=0&&i>=0&&i<=lim; }
@@ -807,8 +811,8 @@ function renderBody(){
   const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
   shown.forEach(r=>{
-    const tr=h("tr",{"data-id":r.id,class:r.type==="break"?"break":""});
-    const isBreak=r.type==="break";
+    const tr=h("tr",{"data-id":r.id,class:r.type==="tech"?"break tech":isBlock(r)?"break":""});
+    const isBreak=isBlock(r);
     for(const c of cols()){
       const td=h("td",{class:hid.includes(c.key)?"hide-col":"","data-col":c.key,"data-g":groupOf(c)||null});
       const k=c.key;
@@ -818,6 +822,7 @@ function renderBody(){
         g.addEventListener("dragstart",e=>{dragId=r.id;tr.classList.add("dragging");e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",r.id)});
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
+        if(isBreak) hd.append(h("button",{class:"kindtag",title:r.type==="tech"?"Tech / turnaround time. Click to make it a break.":"A break or move. Click to make it tech / turnaround time.",onclick:()=>{const x=R(r.id);if(!x)return;const was=x.type;x.type=was==="tech"?"break":"tech";const c=cfg();if(!x.label||x.label===(was==="tech"?c.techLabel:c.breakLabel)||x.label===(was==="tech"?"Tech / turnaround":"Break"))x.label=x.type==="tech"?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break");commit();renderBody()}},r.type==="tech"?"Tech":"Break"));
         if(!isBreak){const cb=h("input",{type:"checkbox",title:"Mark as shot","data-k":"done"});cb.checked=!!r.done;
           cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;x.doneAt=cb.checked?dayClock(D()):null;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute());renderDayTabs()});
           hd.append(h("label",{class:"chk"},cb,"Shot"))}
@@ -836,7 +841,7 @@ function renderBody(){
       else if(k==="actions"){
         const b=h("div",{class:"rowbtns"});
         b.append(h("button",{class:"mv",title:"Move up",onclick:()=>move(r.id,-1)},"↑"),h("button",{class:"mv",title:"Move down",onclick:()=>move(r.id,1)},"↓"),
-          h("button",{title:"Duplicate row",onclick:()=>dup(r.id)},"Dup"),h("button",{title:"Insert a break / move below",onclick:()=>insertBreakAfter(r.id)},"+Brk"),
+          h("button",{title:"Duplicate row",onclick:()=>dup(r.id)},"Dup"),h("button",{title:"Insert a break / move below",onclick:()=>insertBreakAfter(r.id)},"+Brk"),h("button",{class:"techbtn",title:"Insert tech / turnaround time below (technical setup, reset, turnaround)",onclick:()=>insertTechAfter(r.id)},"+Tech"),
           ...(isBreak?[]:[h("button",{class:"cutbtn",title:r.cut?"Put this shot back in the schedule":"Cut this shot from the schedule (nothing is deleted)",onclick:()=>setCut([r.id],!r.cut)},r.cut?"Restore":"Cut")]),
           h("button",{title:"Delete row",onclick:()=>del(r.id)},"Del"));
         td.append(b);
@@ -854,7 +859,7 @@ function renderBody(){
     }
     if(r.done) tr.classList.add("done");
     if(r.cut){ tr.classList.add("cut"); tr.title="Cut from the schedule: it takes no time. Restore it from the row buttons or the plan panel."; }
-    if(r.type!=="break") paintPrio(null,tr,r.priority);
+    if(!isBlock(r)) paintPrio(null,tr,r.priority);
     tr.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"));tr.classList.add("dropbefore")});
     tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
     tb.append(tr);
@@ -868,23 +873,23 @@ function recalc(){
     const r=d.rows.find(x=>x.id===tr.dataset.id); if(!r) continue; const c=C.rows[r.id];
     $('[data-t="start"]',tr).textContent=fmt(c.start);
     $('[data-t="end"]',tr).textContent="→ "+fmt(c.end);
-    const sf=$('[data-t="setupfrom"]',tr); if(sf) sf.textContent=r.type==="break"?"":(c.su?"setup "+fmt(c.setupStart):"");
+    const sf=$('[data-t="setupfrom"]',tr); if(sf) sf.textContent=isBlock(r)?"":(c.su?"setup "+fmt(c.setupStart):"");
     const dl=$('[data-t="delta"]',tr);
     if(dl){ if(r.origStart){const o=toMin(r.origStart.length<5?"0"+r.origStart:r.origStart);const dd=c.start-o;dl.textContent=dd===0?"on time":(dd>0?"+":"")+dur(dd);dl.className="delta "+(dd>0?"late":dd<0?"early":"")} else dl.textContent=""; }
     const se=$('.eff[data-eff="setup"]',tr); if(se) se.textContent=(Math.round(c.su)!==Number(r.setup))?"= "+Math.round(c.su)+" min":"";
-    const sh=$('.eff[data-eff="shoot"]',tr); if(sh) sh.textContent=(r.type!=="break"&&Math.round(c.sh)!==Number(r.shoot))?"= "+Math.round(c.sh)+" min":"";
+    const sh=$('.eff[data-eff="shoot"]',tr); if(sh) sh.textContent=(!isBlock(r)&&Math.round(c.sh)!==Number(r.shoot))?"= "+Math.round(c.sh)+" min":"";
     tr.classList.toggle("over",c.end>wrapT&&!r.done);
   }
   renderStats(C); renderTimeline(C); renderPlan(C); renderLinks(); refreshTabLabel(C);
 }
-function tabSub(d,C){const shots=d.rows.filter(r=>r.type!=="break");const done=shots.filter(r=>r.done).length;
+function tabSub(d,C){const shots=d.rows.filter(r=>!isBlock(r));const done=shots.filter(r=>r.done).length;
   if(C.shootT>0) return "wrap "+fmt(C.wrap); if(!shots.length) return "empty"; return done===shots.length?"shot":shots.length+" setups";}
 function refreshTabLabel(C){const b=$("#dayTabs .daytab.on");if(!b)return;const sm=$("small",b);if(sm)sm.textContent=tabSub(D(),C)}
 function renderStats(C){
   const d=D(); const st=$("#stats"); st.innerHTML=""; const w=$("#warnings"); w.innerHTML="";
   if(!d) return;
   const wrapT=wrapMin(d), callT=toMin(d.call||"09:00"); const over=C.wrap-wrapT;
-  const shots=d.rows.filter(r=>r.type!=="break"); const done=shots.filter(r=>r.done).length;
+  const shots=d.rows.filter(r=>!isBlock(r)); const done=shots.filter(r=>r.done).length;
   const takes=shots.reduce((a,r)=>a+(Number(r.takes)||0),0);
   const card=(k,v,sub,cls="")=>h("div",{class:"stat"},h("div",{class:"k"},k),h("div",{class:"v "+cls},v),sub?h("div",{class:"sub"},sub):null);
   const L=liveStatus(d,C);
@@ -894,11 +899,11 @@ function renderStats(C){
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
-    card("Shooting total",dur(C.shootT)), card("Breaks / moves",dur(C.breakT)),
+    card("Shooting total",dur(C.shootT)), card("Breaks / moves",dur(C.breakT)), ...(C.techT?[card("Tech / turnaround",dur(C.techT),"technical setups and resets")]:[]),
     card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")));
   if(takes||d.kind==="capture") st.append(card("Takes",String(takes),"logged on this day"));
   if(d.origWrap) st.append(card("Original wrap",fmt(toMin(d.origWrap)),"as planned"));
-  if(C.shootT>0&&!d.rows.some(r=>r.type==="break"&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
+  if(C.shootT>0&&!d.rows.some(r=>isBlock(r)&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
   if(dayStatus(d)==="wrapped"){const miss=linkNeeds(d).filter(n=>!isUrl(n.r[n.k])).length;if(miss)w.append(h("span",{class:"pill",style:"cursor:pointer",onclick:()=>{P.linksOpen=true;renderLinks();$("#links").scrollIntoView({behavior:"smooth",block:"center"})}},`${miss} hero / safety link${miss>1?"s":""} still needed`))}
   const zero=shots.filter(r=>effSetup(r,d)===0).length;
   if(C.shootT===0&&shots.length) w.append(h("span",{class:"pill info"},"No timings logged for this day yet - fill in Setup / Shoot minutes"));
@@ -924,8 +929,8 @@ function liveStatus(d,C){
   const now=dayClock(d); if(now==null) return null;
   const call=toMin(d.call||"09:00"); if(now<call-60) return null;
   const rows=d.rows.filter(r=>!r.cut);
-  let li=-1; rows.forEach((r,i)=>{if(r.type!=="break"&&r.done)li=i});
-  const last=li>=0?rows[li]:null, next=rows.slice(li+1).find(r=>r.type!=="break"&&!r.done)||null;
+  let li=-1; rows.forEach((r,i)=>{if(!isBlock(r)&&r.done)li=i});
+  const last=li>=0?rows[li]:null, next=rows.slice(li+1).find(r=>!isBlock(r)&&!r.done)||null;
   let slip, basis;
   if(last&&last.doneAt!=null){slip=last.doneAt-C.rows[last.id].end;basis=`shot ${last.shot||last.action||""} finished at ${fmt(last.doneAt)}, planned ${fmt(C.rows[last.id].end)}`.replace("shot  ","shot ")}
   else if(next){slip=Math.min(0,now-C.rows[next.id].setupStart);basis=slip<0?"next shot isn't due to start until "+fmt(C.rows[next.id].setupStart):"on the shot that's due now"}
@@ -941,7 +946,7 @@ function buildPlan(d,C){
   const c=cfg(), amber=Number(c.gateAmber)||10, red=Number(c.gateRed)||30;
   const gate=need<=0?"green":need>=red?"red":need>=amber?"amber":"slight";
   const top=priorityOptions()[0];
-  const pool=d.rows.filter(r=>r.type!=="break"&&!r.done&&!r.cut&&!(L&&L.next&&L.next.id===r.id));
+  const pool=d.rows.filter(r=>!isBlock(r)&&!r.done&&!r.cut&&!(L&&L.next&&L.next.id===r.id));
   const cost=r=>Math.round(effSetup(r,d)+effShoot(r,d));
   // cut first: most minutes for the least priority and screen time
   const score=r=>cost(r)/(Math.pow(prioWeight(r.priority),2)*(1+Math.min(durSec(r.duration),60)/60));
@@ -954,10 +959,10 @@ function buildPlan(d,C){
   // wins: a shot that returns to a location already set up earlier can move next to it and skip most of its setup
   const wins=[]; const minEff=Math.max(0,Number(d.minSetup)||0)*(Number(d.setupPct)||100)/100;
   const rem=d.rows.filter(r=>!r.done&&!r.cut);
-  rem.forEach((r,i)=>{ if(r.type==="break"||!String(r.location||"").trim()) return;
-    const loc=normLoc(r.location), prev=rem.slice(0,i).reverse().find(x=>x.type!=="break");
+  rem.forEach((r,i)=>{ if(isBlock(r)||!String(r.location||"").trim()) return;
+    const loc=normLoc(r.location), prev=rem.slice(0,i).reverse().find(x=>!isBlock(x));
     if(prev&&normLoc(prev.location)===loc) return;
-    const anchor=rem.slice(0,i).reverse().find(x=>x.type!=="break"&&normLoc(x.location)===loc);
+    const anchor=rem.slice(0,i).reverse().find(x=>!isBlock(x)&&normLoc(x.location)===loc);
     const save=Math.round(effSetup(r,d)-minEff); if(anchor&&save>=5) wins.push({r,anchor,save});
   });
   wins.sort((a,b)=>b.save-a.save);
@@ -969,7 +974,7 @@ function rowLabel(r){return (r.shot?"Shot "+r.shot:"")+(r.action?(r.shot?" · ":
 function setCut(ids,on){const d=D();if(!d)return;for(const id of ids){const r=d.rows.find(x=>x.id===id);if(r)r.cut=on?true:null}commit();renderBody();toast(on?(ids.length>1?`Cut ${ids.length} shots`:"Cut from the schedule")+" - Undo or Restore brings it back":"Back in the schedule")}
 function applyWin(id,anchorId){const d=D();const i=d.rows.findIndex(x=>x.id===id);if(i<0)return;const [r]=d.rows.splice(i,1);const a=d.rows.findIndex(x=>x.id===anchorId);r.setup=0;d.rows.splice(a+1,0,r);commit();renderBody();jump(r.id);toast("Moved next to the same location, setup down to the minimum - Undo to go back")}
 function renderPlan(C){
-  const box=$("#plan"); if(!box) return; box.innerHTML=""; const d=D(); if(!d||!d.rows.some(r=>r.type!=="break")) return;
+  const box=$("#plan"); if(!box) return; box.innerHTML=""; const d=D(); if(!d||!d.rows.some(r=>!isBlock(r))) return;
   const p=buildPlan(d,C);
   const show=p.need>0||p.wins.length||(p.restorable.length&&p.spare>=p.amber)||d.rows.some(r=>r.cut);
   if(!show) return;
@@ -1005,8 +1010,8 @@ function renderPlan(C){
   if(p.L) body.append(h("p",{class:"note"},"Running "+(p.L.slip>0?dur(p.L.slip)+" behind":p.L.slip<0?dur(-p.L.slip)+" ahead":"on time")+": "+p.L.basis+". Projected wrap "+fmt(p.L.proj)+"."));
 }
 /* ===================== hero / safety links on wrapped days ===================== */
-function isHero(r){return r.type!=="break"&&!r.cut&&(String(r.hero||"").trim()!==""||/\bhero\s*:\s*t?\d/i.test(String(r.director||"")))}
-function isSafety(r){return r.type!=="break"&&!r.cut&&(String(r.safety||"").trim()!==""||/\bsafety\s*:\s*t?\d/i.test(String(r.director||"")))}
+function isHero(r){return !isBlock(r)&&!r.cut&&(String(r.hero||"").trim()!==""||/\bhero\s*:\s*t?\d/i.test(String(r.director||"")))}
+function isSafety(r){return !isBlock(r)&&!r.cut&&(String(r.safety||"").trim()!==""||/\bsafety\s*:\s*t?\d/i.test(String(r.director||"")))}
 function linkNeeds(d){const out=[];for(const r of d.rows){if(isHero(r))out.push({r,k:"heroUrl",what:"Hero"});if(isSafety(r))out.push({r,k:"safetyUrl",what:"Safety"})}return out}
 function takeNote(r,what){const f=String(r[what.toLowerCase()]||"").trim();if(f&&!/^x$/i.test(f))return f;const m=String(r.director||"").match(new RegExp(what+"\\s*:\\s*([^.\\n]+)","i"));return m?m[1].trim():""}
 const linkAsked=new Set();
@@ -1158,9 +1163,9 @@ function renderTimeline(C){
   for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){if(hr%every){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}));continue}const f=(hr-start)/span;tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick"+(f<0.04?" first":f>0.96?" last":""),style:"left:"+pct(hr)},fmt(hr)))}
   const wrapT=wrapMin(d);
   for(const r of d.rows){
-    const c=C.rows[r.id]; const name=r.type==="break"?(r.label||"Break"):("Shot "+(r.shot||r.action||"-"));
+    const c=C.rows[r.id]; const name=isBlock(r)?blockName(r):("Shot "+(r.shot||r.action||"-"));
     if(c.su>0){const s=h("div",{class:"seg setup",style:`left:${pct(c.setupStart)};width:${c.su/span*100}%`,title:`${name} - setup ${fmt(c.setupStart)} to ${fmt(c.start)}`});s.onclick=()=>jump(r.id);tl.append(s)}
-    if(c.sh>0){const s=h("div",{class:"seg "+(r.type==="break"?"break":"shoot")+(c.end>wrapT?" over":""),style:`left:${pct(c.start)};width:${c.sh/span*100}%;border-left:1px solid var(--panel)`,title:`${name} - ${fmt(c.start)} to ${fmt(c.end)}`});s.onclick=()=>jump(r.id);tl.append(s)}
+    if(c.sh>0){const s=h("div",{class:"seg "+(r.type==="tech"?"tech":isBlock(r)?"break":"shoot")+(c.end>wrapT?" over":""),style:`left:${pct(c.start)};width:${c.sh/span*100}%;border-left:1px solid var(--panel)`,title:`${name} - ${fmt(c.start)} to ${fmt(c.end)}`});s.onclick=()=>jump(r.id);tl.append(s)}
   }
   tl.append(h("div",{class:"wrapline",style:"left:"+pct(wrapT),title:"Target wrap "+fmt(wrapT)}));
   { const n=dayClock(d);if(n!=null&&n>=start&&n<=end)tl.append(h("div",{class:"nowline",style:"left:"+pct(n),title:"Now "+fmt(n)}))}
@@ -1184,7 +1189,7 @@ function renderDayTabs(){
   const {ready,wrapped}=tabOrder(); const cur=D();
   const tab=d=>{
     const st=dayStatus(d), auto=!d.status;
-    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.name||"Day"} · ${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
+    const b=h("button",{class:"daytab"+(st==="wrapped"?" wrapped":"")+(cur&&d.id===cur.id?" on":""),title:`${d.name||"Day"} · ${d.date||"no date"} · ${d.rows.filter(r=>!isBlock(r)).length} setups · ${st==="wrapped"?"Wrapped":"Ready to roll"}${auto?" (auto)":""}`},
       h("span",{class:"kind "+(d.kind==="capture"?"mocap":"la")},d.kind==="capture"?"Mocap":"LA"), d.name||"Day", h("small",{},tabSub(d,compute(d))));
     b.onclick=()=>{if(cur&&cur.id===d.id)return;commit();P.activeByProject[pid()]=d.id;P.sort=null;savePrefs();renderAll()};
     return b;
@@ -1214,7 +1219,7 @@ function openArchived(){renderArchived();$("#archModal").classList.add("open")}
 function renderArchived(){
   const l=$("#archList"); l.innerHTML=""; const arch=S.days.filter(d=>d.archived);
   if(!arch.length){l.append(h("p",{class:"note"},"Nothing archived."));return}
-  for(const d of arch) l.append(h("div",{class:"toolbar"},h("span",{},h("b",{},d.name||"Day")," ",h("span",{class:"note"},`${d.date||"no date"} · ${d.rows.filter(r=>r.type!=="break").length} setups`)),
+  for(const d of arch) l.append(h("div",{class:"toolbar"},h("span",{},h("b",{},d.name||"Day")," ",h("span",{class:"note"},`${d.date||"no date"} · ${d.rows.filter(r=>!isBlock(r)).length} setups`)),
     h("button",{class:"btn small primary",onclick:()=>{d.archived=null;P.activeByProject[pid()]=d.id;commit();savePrefs();renderAll();renderArchived();if(!S.days.some(x=>x.archived))$("#archModal").classList.remove("open");toast("Restored "+d.name)}},"Restore")));
 }
 function renderSettingsRow(){
@@ -1241,18 +1246,19 @@ function renderAllKeepFocus(){
 
 /* ===================== row and day operations ===================== */
 function newShot(extra={}){
-  const c=cfg(); const d=D(); const prev=[...d.rows].reverse().find(r=>r.type!=="break")||{};
+  const c=cfg(); const d=D(); const prev=[...d.rows].reverse().find(r=>!isBlock(r))||{};
   const r={id:uid("r"),type:"shot",shot:"",label:"",duration:"",setup:c.newSetup,shoot:c.newShoot,origStart:"",origSetup:0,origShoot:0,
     location:prev.location||"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",ref3:"",done:false,
     priority:"",perfCount:d.kind==="capture"?(prev.perfCount||1):"",performers:d.kind==="capture"?(prev.performers||""):"",genre:"",action:"",body:d.kind==="capture",face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
   return Object.assign(r,extra);
 }
 function addShot(){const d=D();if(!d)return;const r=newShot();d.rows.push(r);commit();renderBody();jump(r.id);const el=$(`#grid tbody tr[data-id="${r.id}"] [data-k="${d.kind==="capture"?"action":"shot"}"]`);if(el)el.focus()}
-function insertBreakAt(i){const c=cfg();const d=D();const r={id:uid("r"),type:"break",label:c.breakLabel||"Break",shoot:Number(c.breakMin)||30,setup:0,description:"",origStart:"",done:false,takes:0};d.rows.splice(i,0,r);commit();renderBody();jump(r.id)}
+function insertBreakAt(i,type="break"){const c=cfg();const d=D();const tech=type==="tech";const r={id:uid("r"),type:tech?"tech":"break",label:tech?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break"),shoot:Number(tech?c.techMin:c.breakMin)||(tech?15:30),setup:0,description:"",origStart:"",done:false,takes:0};d.rows.splice(i,0,r);commit();renderBody();jump(r.id)}
+function insertTechAfter(id){const i=D().rows.findIndex(x=>x.id===id);insertBreakAt(i+1,"tech")}
 function insertBreakAfter(id){const i=D().rows.findIndex(x=>x.id===id);insertBreakAt(i+1)}
 function move(id,dir){const rows=D().rows;const i=rows.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=rows.length)return;[rows[i],rows[j]]=[rows[j],rows[i]];commit();renderBody()}
 function dup(id){const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const c=clone(rows[i]);c.id=uid("r");c.origStart="";c.done=false;c.takes=0;if(c.shot)c.shot+=" (copy)";rows.splice(i+1,0,c);commit();renderBody()}
-function del(id){const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const r=rows[i];const name=r.type==="break"?(r.label||"break"):("shot "+(r.shot||r.action||"(no number)"));rows.splice(i,1);commit();renderBody();toast("Deleted "+name+" - Undo to restore")}
+function del(id){const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const r=rows[i];const name=isBlock(r)?blockName(r).toLowerCase():("shot "+(r.shot||r.action||"(no number)"));rows.splice(i,1);commit();renderBody();toast("Deleted "+name+" - Undo to restore")}
 function addDay(){
   commit(); const c=cfg(); const n=S.days.length+1;
   const d={id:uid("d"),name:"Day "+n,kind:"schedule",dayNo:n,date:"",call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,origWrap:null,rows:[]};
@@ -1260,7 +1266,7 @@ function addDay(){
 }
 
 /* ===================== DIT names ===================== */
-function ditRows(){const d=D();return d?d.rows.filter(r=>r.type!=="break"&&!r.cut&&(P.ditShowDone||!r.done||Number(r.takes)>0)):[]}
+function ditRows(){const d=D();return d?d.rows.filter(r=>!isBlock(r)&&!r.cut&&(P.ditShowDone||!r.done||Number(r.takes)>0)):[]}
 function renderDit(){
   const d=D(); const tb=$("#ditRows"); tb.innerHTML=""; $("#ditDay").textContent=d?"· "+d.name:"";
   $("#ditShowDone").checked=!!P.ditShowDone;
@@ -1388,6 +1394,7 @@ function renderSetTab(){
     const txt=(label,key,type="text")=>{const i=h("input",{type,value:c[key]});bindDoc(i,null,v=>{S.cfg[key]=v},"change");f.append(h("label",{},label,i))};
     num("− / + step (min)","stepMin",1); num("New shot: setup (min)","newSetup"); num("New shot: shoot (min)","newShoot");
     txt("Break name","breakLabel"); num("Break length (min)","breakMin");
+    txt("Tech / turnaround name","techLabel"); num("Tech / turnaround length (min)","techMin");
     txt("New day: call","newCall","time"); txt("New day: target wrap","newWrap","time");
     num("New day: setup buffer %","newSetupPct"); num("New day: shoot buffer %","newShootPct"); num("New day: minimum setup (min)","newMinSetup");
     num("Amber gate: minutes over target wrap","gateAmber"); num("Red gate: minutes over target wrap","gateRed");
@@ -1427,7 +1434,7 @@ function renderSetTab(){
       i.addEventListener("input",()=>{P.tl=Object.assign({},P.tl,{[key]:i.value});applyDisplay()});i.addEventListener("change",savePrefs);
       def.onclick=()=>{P.tl=Object.assign({},P.tl,{[key]:""});savePrefs();applyDisplay();i.value=toHex(cur())};
       f2.append(h("label",{},label,h("span",{class:"toolbar"},i,def)))};
-    pick("Timeline: setup","setup","--setup"); pick("Timeline: shooting","shoot","--shoot"); pick("Timeline: break / move","break","--break"); pick("Timeline: target wrap line","wrap","--bad");
+    pick("Timeline: setup","setup","--setup"); pick("Timeline: shooting","shoot","--shoot"); pick("Timeline: break / move","break","--break"); pick("Timeline: tech / turnaround","tech","--tech"); pick("Timeline: target wrap line","wrap","--bad");
     const bandSel=h("select",{});for(const [v,l] of BANDS)bandSel.append(h("option",{value:v},l));bandSel.value=BANDS.some(x=>x[0]===P.band)?P.band:"custom";
     const bandPick=h("input",{type:"color",value:/^#/.test(P.band||"")?P.band:"#2f4858"});
     const showPick=()=>{bandPick.style.display=bandSel.value==="custom"?"":"none"};showPick();
@@ -1465,7 +1472,7 @@ function renderSetTab(){
 }
 function renderPrev(){
   const el=$("#namePrev"); if(!el) return;
-  const d=D(); const r=d&&(d.rows.find(x=>x.type!=="break"&&(x.action||x.shot))||d.rows.find(x=>x.type!=="break"));
+  const d=D(); const r=d&&(d.rows.find(x=>!isBlock(x)&&(x.action||x.shot))||d.rows.find(x=>!isBlock(x)));
   el.textContent=r?("Example (take "+nextTake(r,d)+"): "+(shotName(r,d,nextTake(r,d))||"(every part is switched off)")):"Add a shot to this day to see an example name.";
 }
 function keyCell(p,allKeys){
@@ -1540,8 +1547,8 @@ function exportCSV(){
   const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera","Lighting","VFX notes","Director notes","Prop / set notes","Shot (done)","Cut","Hero link","Safety link"];
   const customs=cols().filter(c=>c.custom); head.push(...customs.map(c=>c.label));
   const lines=[head.map(csvEsc).join(",")];
-  for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
-    lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?"Break/Move":"Shot",br?(r.label||"Break"):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
+  for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=isBlock(r);const t=br?0:lastTake(r,d);
+    lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?(r.type==="tech"?"Tech":"Break/Move"):"Shot",br?blockName(r):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
       br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":(r.lighting||""),br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),br?"":(r.heroUrl||""),br?"":(r.safetyUrl||""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
@@ -1651,7 +1658,7 @@ function applyDisplay(){
   document.body.classList.toggle("calm",!!P.calm);
   document.body.classList.toggle("nosteps",P.steppers===false);
   { const t=P.colTint||"subtle"; document.body.classList.toggle("colgroups",t!=="off"); const k=dark?1.35:1; root.style.setProperty("--gb",(t==="strong"?9:5)*k+"%"); root.style.setProperty("--gh",(t==="strong"?22:14)*k+"%"); }
-  const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
+  const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["tech","--tech"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
   const mix=Math.max(4,Math.min(40,Number(P.bandMix)||10));
   if(P.band==="none"){root.style.setProperty("--band","var(--bg)");root.style.setProperty("--band-line","var(--line)")}
   else{const hue=P.band||"var(--shoot)";const m=dark?Math.round(mix*1.5):mix;root.style.setProperty("--band",`color-mix(in srgb, ${hue} ${m}%, var(--bg))`);root.style.setProperty("--band-line",`color-mix(in srgb, ${hue} ${Math.min(60,m*2+6)}%, var(--line))`)}
@@ -1787,7 +1794,7 @@ $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
 document.addEventListener("click",e=>{if(!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open")});
-$("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length);
+$("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
 $("#pasteBtn").onclick=()=>{$("#pasteText").value="";$("#pasteModal").classList.add("open");$("#pasteText").focus()};
 $("#pasteGo").onclick=()=>{const lines=$("#pasteText").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);const d=D();if(!lines.length||!d)return;
   const counts={};lines.forEach(a=>{const k=a.toLowerCase();counts[k]=(counts[k]||0)+1});

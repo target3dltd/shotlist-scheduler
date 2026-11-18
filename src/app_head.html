@@ -20,8 +20,8 @@
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ui:13px; --tbl:13px;
   --bg:#f6f5f2; --panel:#ffffff; --panel2:#fbfaf8; --field:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e2e0db; --line2:#bdb9b1;
-  --accent:#c2412d; --accent-soft:#f6e3df; --setup:#c9c3b6; --shoot:#2f4858; --break:#d9a441;
-  --ok:#2e7d4f; --warn:#b4541a; --bad:#b3261e; --done-bg:#e8f1ea; --over-bg:#fdf2f0; --break-bg:#fbf3e2;
+  --accent:#c2412d; --accent-soft:#f6e3df; --setup:#c9c3b6; --shoot:#2f4858; --break:#d9a441; --tech:#7a5ea8;
+  --ok:#2e7d4f; --warn:#b4541a; --bad:#b3261e; --done-bg:#e8f1ea; --over-bg:#fdf2f0; --break-bg:#fbf3e2; --tech-bg:#efe9f7;
   --info-bg:#e9eef2; --info-ink:#2f4858; --tab-bg:#efeee9; --focus:#9fb3c8; --code-bg:#f2f1ee; --shadow:rgba(0,0,0,.08);
   --handle:#aaa; --tick:#eee; --overlay:rgba(20,20,20,.55); --ref-bg:#fafafa;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -30,40 +30,40 @@
 }
 html[data-theme="warm"]{
   --bg:#f3ecdf; --panel:#fbf6ec; --panel2:#f6efe2; --field:#fffaf0; --ink:#3b3229; --muted:#7c6f60; --line:#e3d8c5; --line2:#c9b99f;
-  --accent:#b5532e; --accent-soft:#f3dccd; --setup:#d2c4ad; --shoot:#5b6f63; --break:#d4a24c;
-  --ok:#4f7a46; --warn:#a85a1e; --bad:#a8382c; --done-bg:#e6ead5; --over-bg:#f6e1d6; --break-bg:#f4e7c9;
+  --accent:#b5532e; --accent-soft:#f3dccd; --setup:#d2c4ad; --shoot:#5b6f63; --break:#d4a24c; --tech:#7d6194;
+  --ok:#4f7a46; --warn:#a85a1e; --bad:#a8382c; --done-bg:#e6ead5; --over-bg:#f6e1d6; --break-bg:#f4e7c9; --tech-bg:#ebe2ee;
   --info-bg:#ebe3d3; --info-ink:#5b4a35; --tab-bg:#ece3d2; --focus:#b59b74; --code-bg:#efe6d6; --shadow:rgba(60,40,10,.10);
   --handle:#a8997f; --tick:#ebe2d1; --ref-bg:#f6efe2; --zebra:rgba(120,90,40,.035);
   color-scheme: light;
 }
 html[data-theme="hc"]{
   --bg:#ffffff; --panel:#ffffff; --panel2:#f2f2f2; --field:#ffffff; --ink:#000000; --muted:#333333; --line:#8a8a8a; --line2:#444444;
-  --accent:#a3000b; --accent-soft:#ffe1e1; --setup:#9a9a9a; --shoot:#003c78; --break:#a86a00;
-  --ok:#006b2b; --warn:#8a4500; --bad:#a3000b; --done-bg:#d9f2df; --over-bg:#ffdcdc; --break-bg:#fff0c8;
+  --accent:#a3000b; --accent-soft:#ffe1e1; --setup:#9a9a9a; --shoot:#003c78; --break:#a86a00; --tech:#5b2a9e;
+  --ok:#006b2b; --warn:#8a4500; --bad:#a3000b; --done-bg:#d9f2df; --over-bg:#ffdcdc; --break-bg:#fff0c8; --tech-bg:#ece0ff;
   --info-bg:#e1ecf7; --info-ink:#002e5c; --tab-bg:#e6e6e6; --focus:#003c78; --code-bg:#ededed; --shadow:rgba(0,0,0,.2);
   --handle:#333; --tick:#cccccc; --ref-bg:#f5f5f5; --zebra:rgba(0,0,0,.05);
   color-scheme: light;
 }
 html[data-theme="dim"]{
   --bg:#2a2c31; --panel:#32353b; --panel2:#373a41; --field:#3a3d44; --ink:#d9d6cf; --muted:#a5a29b; --line:#454850; --line2:#5c5f68;
-  --accent:#e0907a; --accent-soft:#4a3632; --setup:#7d786e; --shoot:#8fb0c2; --break:#c9a052;
-  --ok:#86c59c; --warn:#e3a173; --bad:#ec8d83; --done-bg:#33433a; --over-bg:#4a3434; --break-bg:#45412e;
+  --accent:#e0907a; --accent-soft:#4a3632; --setup:#7d786e; --shoot:#8fb0c2; --break:#c9a052; --tech:#a98fd6;
+  --ok:#86c59c; --warn:#e3a173; --bad:#ec8d83; --done-bg:#33433a; --over-bg:#4a3434; --break-bg:#45412e; --tech-bg:#3b3448;
   --info-bg:#38434b; --info-ink:#b9cfdc; --tab-bg:#373a41; --focus:#7f9bb3; --code-bg:#3a3d44; --shadow:rgba(0,0,0,.4);
   --handle:#8a8a8a; --tick:#3d4047; --overlay:rgba(0,0,0,.55); --ref-bg:#373a41; --zebra:rgba(255,255,255,.03);
   color-scheme: dark;
 }
 html[data-theme="hcdark"]{
   --bg:#000000; --panel:#0b0b0b; --panel2:#151515; --field:#111111; --ink:#ffffff; --muted:#d0d0d0; --line:#6e6e6e; --line2:#bdbdbd;
-  --accent:#ffb000; --accent-soft:#3d2c00; --setup:#8c8c8c; --shoot:#5cc8ff; --break:#ffcc33;
-  --ok:#5df08f; --warn:#ffb000; --bad:#ff6b6b; --done-bg:#0e2b17; --over-bg:#3a0e0e; --break-bg:#332700;
+  --accent:#ffb000; --accent-soft:#3d2c00; --setup:#8c8c8c; --shoot:#5cc8ff; --break:#ffcc33; --tech:#c9a2ff;
+  --ok:#5df08f; --warn:#ffb000; --bad:#ff6b6b; --done-bg:#0e2b17; --over-bg:#3a0e0e; --break-bg:#332700; --tech-bg:#2a1d3d;
   --info-bg:#0b2233; --info-ink:#9fd8ff; --tab-bg:#151515; --focus:#5cc8ff; --code-bg:#1a1a1a; --shadow:rgba(0,0,0,.7);
   --handle:#bbbbbb; --tick:#222222; --overlay:rgba(0,0,0,.75); --ref-bg:#151515; --zebra:rgba(255,255,255,.06);
   color-scheme: dark;
 }
 html[data-theme="dark"]{
   --bg:#141518; --panel:#1d1e22; --panel2:#222328; --field:#25262b; --ink:#ececec; --muted:#9c9ca6; --line:#33343a; --line2:#4b4c54;
-  --accent:#ec7a5f; --accent-soft:#3b2420; --setup:#6e6a60; --shoot:#86b0c9; --break:#cf9b34;
-  --ok:#62c38a; --warn:#e8935a; --bad:#f07367; --done-bg:#1d2c23; --over-bg:#3a2222; --break-bg:#33301f;
+  --accent:#ec7a5f; --accent-soft:#3b2420; --setup:#6e6a60; --shoot:#86b0c9; --break:#cf9b34; --tech:#a48bd4;
+  --ok:#62c38a; --warn:#e8935a; --bad:#f07367; --done-bg:#1d2c23; --over-bg:#3a2222; --break-bg:#33301f; --tech-bg:#2d2738;
   --info-bg:#232f37; --info-ink:#a9c8db; --tab-bg:#25262b; --focus:#5d7d99; --code-bg:#2a2b30; --shadow:rgba(0,0,0,.5);
   --handle:#777; --tick:#2a2b30; --overlay:rgba(0,0,0,.65); --ref-bg:#232428; --zebra:rgba(255,255,255,.025);
   color-scheme: dark;
@@ -181,7 +181,7 @@ select.cell.prio{font-weight:700;border-radius:4px}
 .daytab.wrapped .stat-dot{background:var(--muted)}
 .timeline{margin-top:.8rem;position:relative;height:calc(2.05rem + 1.35em);background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .timeline .seg{position:absolute;top:.45rem;height:1.05rem;cursor:pointer}
-.timeline .seg.setup{background:var(--setup)} .timeline .seg.shoot{background:var(--shoot)} .timeline .seg.break{background:var(--break)}
+.timeline .seg.setup{background:var(--setup)} .timeline .seg.shoot{background:var(--shoot)} .timeline .seg.break{background:var(--break)} .timeline .seg.tech{background:var(--tech)}
 .timeline .seg.over{outline:1px solid var(--bad)}
 .timeline .tick{position:absolute;top:1.75rem;font-size:.78rem;line-height:1.25;color:var(--muted);transform:translateX(-50%);white-space:nowrap;padding:0 .2rem}
 .timeline .tick.first{transform:none} .timeline .tick.last{transform:translateX(-100%)}
@@ -218,6 +218,12 @@ td.num,th.num{text-align:center}
 #grid tr.over td{background:var(--over-bg)}
 #grid tr.done td{background:var(--done-bg)}
 #grid tr.break td{background:var(--break-bg)}
+#grid tr.tech td{background:var(--tech-bg)}
+#grid tr.tech td:first-child{box-shadow:inset 4px 0 0 var(--tech)}
+.kindtag{font-size:.72em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line2);background:var(--panel);color:var(--muted);border-radius:999px;padding:.05rem .45rem;cursor:pointer}
+tr.tech .kindtag{border-color:var(--tech);color:var(--tech)}
+tr.break:not(.tech) .kindtag{border-color:var(--break);color:color-mix(in srgb,var(--break) 70%,var(--ink))}
+.rowbtns .techbtn{color:var(--tech)}
 #grid tr.dragging{opacity:.4}
 #grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
 #grid tr.flash td{animation:flash 1.6s ease-out}
@@ -352,6 +358,7 @@ body.nosteps .mins.timing input{width:4.5em}
   #grid tr.over td[data-col=handle],#grid tr.over td[data-col=shot]{background:var(--over-bg)}
   #grid tr.done td[data-col=handle],#grid tr.done td[data-col=shot]{background:var(--done-bg)}
   #grid tr.break td[data-col=handle],#grid tr.break td[data-col=shot]{background:var(--break-bg)}
+  #grid tr.tech td[data-col=handle],#grid tr.tech td[data-col=shot]{background:var(--tech-bg)}
 }
 @media (max-width:900px){
   header.top{padding:.7rem .8rem .6rem}
@@ -392,7 +399,7 @@ body.nosteps .mins.timing input{width:4.5em}
   html{--ui:8.5px!important;--tbl:8.6px!important;--lh:1.2!important;--ls:0em!important;--fw:400!important}
   #grid td,#grid th{line-height:1.2}
   .stats .stat{padding:.2rem .5rem;min-width:auto} .stat .v{font-size:1.05rem}
-  html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2}
+  html[data-theme]{--bg:#fff;--panel:#fff;--panel2:#fff;--field:#fff;--ink:#000;--muted:#555;--line:#ccc;--done-bg:#eef6f0;--over-bg:#fdf2f0;--break-bg:#fbf3e2;--tech-bg:#efe9f7}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
   #grid tr.cut{display:none}
@@ -481,7 +488,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="plan noprint" id="plan"></div>
   <div class="plan noprint" id="links"></div>
   <div class="timeline noprint" id="timeline"></div>
-  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
+  <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--tech)"></i>Tech / turnaround</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
 </header>
 
 <main>
@@ -490,6 +497,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="addrow noprint">
     <button class="btn" id="addShot">+ Add shot</button>
     <button class="btn" id="addBreak">+ Add break / move</button>
+    <button class="btn" id="addTech" title="Technical setup, reset or turnaround time">+ Tech / turnaround</button>
     <button class="btn" id="pasteBtn" title="Paste a list of actions, one per line">+ Paste list of actions</button>
   </div>
 </main>
