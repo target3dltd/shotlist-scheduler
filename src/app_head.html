@@ -149,6 +149,11 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .linktable{width:100%;margin-top:.3rem} .linktable td{vertical-align:middle}
 .linktable input{width:100%;border:1px solid var(--line);border-radius:4px;padding:.25rem .4rem}
 .linktable tr.need td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+/* column groups */
+[data-g=id]{--gc:#5b6b7a}[data-g=time]{--gc:#2f6fb0}[data-g=capture]{--gc:#7a5ea8}[data-g=place]{--gc:#b08a3e}[data-g=story]{--gc:#2e7d4f}[data-g=look]{--gc:#1f7a7a}[data-g=notes]{--gc:#d0700f}[data-g=refs]{--gc:#b3264e}
+body.colgroups #grid tbody td[data-g]{background-image:linear-gradient(color-mix(in srgb,var(--gc) var(--gb,5%),transparent),color-mix(in srgb,var(--gc) var(--gb,5%),transparent))}
+body.colgroups #grid thead th[data-g]{background-image:linear-gradient(color-mix(in srgb,var(--gc) var(--gh,14%),transparent),color-mix(in srgb,var(--gc) var(--gh,14%),transparent))}
+body.colgroups #grid thead tr:first-child th[data-g]{box-shadow:inset 0 3px 0 color-mix(in srgb,var(--gc) 60%,transparent)}
 #grid tr.cut td{opacity:.5}
 #grid tr.cut td[data-col=shot],#grid tr.cut td[data-col=shotId]{text-decoration:line-through}
 #grid tr.cut td[data-col=actions]{opacity:1}
@@ -384,6 +389,7 @@ body.nosteps .mins.timing input{width:4.5em}
   body{background:#fff}
   header.top{border:none;padding:0 0 6px}
   #grid tr.cut{display:none}
+  body.colgroups #grid tbody td[data-g]{background-image:none}
   /* only the tab being printed */
   .daytabs .tabgroup,.daytabs .tg:not(:has(.daytab.on)){display:none!important}
   .daytabs .tg.wrapped{border-left:none;padding-left:0;margin-left:0}

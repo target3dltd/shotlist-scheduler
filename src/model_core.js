@@ -17,9 +17,9 @@
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
-const COL_FIELDS = ["label","type","options"];   // project-level custom columns; their values live on rows as c_<id>
+const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
 const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes"];
 const ID_PARTS_DEFAULT = [

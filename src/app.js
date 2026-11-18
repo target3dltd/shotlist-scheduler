@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.10.0";
+const VERSION = "2.11.0";
 const CHANGELOG = [
+  ["2.11.0","2026-11-18","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
   ["2.10.0","2026-11-17","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
   ["2.9.0","2026-11-17","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
   ["2.8.0","2026-11-17","Running delta: on the shoot day a Running card shows how far ahead (-) or behind (+) you are, from when shots were ticked off and the time now, with the projected wrap and a now line on the timeline. Recovery plan panel with amber and red gates (set in Settings > Team defaults): suggests shots to cut, ranked by setup and shooting time against priority and screen time, and wins such as moving a shot next to others at the same location to skip a setup. Cut takes a shot out of the timings without deleting it, and Restore brings it back."],
@@ -56,7 +57,7 @@ function initials(s){return String(s||"?").trim().split(/\s+/).map(w=>w[0]).slic
 const PREF_KEY="shotlist2-prefs";
 const HIDDEN_DEFAULT={
   schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes","heroUrl","safetyUrl"],
-  capture:["duration","orig","script","camera","location"]
+  capture:["duration","orig","script","camera","lighting","location"]
 };
 const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24",band:"",bandMix:10};
 const BANDS=[["","Theme default (soft slate)"],["none","None (plain)"],["#2f6fb0","Blue"],["#1f7a7a","Teal"],["#2e7d4f","Green"],["#c8a052","Sand"],["#d0700f","Orange"],["#b3264e","Rose"],["#7a5ea8","Purple"],["custom","Pick my own..."]];
@@ -64,11 +65,18 @@ function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;i
 const P=Object.assign({name:"",poll:3,peerRows:false,tl:{},steppers:true},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
+if(!P.v210){ for(const k of ["schedule","capture"]){const l=P.hiddenBy&&P.hiddenBy[k];if(l&&l.includes("camera")&&!l.includes("lighting"))l.push("lighting")} P.v210=true; }
 if(!P.v28){ if(P.hiddenBy&&P.hiddenBy.schedule&&!P.hiddenBy.schedule.includes("heroUrl")) P.hiddenBy.schedule.push("heroUrl","safetyUrl"); P.v28=true; }
 if(!P.v22){ for(const k of Object.keys(P.hiddenBy||{})) P.hiddenBy[k]=(P.hiddenBy[k]||[]).filter(x=>x!=="priority"); P.v22=true; }
 function savePrefs(){lsSet(PREF_KEY,P)}
 
 /* ===================== columns ===================== */
+// column groups: a subtle tint ties related columns together
+const COL_GROUPS=[["id","Shot","#5b6b7a"],["time","Timing","#2f6fb0"],["capture","Capture","#7a5ea8"],["place","Location","#b08a3e"],["story","Story","#2e7d4f"],["look","Camera & look","#1f7a7a"],["notes","Notes","#d0700f"],["refs","Storyboard","#b3264e"]];
+const GROUP_OF={shot:"id",priority:"id",shotId:"id",duration:"time",setup:"time",start:"time",shoot:"time",end:"time",orig:"time",
+  takes:"capture",action:"capture",performers:"capture",perfCount:"capture",genre:"capture",body:"capture",face:"capture",glove:"capture",hero:"capture",safety:"capture",heroUrl:"capture",safetyUrl:"capture",
+  location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs"};
+function groupOf(c){return c.custom?(c.group||""):(GROUP_OF[c.key]||"")}
 const BASE_COLS=[
   {key:"handle",label:"",fixed:true},
   {key:"shot",label:"Shot #",fixed:true},
@@ -96,7 +104,8 @@ const BASE_COLS=[
   {key:"description",label:"Description",type:"note"},
   {key:"script",label:"Script / Dialogue",type:"note"},
   {key:"shotType",label:"Shot type",type:"note"},
-  {key:"camera",label:"Camera & lighting",type:"note"},
+  {key:"camera",label:"Camera",type:"note"},
+  {key:"lighting",label:"Lighting",type:"note"},
   {key:"vfx",label:"VFX notes",type:"note"},
   {key:"director",label:"Director notes",type:"note"},
   {key:"props",label:"Prop / set notes",type:"note"},
@@ -113,7 +122,7 @@ function cols(){
   const labels=(S&&S.cfg&&S.cfg.colLabels)||{};
   const out=[];
   for(const c of BASE_COLS){
-    if(c.key==="location") for(const k of (S&&S.cols)||[]) out.push({key:"c_"+k.id,label:k.label||"New column",type:k.type||"text",options:k.type==="list"?["",...optList(k.options)]:null,custom:true,colId:k.id});
+    if(c.key==="location") for(const k of (S&&S.cols)||[]) out.push({key:"c_"+k.id,label:k.label||"New column",type:k.type||"text",options:k.type==="list"?["",...optList(k.options)]:null,custom:true,colId:k.id,group:k.group||""});
     const x=Object.assign({},c,{base:c.label}); if(labels[c.key]) x.label=labels[c.key];
     if(c.key==="priority") x.options=["",...priorityOptions()];
     out.push(x);
@@ -144,7 +153,7 @@ function moveColumn(key,beforeKey){
 }
 function colMap(){ return Object.fromEntries(cols().map(c=>[c.key,c])); }
 function invalidateCols(){ _cols=null; }
-const DEFAULT_WIDTHS={handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
+const DEFAULT_WIDTHS={lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
 const NO_SORT=["handle","refs","actions"];
 function partLabel(key){ if(String(key).startsWith("c_")){const c=colMap()[key];return c?c.label+(c.type==="flag"?" (tag when ticked)":""):null} return ID_PART_LABELS[key]||key; }
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
@@ -578,7 +587,7 @@ function renderHead(){
   for(const c of cols()){
     const hc=hid.includes(c.key)?" hide-col":"";
     const sortable=!NO_SORT.includes(c.key);
-    const th=h("th",{class:(sortable?"sortable":"")+hc,"data-col":c.key});
+    const th=h("th",{class:(sortable?"sortable":"")+hc,"data-col":c.key,"data-g":groupOf(c)||null});
     const movable=c.key!=="handle"&&c.key!=="actions";
     const lab=h("div",{class:"thl",title:(sortable?"Click to sort":"")+(movable?" · drag to move":""),draggable:movable?"true":null},c.label);
     if(movable){
@@ -597,7 +606,7 @@ function renderHead(){
     grip.addEventListener("pointerdown",e=>startResize(e,c.key,grip));
     grip.addEventListener("dblclick",()=>{delete P.widths[c.key];applyWidths();reflow();savePrefs()});
     th.append(grip); tr.append(th);
-    const fth=h("th",{class:hc.trim(),"data-col":c.key});
+    const fth=h("th",{class:hc.trim(),"data-col":c.key,"data-g":groupOf(c)||null});
     if(sortable){
       const ph=["setup","shoot","takes","perfCount"].includes(c.key)?">10":["start","end","orig"].includes(c.key)?">14:00":"filter…";
       const inp=h("input",{type:"search",placeholder:ph,value:(P.filters||{})[c.key]||"","aria-label":"Filter "+c.label});
@@ -772,7 +781,7 @@ function renderBody(){
     const tr=h("tr",{"data-id":r.id,class:r.type==="break"?"break":""});
     const isBreak=r.type==="break";
     for(const c of cols()){
-      const td=h("td",{class:hid.includes(c.key)?"hide-col":"","data-col":c.key});
+      const td=h("td",{class:hid.includes(c.key)?"hide-col":"","data-col":c.key,"data-g":groupOf(c)||null});
       const k=c.key;
       if(k==="handle"){
         const hd=h("div",{class:"ctl"});
@@ -1157,7 +1166,7 @@ function renderAllKeepFocus(){
 function newShot(extra={}){
   const c=cfg(); const d=D(); const prev=[...d.rows].reverse().find(r=>r.type!=="break")||{};
   const r={id:uid("r"),type:"shot",shot:"",label:"",duration:"",setup:c.newSetup,shoot:c.newShoot,origStart:"",origSetup:0,origShoot:0,
-    location:prev.location||"",description:"",script:"",shotType:"",camera:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,
+    location:prev.location||"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,
     priority:"",perfCount:d.kind==="capture"?(prev.perfCount||1):"",performers:d.kind==="capture"?(prev.performers||""):"",genre:"",action:"",body:d.kind==="capture",face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
   return Object.assign(r,extra);
 }
@@ -1225,7 +1234,7 @@ function renderSetTab(){
   else if(setTab==="columns"){
     b.append(h("p",{class:"note"},"Shared with everyone on this project. New columns appear on every day. Each person can still show or hide columns for themselves with the Columns menu."));
     b.append(h("h3",{},"Your columns"));
-    const t2=h("table",{class:"plain"}); t2.append(h("thead",{},h("tr",{},...["","Name","Type","Dropdown options (comma separated)","In shot name",""].map(x=>h("th",{},x)))));
+    const t2=h("table",{class:"plain"}); t2.append(h("thead",{},h("tr",{},...["","Name","Type","Dropdown options (comma separated)","Colour group","In shot name",""].map(x=>h("th",{},x)))));
     const tb2=h("tbody",{});
     S.cols.forEach((col,i)=>{
       const C=()=>S.cols.find(x=>x.id===col.id)||{};   // look the column up each time: a teammate's change may have refreshed S
@@ -1233,14 +1242,16 @@ function renderSetTab(){
       const ty=h("select",{}); CUSTOM_TYPES.forEach(([v,l])=>ty.append(h("option",{value:v},l))); ty.value=col.type||"text";
       ty.addEventListener("change",()=>{const c=C();c.type=ty.value;if(c.type==="list"&&!c.options)c.options="A,B,C";commit();renderAll();renderSetTab()});
       const op=h("input",{value:col.options||"",placeholder:"A,B,C",disabled:col.type!=="list"}); op.addEventListener("change",()=>{C().options=op.value;commit();renderAll()});
+      const gs=h("select",{title:"Tints the column to match a group"});gs.append(h("option",{value:""},"None"));COL_GROUPS.forEach(([v,l])=>gs.append(h("option",{value:v},l)));gs.value=col.group||"";
+      gs.addEventListener("change",()=>{C().group=gs.value||null;invalidateCols();commit();renderAll()});
       const key="c_"+col.id; const part=(S.cfg.idParts||[]).find(p=>p.key===key);
       const inId=h("input",{type:"checkbox"}); inId.checked=!!(part&&part.on);
       inId.addEventListener("change",()=>{const parts=S.cfg.idParts;const pp=parts.find(p=>p.key===key);if(pp)pp.on=inId.checked;else if(inId.checked)parts.push({key,on:true,prefix:""});commit();renderAll();toast(inId.checked?"Added to shot names - set its prefix and position in Shot names":"Removed from shot names")});
       const mv=dir=>{const i2=S.cols.findIndex(x=>x.id===col.id),j=i2+dir;if(i2<0||j<0||j>=S.cols.length)return;[S.cols[i2],S.cols[j]]=[S.cols[j],S.cols[i2]];commit();renderAll();renderSetTab()};
       const del=h("button",{class:"btn small danger",title:"Delete column",onclick:async()=>{if(!(await ask("Delete "+(col.label||"this column")+"?","It disappears from every day for everyone. The values are kept behind the scenes, so Undo brings it back with its data.","Delete")))return;S.cols=S.cols.filter(x=>x.id!==col.id);commit();renderAll();renderSetTab();toast("Deleted - Undo to restore")}},"✕");
-      tb2.append(h("tr",{},h("td",{style:"white-space:nowrap"},h("button",{class:"btn small",disabled:i===0,onclick:()=>mv(-1)},"↑"),h("button",{class:"btn small",disabled:i===S.cols.length-1,onclick:()=>mv(1)},"↓")),h("td",{},nm),h("td",{},ty),h("td",{},op),h("td",{style:"text-align:center"},inId),h("td",{},del)));
+      tb2.append(h("tr",{},h("td",{style:"white-space:nowrap"},h("button",{class:"btn small",disabled:i===0,onclick:()=>mv(-1)},"↑"),h("button",{class:"btn small",disabled:i===S.cols.length-1,onclick:()=>mv(1)},"↓")),h("td",{},nm),h("td",{},ty),h("td",{},op),h("td",{},gs),h("td",{style:"text-align:center"},inId),h("td",{},del)));
     });
-    if(!S.cols.length) tb2.append(h("tr",{},h("td",{colspan:6,class:"note"},"No extra columns yet.")));
+    if(!S.cols.length) tb2.append(h("tr",{},h("td",{colspan:7,class:"note"},"No extra columns yet.")));
     t2.append(tb2); b.append(t2);
     b.append(h("div",{class:"toolbar",style:"margin-top:.5rem"},h("button",{class:"btn small primary",id:"addColBtn",onclick:()=>{const id=uid("k").replace(/[^a-z0-9]/gi,"");S.cols.push({id,label:"New column",type:"text",options:""});commit();renderAll();renderSetTab();const ins=$$("#setBody table.plain")[0];const last=ins&&$$("tbody tr",ins).pop();if(last){const i=$("input",last);i.focus();i.select()}}},"+ Add column")));
     b.append(h("h3",{},"Priority"));
@@ -1329,6 +1340,9 @@ function renderSetTab(){
     tog("Stripe alternate rows (easier to follow a row across)","zebra");
     tog("Reduce motion (no flashing or fades)","calm");
     tog("Show − / + buttons on Setup and Shoot times (untick to just type)","steppers");
+    { const sel=h("select",{});[["off","Off"],["subtle","Subtle"],["strong","Stronger"]].forEach(([v,l])=>sel.append(h("option",{value:v},l)));sel.value=P.colTint||"subtle";
+      sel.addEventListener("change",()=>{P.colTint=sel.value;savePrefs();applyDisplay()});
+      f.append(h("label",{},"Column group colours (tints related columns: shot, timing, capture, story, camera & look, notes, storyboard)",sel)); }
     tog("Highlight rows the team are working in, in each person's badge colour","peerRows");
     const f2=h("div",{class:"form",id:"colourForm"});
     const pick=(label,key,cssVar)=>{const cur=()=>(P.tl||{})[key]||getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()||"#888888";
@@ -1406,17 +1420,17 @@ function saveFile(){commit();download(fileBase()+".shotlist.json",JSON.stringify
 function csvEsc(v){v=v==null?"":String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function exportCSV(){
   commit();
-  const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera & lighting","VFX notes","Director notes","Prop / set notes","Shot (done)","Cut","Hero link","Safety link"];
+  const head=["Day","Kind","Date","Order","Type","Shot #","Shot name (last take)","Takes","Screen duration","Setup (min)","Setup from","Start","Shoot (min)","End","Original start","Action","Performer(s)","# Performers","Genre","Body","Face","Glove","Hero","Safety","Priority","Location / Setup","Description","Script / Dialogue","Shot type","Camera","Lighting","VFX notes","Director notes","Prop / set notes","Shot (done)","Cut","Hero link","Safety link"];
   const customs=cols().filter(c=>c.custom); head.push(...customs.map(c=>c.label));
   const lines=[head.map(csvEsc).join(",")];
   for(const d of live()){const C=compute(d);d.rows.forEach((r,i)=>{const c=C.rows[r.id];const br=r.type==="break";const t=br?0:lastTake(r,d);
     lines.push([d.name,d.kind==="capture"?"Mocap":"Live Action",d.date||"",i+1,br?"Break/Move":"Shot",br?(r.label||"Break"):r.shot,br?"":shotName(r,d,t||null),br?"":(Number(r.takes)||0),br?"":r.duration,br?"":Math.round(c.su),br?"":hhmm(c.setupStart),hhmm(c.start),Math.round(c.sh),hhmm(c.end),r.origStart||"",
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
-      br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),br?"":(r.heroUrl||""),br?"":(r.safetyUrl||""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
+      br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":(r.lighting||""),br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),br?"":(r.heroUrl||""),br?"":(r.safetyUrl||""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
-const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
+const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
 const DAY_BLANK={kind:"schedule",status:"",dayNo:null,date:"",call:"09:00",wrap:"18:00",setupPct:100,shootPct:100,minSetup:0,origWrap:null};
 function normDoc(doc){
   const out={project:Object.assign({name:"",client:"",prodId:"",fps:"",dates:"",location:"",system:"",lead:"",notes:""},doc.project||{}),cfg:Object.assign({},CFG_DEFAULTS,doc.cfg||{}),people:(doc.people||[]).map(p=>Object.assign({id:uid("p"),group:"Crew",name:"",role:"",phone:"",email:"",notes:""},p)),cols:(doc.cols||[]).map(c=>Object.assign({id:uid("k").replace(/[^a-z0-9]/gi,""),label:"Column",type:"text",options:""},c)),days:[]};
@@ -1515,6 +1529,7 @@ function applyDisplay(){
   document.body.classList.toggle("zebra",!!P.zebra);
   document.body.classList.toggle("calm",!!P.calm);
   document.body.classList.toggle("nosteps",P.steppers===false);
+  { const t=P.colTint||"subtle"; document.body.classList.toggle("colgroups",t!=="off"); const k=dark?1.35:1; root.style.setProperty("--gb",(t==="strong"?9:5)*k+"%"); root.style.setProperty("--gh",(t==="strong"?22:14)*k+"%"); }
   const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
   const mix=Math.max(4,Math.min(40,Number(P.bandMix)||10));
   if(P.band==="none"){root.style.setProperty("--band","var(--bg)");root.style.setProperty("--band-line","var(--line)")}

@@ -60,7 +60,7 @@ const BASE_IMPORT_TARGETS=[
   ["action","Action"],["description","Description"],["performers","Performer(s)"],["perfCount","# Of performers"],["props","Prop / set notes"],
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
   ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
-  ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera & lighting"],["vfx","VFX notes"],["director","Director notes"],
+  ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["director","Director notes"],
   ["label","Break name"],["rowType","Row type (Shot / Break)"]
 ];
 function importTargets(){
@@ -69,7 +69,7 @@ function importTargets(){
   const relabel=([k,l])=>{const c=colMap()[k];return [k,c&&c.label!==c.base&&!c.custom?`${c.label} (${l})`:l]};
   return [...BASE_IMPORT_TARGETS.map(relabel),...extra,...custom,["new","+ New column (named after the heading)"]];
 }
-const APPEND_TARGETS=["director","vfx","camera","location","props","script","description"];
+const APPEND_TARGETS=["director","vfx","camera","lighting","location","props","script","description"];
 const IMPORT_SYN={
   shot:["shot #","shot","shot no","shot number","shot#","sc/shot","scene/shot"],
   take:["take #","take","take no","take#","tk"],
@@ -84,7 +84,7 @@ const IMPORT_SYN={
   setup:["time to setup","setup","setup (min)","setup mins"],shoot:["time to shoot","shoot","shoot (min)","shoot mins"],
   origStart:["start shooting","start","start time","planned start","original start"],duration:["duration","screen dur.","screen duration"],
   location:["location and setup","location / setup","location","capture"],script:["script / dialogue","script","dialogue"],
-  shotType:["shot type"],camera:["camera & lighting notes","camera & lighting","camera","technical notes"],
+  shotType:["shot type"],camera:["camera & lighting notes","camera & lighting","camera","camera notes","technical notes"],lighting:["lighting","lighting notes","lights","lx"],
   vfx:["vfx notes","vfx","gs process?","capture notes","mocap notes"],director:["director notes","notes","other notes","comments","comment"],
   rowType:["type","row type"]
 };
@@ -396,7 +396,7 @@ async function buildTracker(days,opt){
     {k:"day",h:"Shoot Day",w:8},{k:"priority",h:"Priority",w:9},{k:"perfCount",h:"# Of Performers",w:10},{k:"props",h:"Prop",w:16},{k:"performers",h:"Performer(s)",w:16},
     {k:"genre",h:"Genre",w:12},{k:"action",h:"Action",w:30},{k:"done",h:"Shot?",w:7},{k:"body",h:"Body",w:7},{k:"face",h:"Face",w:7},{k:"glove",h:"Glove",w:7},
     {k:"hero",h:"Hero",w:8},{k:"safety",h:"Safety",w:8},{k:"heroUrl",h:"Hero link",w:24},{k:"safetyUrl",h:"Safety link",w:24},{k:"description",h:"Description",w:30},{k:"location",h:"Location / Setup",w:18},{k:"shotType",h:"Shot type",w:14},
-    {k:"camera",h:"Technical Notes",w:28},{k:"vfx",h:"Capture Notes",w:24},{k:"director",h:"Notes",w:30},
+    {k:"camera",h:"Technical Notes",w:28},{k:"lighting",h:"Lighting",w:24},{k:"vfx",h:"Capture Notes",w:24},{k:"director",h:"Notes",w:30},
     ...cols().filter(x=>x.custom).map(x=>({k:x.key,h:x.label,w:x.type==="note"?28:x.type==="flag"?8:14,custom:x.type})),
     {k:"setup",h:"Setup (min)",w:9},{k:"shoot",h:"Shoot (min)",w:9},{k:"start",h:"Planned start",w:10}];
   if(opt.withTiming) tcols.push({k:"tcIn",h:"TC IN",w:11},{k:"tcOut",h:"TC OUT",w:11},{k:"secTc",h:"Seconds (TC)",w:12},{k:"fs",h:"Frame Start",w:11},{k:"fe",h:"Frame End",w:11},{k:"range",h:"Frame Range",w:11},{k:"fps",h:"Frame Rate",w:10},{k:"secFr",h:"Seconds (Frames)",w:14});
@@ -455,7 +455,7 @@ async function buildTracker(days,opt){
       put("rid",r.id); put("shot",shotNumber(r,d)); put("take",x.take); put("app",shotName(r,d,x.take));
       const pid_=String(S.project.prodId||"").trim(); put("prod",pid_===""?null:(isNaN(Number(pid_))?pid_:Number(pid_)));
       put("day",d.dayNo||dayIndex(d)+1);
-      for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
+      for(const k of ["priority","props","performers","genre","action","hero","safety","description","location","shotType","camera","lighting","vfx","director"]){const v=r[k];if(v!=null&&String(v).trim()!=="")put(k,String(v))}
       for(const k of ["heroUrl","safetyUrl"]){const v=String(r[k]||"").trim();if(v)put(k,isUrl(v)?{text:v,hyperlink:v}:v)}
       for(const col of tcols.filter(y=>y.custom)){const v=r[col.k];if(col.custom==="flag")put(col.k,isOn(v)?1:0);else if(v!=null&&String(v).trim()!=="")put(col.k,col.custom==="number"&&!isNaN(Number(v))?Number(v):String(v))}
       if(r.perfCount!==""&&r.perfCount!=null) put("perfCount",isNaN(Number(r.perfCount))?r.perfCount:Number(r.perfCount));
@@ -477,7 +477,7 @@ async function buildTracker(days,opt){
     tcols.forEach(col=>{const cell=row.getCell(col.i);cell.border=box;const auto=["sid","app","secTc","range","secFr"].includes(col.k);
       cell.fill=fill(auto?XC.paper:XC.white);cell.font=auto?F({name:"Consolas",size:9,color:{argb:XC.signal}}):F();
       const centre=["shot","take","prod","day","priority","perfCount","done","body","face","glove","hero","safety","setup","shoot","start","fps","fs","fe"].includes(col.k);
-      cell.alignment={vertical:"top",horizontal:centre?"center":undefined,wrapText:["description","camera","vfx","director","location"].includes(col.k)}});
+      cell.alignment={vertical:"top",horizontal:centre?"center":undefined,wrapText:["description","camera","lighting","vfx","director","location"].includes(col.k)}});
     if(opt.withTiming){row.getCell(tcols.find(y=>y.k==="tcIn").i).numFmt="hh:mm:ss";row.getCell(tcols.find(y=>y.k==="tcOut").i).numFmt="hh:mm:ss"}
   }
   const last=total+2; const rng=k=>`${L(k)}3:${L(k)}${last}`; let pri=1;
