@@ -550,6 +550,9 @@ async function buildTracker(days,opt){
     if(x){
       const r=x.r, d=x.d;
       put("rid",r.id); put("shot",shotNumber(r,d)); put("take",x.take);
+      // timecode in / out from takes logged with the slate or Note View
+      if(opt.withTiming){ const lt=takeList(r).find(t=>t.n===x.take); const fps=slateFps(); const fr=v=>{const ms=parseTc(v,fps);return ms==null?null:ms/864e5};
+        if(lt&&lt.tc&&fr(lt.tc)!=null) put("tcIn",fr(lt.tc)); if(lt&&lt.out&&fr(lt.out)!=null) put("tcOut",fr(lt.out)); }
       if(x.first) for(const k of refKeys){ const du=pics.get(r[k]); const col=tcols.find(y=>y.k===k); if(!du||!col) continue;
         const m=du.match(/^data:image\/(png|jpe?g|gif);base64,(.*)$/i); if(!m) continue;
         const id=wb.addImage({base64:m[2],extension:m[1].toLowerCase().replace("jpg","jpeg")});

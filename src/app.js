@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.18.0";
+const VERSION = "2.19.0";
 const CHANGELOG = [
+  ["2.19.0","2026-11-18","Cut in Slate View: Clap logs a take with its timecode in, Cut adds the timecode out and length. Note View shows in / out for every take (its Roll / Cut does the same), the slate shows the rolling take, and the .xlsx export fills TC IN / TC OUT from the logged takes. A jam is shared with the team, so every device on the project logs takes on the same timecode."],
   ["2.18.0","2026-11-18","Clap sound in Slate View: a clap by default, or clapper sticks, a 1 kHz sync beep, your own sound file or none, with a volume control. Slate and Notes now sit at the end of the header as red and blue buttons."],
   ["2.17.1","2026-11-18","Laptops: choose which audio input carries the LTC, open the slate in its own window for a second screen, and keyboard shortcuts in Slate View and Note View."],
   ["2.17.0","2026-11-18","Slate View: a full-screen, customisable slate for the next shot, with time of day timecode or timecode jammed from LTC audio (e.g. a Tentacle Sync into the mic input) or typed in, free-running after the jam; clapping logs the take with its timecode. Note View: the current shot full screen with its pictures and script, editable notes, a scribble pad saved to the shot, a take logger (Roll / Cut, Good / NG / Hero / Safety) and Shot done. Both work on phones and tablets."],
@@ -1364,9 +1365,19 @@ function syncMarks(r){const a=takeList(r);const hs=a.filter(t=>t.mark==="hero").
 // log a take on a shot: counts it, and keeps its timecode and time of day
 function logTake(id,extra={}){
   const r=R(id); if(!r) return null; const d=D(); const n=nextTake(r,d);
-  const a=takeList(r); const t=Object.assign({n,tc:tcString(nowTcMs(),slateFps()),t:hhmm(nowMin()),mark:"",note:""},extra);
+  const a=takeList(r); const t=Object.assign({n,tc:tcString(nowTcMs(),slateFps()),t:hhmm(nowMin()),at:Date.now(),mark:"",note:""},extra);
   a.push(t); setTakeList(r,a); r.takes=(Number(r.takes)||0)+1; commit();
   return t;
+}
+// the take still rolling on a shot: logged (clapped / rolled) but not cut yet, within the last few hours
+function rollingTake(r){const a=r?takeList(r):[];const t=a[a.length-1];return t&&!t.out&&t.at&&Date.now()-t.at<4*3600e3?t:null}
+// Cut: timecode out and length on the rolling take
+function cutTake(id){
+  const r=R(id); if(!r) return null; const a=takeList(r); const t=a[a.length-1];
+  if(!t||t.out||!t.at) return null;
+  const fps=slateFps(), outMs=nowTcMs(); t.out=tcString(outMs,fps); t.endT=hhmm(nowMin());
+  t.len=fmtDur(Date.now()-t.at);
+  setTakeList(r,a); commit(); return t;
 }
 let wakeLock=null;
 async function keepAwake(on){try{if(on&&"wakeLock" in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null})}else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}}
@@ -1374,17 +1385,24 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&($("#slat
 
 /* ===================== timecode ===================== */
 // Time of day, or jammed (from LTC audio or typed in) and then free-running from this device's clock, like a hardware slate.
-function slateCfg(){return Object.assign({show:{prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},dir:"",dop:"",roll:"A001",custom:"",theme:"dark",tcSource:"tod",fps:"",jam:null,logOnClap:true,sound:"clap",volume:0.9},P.slate||{},{show:Object.assign({prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},(P.slate||{}).show||{})})}
+function slateCfg(){return Object.assign({show:{prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},dir:"",dop:"",roll:"A001",custom:"",theme:"dark",tcSource:"auto",fps:"",jam:null,logOnClap:true,shareJam:true,sound:"clap",volume:0.9},P.slate||{},{show:Object.assign({prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},(P.slate||{}).show||{})})}
 function setSlate(ch){P.slate=Object.assign(slateCfg(),ch);savePrefs()}
 // timecode runs at a standard rate; a capture rate like 120 fps falls back to 25
 const TC_RATES=[23.976,24,25,29.97,30,48,50,60];
-function slateFps(){const c=slateCfg();if(Number(c.fps))return Number(c.fps);const p=Number(S&&S.project.fps);return TC_RATES.includes(p)?p:25}
+function teamJam(){const j=S&&S.cfg&&S.cfg.tcJam;return j&&typeof j==="object"&&Number.isFinite(j.offset)&&Date.now()-j.at<12*3600e3?j:null}
+// where this device's timecode comes from: its own jam, the team's shared jam, or the time of day
+function tcSourceNow(){const c=slateCfg();if(c.tcSource==="jam"&&c.jam)return {kind:"own",jam:c.jam};if(c.tcSource!=="tod"){const j=teamJam();if(j)return {kind:"team",jam:j}}return {kind:"tod"}}
+function slateFps(){const c=slateCfg();if(Number(c.fps))return Number(c.fps);const s=tcSourceNow();if(s.kind==="team"&&Number(s.jam.fps))return Number(s.jam.fps);const p=Number(S&&S.project.fps);return TC_RATES.includes(p)?p:25}
 function todMs(){const d=new Date();return ((d.getHours()*60+d.getMinutes())*60+d.getSeconds())*1000+d.getMilliseconds()}
-function nowTcMs(){const c=slateCfg();return c.tcSource==="jam"&&c.jam?Date.now()+c.jam.offset:todMs()}
+function nowTcMs(){const s=tcSourceNow();return s.kind==="tod"?todMs():Date.now()+s.jam.offset}
 function tcString(ms,fps){const nom=Math.round(fps)||25;ms=((Math.floor(ms)%864e5)+864e5)%864e5;const s=Math.floor(ms/1000),f=Math.min(nom-1,Math.floor((ms%1000)*nom/1000));
   return [Math.floor(s/3600),Math.floor(s/60)%60,s%60,f].map(x=>String(x).padStart(2,"0")).join(":")}
 function parseTc(v,fps){const m=String(v).trim().match(/^(\d{1,2})[:.;]?(\d{2})[:.;]?(\d{2})(?:[:.;]?(\d{1,2}))?$/);if(!m)return null;const [h,mi,s,f]=[+m[1],+m[2],+m[3],+(m[4]||0)];if(h>23||mi>59||s>59||f>=Math.round(fps))return null;return ((h*60+mi)*60+s)*1000+f*1000/Math.round(fps)}
-function jamTo(tcMs,source){setSlate({tcSource:"jam",jam:{offset:tcMs-Date.now(),at:Date.now(),source}})}
+function jamTo(tcMs,source){const jam={offset:tcMs-Date.now(),at:Date.now(),source};setSlate({tcSource:"jam",jam});
+  // every device on the project then reads the same timecode (their clocks agree to within a frame or two)
+  if(S&&slateCfg().shareJam!==false){S.cfg.tcJam=Object.assign({},jam,{fps:slateFps(),by:P.name||""});commit()}}
+function tcLabel(){const s=tcSourceNow();if(s.kind==="tod")return "Time of day";const j=s.jam;
+  return (s.kind==="team"?"TC from the team's jam":"TC jammed")+(j.source?" ("+j.source+(s.kind==="team"&&j.by?", "+j.by:"")+")":"")+" "+ago(j.at)+(Date.now()-j.at>4*3600e3?" · jam again":"")}
 
 // LTC (linear timecode) arrives as audio: e.g. a Tentacle Sync's output into the phone or tablet's mic input.
 // Bits are biphase-mark coded: a transition at every bit edge, plus one mid-bit for a 1. 80 bits a frame, ending in a sync word.
@@ -1427,7 +1445,7 @@ async function startLtc(status){
     status(`Hearing LTC ${String(fr.h).padStart(2,"0")}:${String(fr.m).padStart(2,"0")}:${String(fr.s).padStart(2,"0")}:${String(fr.f).padStart(2,"0")}${fr.df?" (drop frame)":""}`+(good>=8?" · jammed":" · locking on…"));
     if(good>=8){const sorted=[...frames].sort((a,b)=>a-b);const offTod=sorted[Math.floor(sorted.length/2)];
       // offset to the device clock (Date.now) from the time-of-day offset
-      setSlate({fps:String(fps)}); jamTo(Date.now()+offTod, `LTC (${fps} fps)`);
+      setSlate({fps:String(fps)}); jamTo(Date.now()+offTod, `LTC, ${fps} fps`);
       stopLtc(); status("Jammed from LTC: now free-running. Unplug the cable; jam again every few hours.");}
   });
   proc.onaudioprocess=e=>{const b=e.inputBuffer.getChannelData(0);dec(b,Date.now()-b.length*1000/ctx.sampleRate)};
@@ -1511,7 +1529,15 @@ const SLV={id:null,raf:0};
 function openSlate(){const d=D();if(!d)return;const r=upNext(d);SLV.id=r&&r.id;$("#slateView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderSlate();tickSlate()}
 function closeSlate(){$("#slateView").classList.remove("open");document.body.classList.remove("viewopen");cancelAnimationFrame(SLV.raf);stopLtc();keepAwake(false);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
 function slateStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===SLV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));SLV.id=s[i].id;renderSlate()}
-function tickSlate(){const el=$("#slTc");if(el&&$("#slateView").classList.contains("open")){el.textContent=tcString(nowTcMs(),slateFps());SLV.raf=requestAnimationFrame(tickSlate)}}
+function tickSlate(){const el=$("#slTc");if(el&&$("#slateView").classList.contains("open")){el.textContent=tcString(nowTcMs(),slateFps());
+  // while a take rolls: its number, timecode in and running length
+  const now=Date.now(); if(!SLV.rt||now-SLV.rt>250){SLV.rt=now;const r=SLV.id&&R(SLV.id),t=rollingTake(r),m=$("#slMsg"),cb=$("#slCut");
+    if(cb)cb.classList.toggle("live",!!t);$("#slateView").classList.toggle("rolling",!!t);
+    if(m&&t)m.textContent=`● Rolling take ${t.n} · in ${t.tc} · ${fmtDur(now-t.at)}`;}
+  SLV.raf=requestAnimationFrame(tickSlate)}}
+function slateCut(){ if(!SLV.id) return; const t=cutTake(SLV.id); const m=$("#slMsg");
+  if(!t){ if(m) m.textContent="Nothing rolling to cut: clap to log a take first"; return; }
+  playClap("none"); if(m) m.textContent=`Take ${t.n} · in ${t.tc} · out ${t.out} · ${t.len}`; renderBody(); }
 function renderSlate(){
   const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme;
   v.innerHTML=""; const sh=c.show, fps=slateFps();
@@ -1534,18 +1560,18 @@ function renderSlate(){
   if(sh.name&&r) extra.append(cell("Shot name",shotName(r,d,take),"wide mono"));
   if(sh.desc&&r) extra.append(cell("Description",r.description||r.action,"wide"));
   if(sh.custom&&c.custom) extra.append(cell("",c.custom,"wide"));
-  const tcl=c.tcSource==="jam"&&c.jam?("TC jammed"+(c.jam.source?" from "+c.jam.source:"")+" "+ago(c.jam.at)):"Time of day";
-  const tc=sh.tc?h("div",{class:"sltcbox"},h("div",{class:"sltc mono",id:"slTc"},tcString(nowTcMs(),fps)),h("div",{class:"sll"},tcl+(c.tcSource==="jam"&&c.jam&&Date.now()-c.jam.at>4*3600e3?" · over 4h ago, jam again":""))):null;
+  const tc=sh.tc?h("div",{class:"sltcbox"},h("div",{class:"sltc mono",id:"slTc"},tcString(nowTcMs(),fps)),h("div",{class:"sll"},tcLabel())):null;
   const nav=h("div",{class:"slnav"},
     h("button",{title:"Previous shot",onclick:()=>slateStep(-1)},"‹"),
     h("button",{class:"clap",onclick:()=>clap()},c.logOnClap?"Clap · log take":"Clap"),
+    h("button",{class:"cutb",id:"slCut",title:"Cut: timecode out on the take that's rolling (X)",onclick:()=>slateCut()},"■ Cut"),
     h("button",{title:"Mark this shot done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){x.done=true;x.doneAt=dayClock(D());commit();renderBody()}const n=upNext();SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
     h("button",{title:"Next shot",onclick:()=>slateStep(1)},"›"),
     h("span",{class:"slgrow"}),
     h("button",{title:"Slate settings and timecode",onclick:()=>slateSettings()},"⚙"),
     document.fullscreenEnabled?h("button",{title:"Full screen",onclick:()=>{document.fullscreenElement?document.exitFullscreen():v.requestFullscreen().catch(()=>{})}},"⛶"):null,
     h("button",{title:"Close",onclick:closeSlate},"✕"));
-  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("p",{class:"keyhint"},"Keys: Space or C clap · ← → shots · F full screen · Esc close"),h("div",{class:"slsettings",id:"slSet"}));
+  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("p",{class:"keyhint"},"Keys: Space or C clap · X cut · ← → shots · F full screen · Esc close"),h("div",{class:"slsettings",id:"slSet"}));
   if(!r) $("#slMsg").textContent="No shots on this day yet.";
   fitSlate();
 }
@@ -1566,17 +1592,21 @@ function slateSettings(){
   const txt=(k,l,ph)=>{const i=h("input",{value:c[k]||"",placeholder:ph||""});i.addEventListener("change",()=>{setSlate({[k]:i.value});renderSlate();slateSettings()});return h("label",{},l,i)};
   const theme=h("select",{},...[["dark","Black"],["light","White"],["contrast","High contrast"],["classic","Classic clapper"]].map(([v,l])=>h("option",{value:v},l)));theme.value=c.theme;theme.addEventListener("change",()=>{setSlate({theme:theme.value});renderSlate();slateSettings()});
   const fpsSel=h("select",{},h("option",{value:""},"Project"+(TC_RATES.includes(Number(S.project.fps))?" ("+S.project.fps+")":" (25)")),...["23.976","24","25","29.97","30","48","50","60"].map(f=>h("option",{value:f},f)));fpsSel.value=c.fps||"";fpsSel.addEventListener("change",()=>{setSlate({fps:fpsSel.value});renderSlate();slateSettings()});
-  const st=h("p",{class:"note",id:"slTcStatus"},c.tcSource==="jam"&&c.jam?"Jammed "+(c.jam.source?"from "+c.jam.source+" ":"")+ago(c.jam.at)+", free-running.":"Using this device's time of day.");
+  const src=tcSourceNow();
+  const st=h("p",{class:"note",id:"slTcStatus"},src.kind==="own"?"Jammed "+(c.jam.source?"from "+c.jam.source+" ":"")+ago(c.jam.at)+", free-running.":src.kind==="team"?"Using the team's jam ("+(src.jam.source||"")+(src.jam.by?", by "+src.jam.by:"")+", "+ago(src.jam.at)+").":"Using this device's time of day.");
+  const share=h("input",{type:"checkbox"}); share.checked=c.shareJam!==false; share.addEventListener("change",()=>setSlate({shareJam:share.checked}));
   const say=m=>{const e=$("#slTcStatus");if(e)e.textContent=m;renderSlateTcLabel()};
   const manual=h("input",{placeholder:"HH:MM:SS:FF",class:"mono",inputmode:"numeric"});
   const logClap=h("input",{type:"checkbox"});logClap.checked=c.logOnClap;logClap.addEventListener("change",()=>{setSlate({logOnClap:logClap.checked});renderSlate();slateSettings()});
   box.append(
     h("h3",{},"Timecode"),st,
     h("div",{class:"toolbar"},
-      h("button",{class:"btn small"+(c.tcSource==="tod"?" primary":""),onclick:()=>{stopLtc();setSlate({tcSource:"tod"});renderSlate();slateSettings()}},"Time of day"),
+      h("button",{class:"btn small"+(c.tcSource==="tod"?" primary":""),title:"Use this device's clock, ignoring any jam",onclick:()=>{stopLtc();setSlate({tcSource:"tod"});renderSlate();slateSettings()}},"Time of day"),
+      teamJam()?h("button",{class:"btn small"+(src.kind==="team"?" primary":""),title:"Use the jam another device shared with the team",onclick:()=>{stopLtc();setSlate({tcSource:"auto"});renderSlate();slateSettings()}},"Team jam"):null,
       h("button",{class:"btn small",onclick:()=>startLtc(say)},"Jam from LTC (Tentacle)"),
       LTC.on?h("button",{class:"btn small",onclick:()=>{stopLtc();say("Stopped listening.")}},"Stop listening"):null),
     h("div",{class:"toolbar"},manual,h("button",{class:"btn small",onclick:()=>{const ms=parseTc(manual.value,slateFps());if(ms==null){say("Type a timecode like 14:02:10:00");return}jamTo(ms,"typed");renderSlate();slateSettings()}},"Jam now")),
+    h("label",{class:"inline"},share,"Share my jam with the team, so every device logs takes on the same timecode"),
     audioInputPicker(c),
     h("p",{class:"note"},"LTC: plug the Tentacle (or any LTC source) into the phone or tablet's mic input with a TRRS adaptor cable (on a laptop: the headset socket, or a USB audio interface or USB-C headset adaptor, then pick it as the audio input above), set it to output audio timecode, and keep the volume up. The slate jams in a second or two (within about a frame), then free-runs from the device clock: jam again every few hours, like a hardware slate. Or type the timecode and press Jam now on the beat."),
     h("h3",{},"Sound"),
@@ -1590,7 +1620,7 @@ function slateSettings(){
     h("label",{class:"inline"},logClap,"Clapping logs a take (with its timecode) on the shot"),
     h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{$("#slSet").classList.remove("open")}},"Done")));
 }
-function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");const c=slateCfg();if(t)t.textContent=c.tcSource==="jam"&&c.jam?"TC jammed"+(c.jam.source?" from "+c.jam.source:"")+" "+ago(c.jam.at):"Time of day"}
+function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textContent=tcLabel()}
 
 /* ===================== Note View ===================== */
 const NV={id:null,roll:null,timer:0};
@@ -1618,20 +1648,22 @@ function renderNotes(){
   if(chips.length) info.append(h("div",{class:"nvchips"},...chips.map(([a,b])=>h("span",{},h("small",{},a+" "),b))));
   // takes
   const takes=h("div",{class:"nvtakes"});
-  const rollBtn=h("button",{class:"btn"+(NV.roll?" rolling":"")},NV.roll?"■ Cut":"● Roll");
-  const clock=h("span",{class:"mono nvclock"},NV.roll?fmtDur(Date.now()-NV.roll):"0:00");
-  rollBtn.onclick=()=>{ if(NV.roll){const secs=Math.round((Date.now()-NV.roll)/1000);NV.roll=null;clearInterval(NV.timer);const a=takeList(R(r.id));const last=a[a.length-1];
-      if(last&&!last.len){last.len=fmtDur(secs*1000);setTakeList(R(r.id),a);commit()}else{logTake(r.id,{len:fmtDur(secs*1000)})}renderNotes()}
-    else{NV.roll=Date.now();clearInterval(NV.timer);NV.timer=setInterval(()=>{const c=$("#noteView .nvclock");if(c)c.textContent=fmtDur(Date.now()-NV.roll)},250);renderNotes()} };
+  const rolling=rollingTake(r);
+  const rollBtn=h("button",{class:"btn"+(rolling?" rolling":"")},rolling?"■ Cut":"● Roll");
+  const clock=h("span",{class:"mono nvclock"},rolling?fmtDur(Date.now()-rolling.at):"0:00");
+  clearInterval(NV.timer); if(rolling) NV.timer=setInterval(()=>{const c=$("#noteView .nvclock");const t=rollingTake(R(r.id));if(c&&t)c.textContent=fmtDur(Date.now()-t.at);else if(!t){clearInterval(NV.timer);renderNotes()}},250);
+  // Roll logs the take with its timecode in; Cut adds the timecode out (the same take the slate clapped, if it did)
+  rollBtn.onclick=()=>{ if(rollingTake(R(r.id))) cutTake(r.id); else logTake(r.id); renderNotes(); };
   takes.append(h("div",{class:"toolbar"},rollBtn,clock,h("button",{class:"btn",onclick:()=>{logTake(r.id);renderNotes()}},"+ Take"),
     h("button",{class:"btn primary",title:"Mark this shot done and go to the next",onclick:()=>{const x=R(r.id);if(x){x.done=true;x.doneAt=dayClock(D());commit()}const n=upNext();NV.id=n&&n.id;renderNotes()}},"Shot done ✓")));
   const list=takeList(r).slice().reverse();
-  if(!list.length) takes.append(h("p",{class:"note"},"No takes logged yet. Roll and Cut times a take; + Take logs one now. Clapping in Slate View logs them too."));
+  if(!list.length) takes.append(h("p",{class:"note"},"No takes logged yet. ● Roll logs a take with its timecode in, ■ Cut adds the timecode out; + Take logs one without rolling. Clap and Cut in Slate View do the same."));
   for(const t of list){
     const marks=h("span",{class:"nvmarks"});
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.mark=it.mark===m?"":m;setTakeList(x,a);syncMarks(x);commit();renderNotes()}}},l));
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.note=note.value;setTakeList(x,a);commit()}});
-    takes.append(h("div",{class:"nvtake"},h("b",{},"T"+t.n),h("span",{class:"mono note"},(t.tc||"")+(t.len?" · "+t.len:"")),marks,note,
+    takes.append(h("div",{class:"nvtake"+(!t.out&&t.at&&Date.now()-t.at<4*3600e3&&t===list[0]?" live":"")},h("b",{},"T"+t.n),
+      h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),marks,note,
       h("button",{class:"nvdel",title:"Remove this take",onclick:async()=>{if(!(await ask("Remove take "+t.n+"?","It comes off the shot's take count and log.","Remove")))return;const x=R(r.id);setTakeList(x,takeList(x).filter(z=>z.n!==t.n));x.takes=Math.max(0,(Number(x.takes)||0)-1);syncMarks(x);commit();renderNotes()}},"✕")));
   }
   // notes, saved straight onto the shot for the whole team
@@ -2157,10 +2189,10 @@ $("#shareBtn").onclick=openShare;
 $("#slateBtn").onclick=openSlate; $("#notesBtn").onclick=openNotes;
 document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("input,textarea,select"))return;
   const k=e.key.toLowerCase();
-  if($("#slateView").classList.contains("open")){ if(e.key==="Escape"){if($("#slSet").classList.contains("open"))$("#slSet").classList.remove("open");else closeSlate()} else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "||k==="c"){e.preventDefault();clap()} else if(k==="f")toggleFull($("#slateView")); }
+  if($("#slateView").classList.contains("open")){ if(e.key==="Escape"){if($("#slSet").classList.contains("open"))$("#slSet").classList.remove("open");else closeSlate()} else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "||k==="c"){e.preventDefault();clap()} else if(k==="x"||k==="."){e.preventDefault();slateCut()} else if(k==="f")toggleFull($("#slateView")); }
   else if($("#noteView").classList.contains("open")){ const r=NV.id&&R(NV.id);
     if(e.key==="Escape")closeNotes(); else if(e.key==="ArrowRight")notesStep(1); else if(e.key==="ArrowLeft")notesStep(-1);
-    else if(k==="r"){const b=$$("#noteView .nvtakes .btn").find(x=>/Roll|Cut/.test(x.textContent));if(b)b.click()}
+    else if(k==="r"&&r){if(rollingTake(r))cutTake(r.id);else logTake(r.id);renderNotes()}
     else if(k==="t"&&r){logTake(r.id);renderNotes()}
     else if(["g","n","h","s"].includes(k)&&r){const a=takeList(r);const last=a[a.length-1];if(last){const m={g:"good",n:"ng",h:"hero",s:"safety"}[k];last.mark=last.mark===m?"":m;setTakeList(r,a);syncMarks(r);commit();renderNotes()}}
     else if(k==="f")toggleFull($("#noteView")); } });

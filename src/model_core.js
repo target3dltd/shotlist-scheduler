@@ -28,7 +28,7 @@ const ID_PARTS_DEFAULT = [
   { key:"performers", on:true, prefix:"" }, { key:"genre", on:true, prefix:"" }, { key:"action", on:true, prefix:"" },
   { key:"body", on:true, prefix:"yB" }, { key:"face", on:true, prefix:"yF" }, { key:"glove", on:true, prefix:"yG" },
   { key:"hero", on:true, prefix:"" }, { key:"shotType", on:false, prefix:"" }, { key:"location", on:false, prefix:"" } ];
-const CFG_DEFAULTS = { stepMin:5, newSetup:15, newShoot:15, breakLabel:"Lunch", breakMin:45, techLabel:"Tech / turnaround", techMin:15,
+const CFG_DEFAULTS = { stepMin:5, newSetup:15, newShoot:15, breakLabel:"Lunch", breakMin:45, techLabel:"Tech / turnaround", techMin:15, tcJam:null,
   newCall:"09:00", newWrap:"18:00", newSetupPct:100, newShootPct:100, newMinSetup:0,
   colLabels:{}, priorityOptions:"HIGH,MID,LOW", priorityColors:{},
   idParts: ID_PARTS_DEFAULT, idSep:"_", idSpaces:"_", shotPad:3, takePad:1, shotSource:"field", gateAmber:10, gateRed:30 };
