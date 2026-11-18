@@ -236,6 +236,29 @@ body.viewopen{overflow:hidden}
 .btn.onset.notes{--obg:#2f6fb0;background:#2f6fb0;border-color:#245a90;color:#fff}
 .btn.onset:hover{transform:translateY(-1px);box-shadow:0 3px 12px -2px color-mix(in srgb,var(--obg) 70%,transparent)}
 .btn.onset:active{transform:translateY(0)}
+.clapicon{display:inline-block;width:.95em;height:.78em;margin-right:.35em;vertical-align:-.08em;border-radius:2px;background:linear-gradient(#fff,#fff) 0 100%/100% 62% no-repeat,repeating-linear-gradient(135deg,#fff 0 3px,transparent 3px 6px) 0 0/100% 30% no-repeat}
+/* Pace: the ahead / behind score */
+.pace{display:none}
+.pace.on{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.6rem 1.2rem;align-items:center;margin-top:.6rem;padding:.7rem .9rem;border-radius:12px;border:1px solid var(--line);background:var(--panel);--pc:var(--ok)}
+.pace.mood-ahead{--pc:#2e9d5b} .pace.mood-ontrack{--pc:#2f6fb0} .pace.mood-slipping{--pc:#d0882a} .pace.mood-behind{--pc:#d0342c}
+.pace.on{box-shadow:inset 5px 0 0 var(--pc);background:linear-gradient(90deg,color-mix(in srgb,var(--pc) 10%,var(--panel)),var(--panel) 40%)}
+.pacebig{display:flex;align-items:center;gap:.7rem}
+.pacenum{font-size:clamp(2rem,4.2vw,3rem);font-weight:800;color:var(--pc);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.02em}
+.pacewords{display:flex;flex-direction:column} .pacewords b{font-size:1.05rem} .pacewords span{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.pacemid{display:flex;flex-direction:column;gap:.45rem;min-width:0}
+.pacebar{position:relative;height:12px;border-radius:999px;background:linear-gradient(90deg,#2e9d5b,#7cc48f 35%,#e9e3d3 50%,#e8b06a 65%,#d0342c);margin-bottom:1.1rem}
+.pacetarget{position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.5}
+.pacemark{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--panel);border:3px solid var(--pc);box-shadow:0 1px 4px rgba(0,0,0,.25);transition:left .6s ease}
+.pacebarlbl{position:absolute;left:0;right:0;top:15px;display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted)} .pacebarlbl span:nth-child(2){color:var(--ink);font-weight:600}
+.pacechips{display:flex;gap:.25rem;flex-wrap:wrap}
+.pchip{display:inline-flex;flex-direction:column;align-items:center;min-width:2.4rem;padding:.12rem .35rem;border-radius:6px;font-size:.78rem;line-height:1.1;border:1px solid var(--line);background:var(--panel2)}
+.pchip small{font-variant-numeric:tabular-nums;font-weight:700} .pchip.won{border-color:#2e9d5b;background:color-mix(in srgb,#2e9d5b 14%,var(--panel))} .pchip.won small{color:#2e9d5b}
+.pchip.lost{border-color:#d0342c;background:color-mix(in srgb,#d0342c 12%,var(--panel))} .pchip.lost small{color:#d0342c}
+.pacefacts{display:grid;grid-template-columns:repeat(4,auto);gap:.2rem 1rem;text-align:center} .pacefacts b{display:block;font-size:1.3rem;font-variant-numeric:tabular-nums} .pacefacts small{color:var(--muted);font-size:.7rem;line-height:1.1;display:block;max-width:6.5rem}
+.pacefacts .good{color:#2e9d5b} .pacefacts .bad{color:#d0342c}
+@media (max-width:900px){.pace.on{grid-template-columns:1fr}.pacefacts{grid-template-columns:repeat(4,1fr)}}
+.pacepill{border-radius:999px;padding:.1rem .6rem;font-weight:700;font-size:.85rem;color:#fff}
+.pacepill.ahead{background:#2e9d5b} .pacepill.ontrack{background:#2f6fb0} .pacepill.slipping{background:#d0882a} .pacepill.behind{background:#d0342c}
 @media (max-width:900px){.onsetgroup{margin-left:0;padding-left:0;border-left:none}}
 .slate{--sb:#000;--sf:#fff;--sm:#9a9a9a;--sline:#fff;background:var(--sb);color:var(--sf);padding:clamp(.5rem,2vw,1.4rem);gap:clamp(.3rem,1.2vh,.8rem);font-family:var(--font)}
 .slate.theme-light{--sb:#fff;--sf:#000;--sm:#666;--sline:#000}
@@ -552,8 +575,8 @@ body.nosteps .mins.timing input{width:4.5em}
       <button class="btn small" id="setBtn">Settings</button>
       <button class="btn small primary" id="helpBtn">Help</button>
       <span class="onsetgroup">
-        <button class="btn small onset slate" id="slateBtn" title="Full-screen slate for the next shot, with timecode"><span aria-hidden="true">🎬</span> Slate</button>
-        <button class="btn small onset notes" id="notesBtn" title="The current shot full screen: notes, scribbles, takes"><span aria-hidden="true">✎</span> Notes</button>
+        <button class="btn small onset slate" id="slateBtn" title="Full-screen slate for the next shot, with timecode"><span class="clapicon" aria-hidden="true"></span>Slate</button>
+        <button class="btn small onset notes" id="notesBtn" title="The current shot full screen: notes, scribbles, takes">Notes</button>
       </span>
     </div>
   </div>
@@ -579,6 +602,7 @@ body.nosteps .mins.timing input{width:4.5em}
     </div>
   </div>
   <div class="stats" id="stats"></div>
+  <div class="pace noprint" id="pace"></div>
   <div class="warnings" id="warnings"></div>
   <div class="plan noprint" id="plan"></div>
   <div class="plan noprint" id="links"></div>

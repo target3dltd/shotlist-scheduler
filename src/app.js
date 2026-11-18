@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.19.0";
+const VERSION = "2.20.0";
 const CHANGELOG = [
+  ["2.20.0","2026-11-18","Takes and Captured / Raw footage cards: the day's logged takes and the seconds recorded between each take's timecode in and out (Captured on Mocap days, Raw footage on Live Action). Pace panel on shoot days: a big +/- score, each finished shot's minutes won back or lost, your on-pace streak and best streak, and where the day will wrap against the target."],
   ["2.19.0","2026-11-18","Cut in Slate View: Clap logs a take with its timecode in, Cut adds the timecode out and length. Note View shows in / out for every take (its Roll / Cut does the same), the slate shows the rolling take, and the .xlsx export fills TC IN / TC OUT from the logged takes. A jam is shared with the team, so every device on the project logs takes on the same timecode."],
   ["2.18.0","2026-11-18","Clap sound in Slate View: a clap by default, or clapper sticks, a 1 kHz sync beep, your own sound file or none, with a volume control. Slate and Notes now sit at the end of the header as red and blue buttons."],
   ["2.17.1","2026-11-18","Laptops: choose which audio input carries the LTC, open the slate in its own window for a second screen, and keyboard shortcuts in Slate View and Note View."],
@@ -889,7 +890,7 @@ function recalc(){
     const sh=$('.eff[data-eff="shoot"]',tr); if(sh) sh.textContent=(!isBlock(r)&&Math.round(c.sh)!==Number(r.shoot))?"= "+Math.round(c.sh)+" min":"";
     tr.classList.toggle("over",c.end>wrapT&&!r.done);
   }
-  renderStats(C); renderTimeline(C); renderPlan(C); renderLinks(); refreshTabLabel(C);
+  renderStats(C); renderPace(C); renderTimeline(C); renderPlan(C); renderLinks(); refreshTabLabel(C);
 }
 function tabSub(d,C){const shots=d.rows.filter(r=>!isBlock(r));const done=shots.filter(r=>r.done).length;
   if(C.shootT>0) return "wrap "+fmt(C.wrap); if(!shots.length) return "empty"; return done===shots.length?"shot":shots.length+" setups";}
@@ -909,8 +910,8 @@ function renderStats(C){
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
     card("Shooting total",dur(C.shootT)), card("Breaks / moves",dur(C.breakT)), ...(C.techT?[card("Tech / turnaround",dur(C.techT),"technical setups and resets")]:[]),
-    card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")));
-  if(takes||d.kind==="capture") st.append(card("Takes",String(takes),"logged on this day"));
+    card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")),
+    ...takeCards(d,card));
   if(d.origWrap) st.append(card("Original wrap",fmt(toMin(d.origWrap)),"as planned"));
   if(C.shootT>0&&!d.rows.some(r=>isBlock(r)&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
   if(dayStatus(d)==="wrapped"){const miss=linkNeeds(d).filter(n=>!isUrl(n.r[n.k])).length;if(miss)w.append(h("span",{class:"pill",style:"cursor:pointer",onclick:()=>{P.linksOpen=true;renderLinks();$("#links").scrollIntoView({behavior:"smooth",block:"center"})}},`${miss} hero / safety link${miss>1?"s":""} still needed`))}
@@ -923,6 +924,52 @@ function renderStats(C){
   const unnumbered=shots.filter(r=>!String(r.shot||"").trim()).length;
   if(unnumbered&&d.kind!=="capture") w.append(h("span",{class:"pill info"},unnumbered+" shot"+(unnumbered>1?"s":"")+" without a shot number"));
 }
+/* ===================== takes, captured seconds and pace ===================== */
+// length of a timed take (cut), in ms
+function takeMs(t){ if(Number(t.ms)>0) return Number(t.ms); const m=String(t.len||"").match(/^(\d+):(\d{2})$/); return t.out&&m?(+m[1]*60+ +m[2])*1000:0; }
+function takeStats(d){ let takes=0,timed=0,ms=0; for(const r of d.rows){ if(isBlock(r)||r.cut) continue; takes+=Number(r.takes)||0; for(const t of takeList(r)){ const x=takeMs(t); if(x>0){timed++;ms+=x} } } return {takes,timed,ms}; }
+function durSecs(ms){ const s=Math.round(ms/1000); return s<60?s+"s":s<3600?Math.floor(s/60)+"m "+String(s%60).padStart(2,"0")+"s":Math.floor(s/3600)+"h "+String(Math.floor(s/60)%60).padStart(2,"0")+"m"; }
+function takeCards(d,card){
+  const st=takeStats(d); if(!st.takes&&!st.timed&&d.kind!=="capture") return [];
+  const label=d.kind==="capture"?"Captured":"Raw footage";
+  const proj=live().reduce((a,x)=>a+takeStats(x).ms,0);
+  return [card("Takes",String(st.takes),st.timed?st.timed+" timed with in / out":"logged on the slate or in Notes"),
+    ...(st.timed?[card(label,durSecs(st.ms),`${Math.round(st.ms/1000)} seconds · avg ${durSecs(st.ms/st.timed)} a take`+(proj>st.ms?` · project ${durSecs(proj)}`:""))]:[])];
+}
+// how each finished shot did against the plan: minutes won back (+) or lost (-), and the streak of shots that held pace
+function paceData(d,C){
+  const L=liveStatus(d,C); const done=d.rows.filter(r=>!isBlock(r)&&!r.cut&&r.done&&r.doneAt!=null&&C.rows[r.id]);
+  if(!L&&!done.length) return null;
+  let prevSlip=0; const shots=done.map(r=>{const slip=r.doneAt-C.rows[r.id].end; const gain=Math.round(prevSlip-slip); prevSlip=slip; return {r,slip:Math.round(slip),gain}});
+  let streak=0; for(let i=shots.length-1;i>=0&&shots[i].gain>=0;i--) streak++;
+  let best=0,run=0; for(const s of shots){run=s.gain>=0?run+1:0;best=Math.max(best,run)}
+  const slip=L?L.slip:(shots.length?shots[shots.length-1].slip:0);
+  const target=wrapMin(d), proj=L?L.proj:C.wrap+slip;
+  return {live:!!L,slip,shots,streak,best,proj,target,over:Math.round(proj-target),won:shots.filter(s=>s.gain>0).reduce((a,s)=>a+s.gain,0),lost:shots.filter(s=>s.gain<0).reduce((a,s)=>a-s.gain,0)};
+}
+function renderPace(C){
+  const box=$("#pace"); if(!box) return; box.innerHTML=""; box.className="pace noprint"; const d=D(); if(!d||P.showPace===false) return;
+  const p=paceData(d,C); if(!p) return;
+  const s=p.slip, mood=s<=-5?"ahead":s<=2?"ontrack":s<=15?"slipping":"behind";
+  box.classList.add("on","mood-"+mood);
+  const words={ahead:"Ahead of schedule",ontrack:"On track",slipping:"Slipping",behind:"Behind"}[mood];
+  // the bar: where today wraps against the target, from 60 min early to 60 min late
+  const pos=Math.max(0,Math.min(100,50+p.over/60*50));
+  const big=h("div",{class:"pacebig"},h("div",{class:"pacenum"},s===0?"±0":(s>0?"+":"−")+dur(Math.abs(s))),h("div",{class:"pacewords"},h("b",{},words),h("span",{},p.live?"live":"final")));
+  const bar=h("div",{class:"pacebar",title:"Projected wrap against the target wrap"},h("div",{class:"pacezone"}),h("div",{class:"pacemark",style:`left:${pos}%`}),h("div",{class:"pacetarget"}),
+    h("div",{class:"pacebarlbl"},h("span",{},"wrap early"),h("span",{},(p.live?"projected ":"wrapped ")+fmt(p.proj)+(p.over?` (${p.over>0?"+":"−"}${dur(Math.abs(p.over))})`:" (on target)")),h("span",{},"wrap late")));
+  const facts=h("div",{class:"pacefacts"},
+    h("div",{},h("b",{},String(p.streak)),h("small",{},p.streak===1?"shot on pace":"shots on pace in a row")),
+    h("div",{},h("b",{},String(p.best)),h("small",{},"best streak today")),
+    h("div",{},h("b",{class:"good"},"+"+dur(p.won)),h("small",{},"won back")),
+    h("div",{},h("b",{class:"bad"},"−"+dur(p.lost)),h("small",{},"lost")));
+  const chips=h("div",{class:"pacechips"});
+  for(const x of p.shots.slice(-14)) chips.append(h("span",{class:"pchip "+(x.gain>0?"won":x.gain<0?"lost":"even"),title:`Shot ${x.r.shot||""}: ${x.gain>0?"won back "+dur(x.gain):x.gain<0?"lost "+dur(-x.gain):"on the plan"}; finished ${x.slip>0?dur(x.slip)+" late":x.slip<0?dur(-x.slip)+" early":"on time"}`},
+    h("b",{},x.r.shot||"·"),h("small",{},x.gain>0?"+"+x.gain:x.gain<0?String(x.gain):"0")));
+  if(!p.shots.length) chips.append(h("span",{class:"note"},"Tick shots as they finish to see each one's score here."));
+  box.append(big,h("div",{class:"pacemid"},bar,chips),facts);
+}
+
 /* ===================== running delta and the recovery plan ===================== */
 function nowMin(){const n=new Date();return n.getHours()*60+n.getMinutes()+n.getSeconds()/60}
 // the time now on this day's clock, or null when it isn't this day; after midnight a night shoot carries on (24:30)
@@ -1051,7 +1098,7 @@ function renderLinks(){
   t.append(tb); body.append(t,h("p",{class:"note"},"Shared with the team. The links also show in the Hero link and Safety link columns, and go into the CSV and .xlsx exports. A shot counts as hero or safety when its Hero or Safety column is filled in, or its notes say e.g. \"Hero: T3\"."));
   box.append(body);
 }
-setInterval(()=>{ if(!S||document.hidden) return; const d=D(); if(d&&dayClock(d)!=null){const C=compute();renderStats(C);renderTimeline(C);renderPlan(C)} },30000);
+setInterval(()=>{ if(!S||document.hidden) return; const d=D(); if(d&&dayClock(d)!=null){const C=compute();renderStats(C);renderPace(C);renderTimeline(C);renderPlan(C)} },30000);
 /* ===================== help: contents and search ===================== */
 function buildHelpNav(){
   const body=$("#helpBody"), toc=$("#helpToc"); if(!body||!toc||body.dataset.built) return; body.dataset.built="1";
@@ -1376,7 +1423,7 @@ function cutTake(id){
   const r=R(id); if(!r) return null; const a=takeList(r); const t=a[a.length-1];
   if(!t||t.out||!t.at) return null;
   const fps=slateFps(), outMs=nowTcMs(); t.out=tcString(outMs,fps); t.endT=hhmm(nowMin());
-  t.len=fmtDur(Date.now()-t.at);
+  t.ms=Date.now()-t.at; t.len=fmtDur(t.ms);
   setTakeList(r,a); commit(); return t;
 }
 let wakeLock=null;
@@ -1633,7 +1680,7 @@ function renderNotes(){
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
     h("div",{class:"nvtitle"},h("b",{},r?"Shot "+(r.shot||"-"):"No shots"),r&&r.priority?h("span",{class:"pill nvprio",style:`background:${prioHex(r.priority)||"var(--panel2)"};color:${inkOn(prioHex(r.priority)||"#ffffff")}`},r.priority):null,
-      h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")+(L?" · "+(L.slip>0?"+"+dur(L.slip)+" behind":L.slip<0?dur(-L.slip)+" ahead":"on time"):""))),
+      h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{title:"Close",onclick:closeNotes},"✕"));
   v.append(head); if(!r) return;
@@ -1858,6 +1905,7 @@ function renderSetTab(){
     tog("Stripe alternate rows (easier to follow a row across)","zebra");
     tog("Reduce motion (no flashing or fades)","calm");
     tog("Show − / + buttons on Setup and Shoot times (untick to just type)","steppers");
+    { const i=h("input",{type:"checkbox"}); i.checked=P.showPace!==false; i.addEventListener("change",()=>{P.showPace=i.checked;savePrefs();renderPace(compute())}); f.append(h("label",{class:"inline"},i,"Show the Pace panel (ahead / behind score, streaks) on shoot days")); }
     { const sel=h("select",{});[["off","Off"],["subtle","Subtle"],["strong","Stronger"]].forEach(([v,l])=>sel.append(h("option",{value:v},l)));sel.value=P.colTint||"subtle";
       sel.addEventListener("change",()=>{P.colTint=sel.value;savePrefs();applyDisplay()});
       f.append(h("label",{},"Column group colours (tints related columns: shot, timing, capture, story, camera & look, notes, storyboard)",sel)); }
