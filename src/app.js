@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.16.1";
+const VERSION = "2.17.0";
 const CHANGELOG = [
+  ["2.17.0","2026-11-18","Slate View: a full-screen, customisable slate for the next shot, with time of day timecode or timecode jammed from LTC audio (e.g. a Tentacle Sync into the mic input) or typed in, free-running after the jam; clapping logs the take with its timecode. Note View: the current shot full screen with its pictures and script, editable notes, a scribble pad saved to the shot, a take logger (Roll / Cut, Good / NG / Hero / Safety) and Shot done. Both work on phones and tablets."],
   ["2.16.1","2026-11-18","The jump-to-time box always opens fully on screen (above the row when there's no room below)."],
   ["2.16.0","2026-11-18","Jump a row to a time: click a row's Start time, type when you want it to happen, and it moves to the slot where it starts closest to that time (with a preview of where it will land). Works for shots, breaks and tech rows."],
   ["2.15.0","2026-11-18","Move shots between days: Move on a shot (or Move… in the recovery plan) sends it, and any others you tick, to another day or a new one, at the start or end. One click picks every shot not yet shot. Copy adds fresh copies instead. Moved shots keep everything and stay the same shot for the team."],
@@ -1348,6 +1349,243 @@ function doMove(toId,where,copy){
   toast(`${copy?"Copied":"Moved"} ${n} ${n===1?"shot":"shots"} to ${to.name} - Undo to put ${n===1?"it":"them"} back`);
 }
 
+/* ===================== on set: shared bits for Slate View and Note View ===================== */
+// the shot "up next" in the running order: the first shot on this day not yet shot (or cut)
+function runningShots(d){return (d||D()).rows.filter(r=>!isBlock(r)&&!r.cut)}
+function upNext(d){const s=runningShots(d);return s.find(r=>!r.done)||s[s.length-1]||null}
+function takeList(r){try{const a=JSON.parse(r.takeLog||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
+function setTakeList(r,a){r.takeLog=JSON.stringify(a)}
+// hero / safety marks also fill the Hero and Safety columns (which drive the links reminder on wrapped days)
+function syncMarks(r){const a=takeList(r);const hs=a.filter(t=>t.mark==="hero").map(t=>"T"+t.n),ss=a.filter(t=>t.mark==="safety").map(t=>"T"+t.n);
+  if(hs.length||String(r.hero||"").match(/^(T\d+(, )?)*$/))r.hero=hs.join(", ");if(ss.length||String(r.safety||"").match(/^(T\d+(, )?)*$/))r.safety=ss.join(", ")}
+// log a take on a shot: counts it, and keeps its timecode and time of day
+function logTake(id,extra={}){
+  const r=R(id); if(!r) return null; const d=D(); const n=nextTake(r,d);
+  const a=takeList(r); const t=Object.assign({n,tc:tcString(nowTcMs(),slateFps()),t:hhmm(nowMin()),mark:"",note:""},extra);
+  a.push(t); setTakeList(r,a); r.takes=(Number(r.takes)||0)+1; commit();
+  return t;
+}
+let wakeLock=null;
+async function keepAwake(on){try{if(on&&"wakeLock" in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null})}else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&($("#slateView").classList.contains("open")||$("#noteView").classList.contains("open")))keepAwake(true)});
+
+/* ===================== timecode ===================== */
+// Time of day, or jammed (from LTC audio or typed in) and then free-running from this device's clock, like a hardware slate.
+function slateCfg(){return Object.assign({show:{prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},dir:"",dop:"",roll:"A001",custom:"",theme:"dark",tcSource:"tod",fps:"",jam:null,logOnClap:true},P.slate||{},{show:Object.assign({prod:1,dir:1,dop:1,shot:1,take:1,roll:1,date:1,day:1,fps:1,name:1,desc:0,custom:0,tc:1},(P.slate||{}).show||{})})}
+function setSlate(ch){P.slate=Object.assign(slateCfg(),ch);savePrefs()}
+// timecode runs at a standard rate; a capture rate like 120 fps falls back to 25
+const TC_RATES=[23.976,24,25,29.97,30,48,50,60];
+function slateFps(){const c=slateCfg();if(Number(c.fps))return Number(c.fps);const p=Number(S&&S.project.fps);return TC_RATES.includes(p)?p:25}
+function todMs(){const d=new Date();return ((d.getHours()*60+d.getMinutes())*60+d.getSeconds())*1000+d.getMilliseconds()}
+function nowTcMs(){const c=slateCfg();return c.tcSource==="jam"&&c.jam?Date.now()+c.jam.offset:todMs()}
+function tcString(ms,fps){const nom=Math.round(fps)||25;ms=((Math.floor(ms)%864e5)+864e5)%864e5;const s=Math.floor(ms/1000),f=Math.min(nom-1,Math.floor((ms%1000)*nom/1000));
+  return [Math.floor(s/3600),Math.floor(s/60)%60,s%60,f].map(x=>String(x).padStart(2,"0")).join(":")}
+function parseTc(v,fps){const m=String(v).trim().match(/^(\d{1,2})[:.;]?(\d{2})[:.;]?(\d{2})(?:[:.;]?(\d{1,2}))?$/);if(!m)return null;const [h,mi,s,f]=[+m[1],+m[2],+m[3],+(m[4]||0)];if(h>23||mi>59||s>59||f>=Math.round(fps))return null;return ((h*60+mi)*60+s)*1000+f*1000/Math.round(fps)}
+function jamTo(tcMs,source){setSlate({tcSource:"jam",jam:{offset:tcMs-Date.now(),at:Date.now(),source}})}
+
+// LTC (linear timecode) arrives as audio: e.g. a Tentacle Sync's output into the phone or tablet's mic input.
+// Bits are biphase-mark coded: a transition at every bit edge, plus one mid-bit for a 1. 80 bits a frame, ending in a sync word.
+const LTC_SYNC=[0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1];
+function ltcDecoder(rate,onFrame){
+  let sign=0,run=0,peak=0.02,L=rate/2100,halfPending=false,win=[];
+  const bcd=(s,n)=>{let v=0;for(let k=0;k<n;k++)v|=win[s+k]<<k;return v};
+  const pushBit=(b,t)=>{win.push(b);if(win.length>80)win.shift();if(win.length<80)return;
+    for(let k=0;k<16;k++)if(win[64+k]!==LTC_SYNC[k])return;
+    const f=bcd(0,4)+10*bcd(8,2),s=bcd(16,4)+10*bcd(24,3),m=bcd(32,4)+10*bcd(40,3),h=bcd(48,4)+10*bcd(56,2);
+    if(f<60&&s<60&&m<60&&h<24) onFrame({h,m,s,f,df:!!win[10],t,bitLen:L});};
+  return (buf,t0)=>{ // t0: wall-clock ms of buf[0]
+    for(let i=0;i<buf.length;i++){const x=buf[i];peak=Math.max(peak*0.9995,Math.abs(x));const th=peak*0.2;let s=sign;if(x>th)s=1;else if(x<-th)s=-1;run++;
+      if(s!==sign&&sign!==0&&s!==0){const len=run,t=t0+i*1000/rate;run=0;
+        if(len<0.75*L){if(halfPending){pushBit(1,t);halfPending=false}else halfPending=true;L=L*0.97+0.03*len*2}
+        else if(len<1.6*L){halfPending=false;pushBit(0,t);L=L*0.97+0.03*len}
+        else{halfPending=false;win=[]}}
+      if(s!==0)sign=s;}
+  };
+}
+const LTC={on:false};
+async function startLtc(status){
+  if(LTC.on) return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){status("This browser can't listen to audio. Use time of day, or type a timecode to jam.");return}
+  let stream; try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}catch(e){status("Microphone access was refused, so LTC can't be read. Allow the microphone for this site and try again.");return}
+  const ctx=new (window.AudioContext||window.webkitAudioContext)(); const src=ctx.createMediaStreamSource(stream);
+  const proc=ctx.createScriptProcessor(1024,1,1); const mute=ctx.createGain(); mute.gain.value=0;
+  const frames=[]; let maxF=0, good=0, prev=null;
+  const dec=ltcDecoder(ctx.sampleRate,fr=>{
+    const tc=(fr.h*3600+fr.m*60+fr.s);
+    if(prev){const fpsGuess=Math.max(24,maxF+1);const pv=prev.tc*fpsGuess+prev.f, cv=tc*fpsGuess+fr.f;good=(cv-pv===1||(fr.f===0&&tc===prev.tc+1))?good+1:0}
+    prev={tc,f:fr.f}; maxF=Math.max(maxF,fr.f);
+    // the frame rate comes from the signal itself: 80 bits a frame
+    const heard=ctx.sampleRate/(80*fr.bitLen), fps=[24,25,30].reduce((a,b)=>Math.abs(b-heard)<Math.abs(a-heard)?b:a);
+    // the frame started 80 bits before its sync word ended
+    const startWall=fr.t-80*fr.bitLen*1000/ctx.sampleRate;
+    frames.push((tc*1000+fr.f*1000/Math.round(fps))-startWall)  /* time-of-day TC minus the device clock */; if(frames.length>25)frames.shift();
+    status(`Hearing LTC ${String(fr.h).padStart(2,"0")}:${String(fr.m).padStart(2,"0")}:${String(fr.s).padStart(2,"0")}:${String(fr.f).padStart(2,"0")}${fr.df?" (drop frame)":""}`+(good>=8?" · jammed":" · locking on…"));
+    if(good>=8){const sorted=[...frames].sort((a,b)=>a-b);const offTod=sorted[Math.floor(sorted.length/2)];
+      // offset to the device clock (Date.now) from the time-of-day offset
+      setSlate({fps:String(fps)}); jamTo(Date.now()+offTod, `LTC (${fps} fps)`);
+      stopLtc(); status("Jammed from LTC: now free-running. Unplug the cable; jam again every few hours.");}
+  });
+  proc.onaudioprocess=e=>{const b=e.inputBuffer.getChannelData(0);dec(b,Date.now()-b.length*1000/ctx.sampleRate)};
+  src.connect(proc);proc.connect(mute);mute.connect(ctx.destination);
+  Object.assign(LTC,{on:true,stream,ctx,proc});status("Listening for LTC on the microphone input…");
+  setTimeout(()=>{if(LTC.on&&!good){status("No timecode heard yet. Check the cable goes into the mic input and the Tentacle is set to output LTC (audio), then keep the volume up.")}},6000);
+}
+function stopLtc(){if(!LTC.on)return;try{LTC.proc.disconnect();LTC.stream.getTracks().forEach(t=>t.stop());LTC.ctx.close()}catch(e){}LTC.on=false}
+
+/* ===================== Slate View ===================== */
+const SLV={id:null,raf:0};
+function openSlate(){const d=D();if(!d)return;const r=upNext(d);SLV.id=r&&r.id;$("#slateView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderSlate();tickSlate()}
+function closeSlate(){$("#slateView").classList.remove("open");document.body.classList.remove("viewopen");cancelAnimationFrame(SLV.raf);stopLtc();keepAwake(false);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
+function slateStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===SLV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));SLV.id=s[i].id;renderSlate()}
+function tickSlate(){const el=$("#slTc");if(el&&$("#slateView").classList.contains("open")){el.textContent=tcString(nowTcMs(),slateFps());SLV.raf=requestAnimationFrame(tickSlate)}}
+function renderSlate(){
+  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme;
+  v.innerHTML=""; const sh=c.show, fps=slateFps();
+  const cell=(lab,val,cls="")=>h("div",{class:"slc "+cls},h("div",{class:"sll"},lab),h("div",{class:"slv"},val||"-"));
+  const take=r?nextTake(r,d):"-";
+  const bar=h("div",{class:"slbar",title:"Tap to clap"+(c.logOnClap?" and log the take":""),onclick:()=>clap()});
+  const top=h("div",{class:"slrow"});
+  if(sh.prod) top.append(cell("Production",S.project.name,"wide"));
+  if(sh.dir) top.append(cell("Director",c.dir||S.project.lead));
+  if(sh.dop) top.append(cell("Camera / DOP",c.dop));
+  const mid=h("div",{class:"slrow big"});
+  if(sh.shot) mid.append(cell("Shot",r?(r.shot||r.action||"-"):"-","huge"));
+  if(sh.take) mid.append(cell("Take",String(take),"huge"));
+  if(sh.roll) mid.append(h("div",{class:"slc huge"},h("div",{class:"sll"},"Roll"),h("div",{class:"slv"},c.roll||"-"),h("div",{class:"slsmall"},h("button",{onclick:e=>{e.stopPropagation();setSlate({roll:bumpRoll(c.roll)});renderSlate()}},"Next roll"))));
+  const low=h("div",{class:"slrow"});
+  if(sh.date) low.append(cell("Date",d&&d.date?d.date:todayISO()));
+  if(sh.day) low.append(cell("Day",d?(d.name||""):""));
+  if(sh.fps) low.append(cell("FPS",String(fps)));
+  const extra=h("div",{class:"slrow"});
+  if(sh.name&&r) extra.append(cell("Shot name",shotName(r,d,take),"wide mono"));
+  if(sh.desc&&r) extra.append(cell("Description",r.description||r.action,"wide"));
+  if(sh.custom&&c.custom) extra.append(cell("",c.custom,"wide"));
+  const tcl=c.tcSource==="jam"&&c.jam?("TC jammed"+(c.jam.source?" from "+c.jam.source:"")+" "+ago(c.jam.at)):"Time of day";
+  const tc=sh.tc?h("div",{class:"sltcbox"},h("div",{class:"sltc mono",id:"slTc"},tcString(nowTcMs(),fps)),h("div",{class:"sll"},tcl+(c.tcSource==="jam"&&c.jam&&Date.now()-c.jam.at>4*3600e3?" · over 4h ago, jam again":""))):null;
+  const nav=h("div",{class:"slnav"},
+    h("button",{title:"Previous shot",onclick:()=>slateStep(-1)},"‹"),
+    h("button",{class:"clap",onclick:()=>clap()},c.logOnClap?"Clap · log take":"Clap"),
+    h("button",{title:"Mark this shot done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){x.done=true;x.doneAt=dayClock(D());commit();renderBody()}const n=upNext();SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
+    h("button",{title:"Next shot",onclick:()=>slateStep(1)},"›"),
+    h("span",{class:"slgrow"}),
+    h("button",{title:"Slate settings and timecode",onclick:()=>slateSettings()},"⚙"),
+    document.fullscreenEnabled?h("button",{title:"Full screen",onclick:()=>{document.fullscreenElement?document.exitFullscreen():v.requestFullscreen().catch(()=>{})}},"⛶"):null,
+    h("button",{title:"Close",onclick:closeSlate},"✕"));
+  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("div",{class:"slsettings",id:"slSet"}));
+  if(!r) $("#slMsg").textContent="No shots on this day yet.";
+  fitSlate();
+}
+// long values (e.g. "12 inserts") shrink to fit their box rather than being cut off
+function fitSlate(){ requestAnimationFrame(()=>{ for(const el of $$("#slateView .slrow.big .slv")){ el.style.fontSize=""; let fs=parseFloat(getComputedStyle(el).fontSize); while(el.scrollWidth>el.clientWidth+1&&fs>14){fs*=0.9;el.style.fontSize=fs+"px"} } }); }
+window.addEventListener("resize",()=>{ if($("#slateView").classList.contains("open")) fitSlate(); });
+function bumpRoll(v){const m=String(v||"A000").match(/^(.*?)(\d+)$/);return m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):String(v||"")+"2"}
+function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+"h ago"}
+function clap(){
+  const v=$("#slateView"); v.classList.remove("flash"); void v.offsetWidth; v.classList.add("flash");
+  if(!SLV.id) return; const c=slateCfg();
+  if(c.logOnClap){const t=logTake(SLV.id);if(t){renderSlate();$("#slMsg").textContent=`Take ${t.n} logged at ${t.tc}`;renderBody()}}
+}
+function slateSettings(){
+  const box=$("#slSet"); if(box.classList.toggle("open")===false) return; box.innerHTML=""; const c=slateCfg();
+  const tog=(k,l)=>{const i=h("input",{type:"checkbox"});i.checked=!!c.show[k];i.addEventListener("change",()=>{const s=Object.assign({},slateCfg().show,{[k]:i.checked?1:0});setSlate({show:s});renderSlate();slateSettings()});return h("label",{class:"inline"},i,l)};
+  const txt=(k,l,ph)=>{const i=h("input",{value:c[k]||"",placeholder:ph||""});i.addEventListener("change",()=>{setSlate({[k]:i.value});renderSlate();slateSettings()});return h("label",{},l,i)};
+  const theme=h("select",{},...[["dark","Black"],["light","White"],["contrast","High contrast"],["classic","Classic clapper"]].map(([v,l])=>h("option",{value:v},l)));theme.value=c.theme;theme.addEventListener("change",()=>{setSlate({theme:theme.value});renderSlate();slateSettings()});
+  const fpsSel=h("select",{},h("option",{value:""},"Project"+(TC_RATES.includes(Number(S.project.fps))?" ("+S.project.fps+")":" (25)")),...["23.976","24","25","29.97","30","48","50","60"].map(f=>h("option",{value:f},f)));fpsSel.value=c.fps||"";fpsSel.addEventListener("change",()=>{setSlate({fps:fpsSel.value});renderSlate();slateSettings()});
+  const st=h("p",{class:"note",id:"slTcStatus"},c.tcSource==="jam"&&c.jam?"Jammed "+(c.jam.source?"from "+c.jam.source+" ":"")+ago(c.jam.at)+", free-running.":"Using this device's time of day.");
+  const say=m=>{const e=$("#slTcStatus");if(e)e.textContent=m;renderSlateTcLabel()};
+  const manual=h("input",{placeholder:"HH:MM:SS:FF",class:"mono",inputmode:"numeric"});
+  const logClap=h("input",{type:"checkbox"});logClap.checked=c.logOnClap;logClap.addEventListener("change",()=>{setSlate({logOnClap:logClap.checked});renderSlate();slateSettings()});
+  box.append(
+    h("h3",{},"Timecode"),st,
+    h("div",{class:"toolbar"},
+      h("button",{class:"btn small"+(c.tcSource==="tod"?" primary":""),onclick:()=>{stopLtc();setSlate({tcSource:"tod"});renderSlate();slateSettings()}},"Time of day"),
+      h("button",{class:"btn small",onclick:()=>startLtc(say)},"Jam from LTC (Tentacle)"),
+      LTC.on?h("button",{class:"btn small",onclick:()=>{stopLtc();say("Stopped listening.")}},"Stop listening"):null),
+    h("div",{class:"toolbar"},manual,h("button",{class:"btn small",onclick:()=>{const ms=parseTc(manual.value,slateFps());if(ms==null){say("Type a timecode like 14:02:10:00");return}jamTo(ms,"typed");renderSlate();slateSettings()}},"Jam now")),
+    h("p",{class:"note"},"LTC: plug the Tentacle (or any LTC source) into the phone or tablet's mic input with a TRRS adaptor cable, set it to output audio timecode, and keep the volume up. The slate jams in a second or two (within about a frame), then free-runs from the device clock: jam again every few hours, like a hardware slate. Or type the timecode and press Jam now on the beat."),
+    h("h3",{},"Show"),
+    h("div",{class:"slchecks"},tog("prod","Production"),tog("dir","Director"),tog("dop","Camera / DOP"),tog("shot","Shot"),tog("take","Take"),tog("roll","Roll"),tog("date","Date"),tog("day","Day"),tog("fps","FPS"),tog("name","Shot name"),tog("desc","Description"),tog("custom","Custom line"),tog("tc","Timecode")),
+    h("div",{class:"form"},txt("dir","Director",S.project.lead||""),txt("dop","Camera / DOP"),txt("roll","Roll / card","A001"),txt("custom","Custom line","e.g. INT. TAVERN - NIGHT"),h("label",{},"Frame rate",fpsSel),h("label",{},"Look",theme)),
+    h("label",{class:"inline"},logClap,"Clapping logs a take (with its timecode) on the shot"),
+    h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{$("#slSet").classList.remove("open")}},"Done")));
+}
+function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");const c=slateCfg();if(t)t.textContent=c.tcSource==="jam"&&c.jam?"TC jammed"+(c.jam.source?" from "+c.jam.source:"")+" "+ago(c.jam.at):"Time of day"}
+
+/* ===================== Note View ===================== */
+const NV={id:null,roll:null,timer:0};
+function openNotes(){const d=D();if(!d)return;const r=upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
+function closeNotes(){$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
+function notesStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
+function renderNotes(){
+  const v=$("#noteView"); v.innerHTML=""; const d=D(), r=NV.id&&R(NV.id);
+  const L=d&&liveStatus(d,compute());
+  const head=h("div",{class:"nvhead"},
+    h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
+    h("div",{class:"nvtitle"},h("b",{},r?"Shot "+(r.shot||"-"):"No shots"),r&&r.priority?h("span",{class:"pill nvprio",style:`background:${prioHex(r.priority)||"var(--panel2)"};color:${inkOn(prioHex(r.priority)||"#ffffff")}`},r.priority):null,
+      h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")+(L?" · "+(L.slip>0?"+"+dur(L.slip)+" behind":L.slip<0?dur(-L.slip)+" ahead":"on time"):""))),
+    h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
+    h("button",{title:"Close",onclick:closeNotes},"✕"));
+  v.append(head); if(!r) return;
+  const body=h("div",{class:"nvbody"});
+  // what the shot is
+  const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}
+  const info=h("div",{class:"nvinfo"});
+  if(r.action) info.append(h("p",{},h("b",{},r.action)));
+  if(r.description) info.append(h("p",{},r.description));
+  if(r.script) info.append(h("blockquote",{},r.script));
+  const chips=[["Location",r.location],["Shot type",r.shotType],["Name",shotName(r,d,nextTake(r,d))]].filter(x=>x[1]);
+  if(chips.length) info.append(h("div",{class:"nvchips"},...chips.map(([a,b])=>h("span",{},h("small",{},a+" "),b))));
+  // takes
+  const takes=h("div",{class:"nvtakes"});
+  const rollBtn=h("button",{class:"btn"+(NV.roll?" rolling":"")},NV.roll?"■ Cut":"● Roll");
+  const clock=h("span",{class:"mono nvclock"},NV.roll?fmtDur(Date.now()-NV.roll):"0:00");
+  rollBtn.onclick=()=>{ if(NV.roll){const secs=Math.round((Date.now()-NV.roll)/1000);NV.roll=null;clearInterval(NV.timer);const a=takeList(R(r.id));const last=a[a.length-1];
+      if(last&&!last.len){last.len=fmtDur(secs*1000);setTakeList(R(r.id),a);commit()}else{logTake(r.id,{len:fmtDur(secs*1000)})}renderNotes()}
+    else{NV.roll=Date.now();clearInterval(NV.timer);NV.timer=setInterval(()=>{const c=$("#noteView .nvclock");if(c)c.textContent=fmtDur(Date.now()-NV.roll)},250);renderNotes()} };
+  takes.append(h("div",{class:"toolbar"},rollBtn,clock,h("button",{class:"btn",onclick:()=>{logTake(r.id);renderNotes()}},"+ Take"),
+    h("button",{class:"btn primary",title:"Mark this shot done and go to the next",onclick:()=>{const x=R(r.id);if(x){x.done=true;x.doneAt=dayClock(D());commit()}const n=upNext();NV.id=n&&n.id;renderNotes()}},"Shot done ✓")));
+  const list=takeList(r).slice().reverse();
+  if(!list.length) takes.append(h("p",{class:"note"},"No takes logged yet. Roll and Cut times a take; + Take logs one now. Clapping in Slate View logs them too."));
+  for(const t of list){
+    const marks=h("span",{class:"nvmarks"});
+    for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.mark=it.mark===m?"":m;setTakeList(x,a);syncMarks(x);commit();renderNotes()}}},l));
+    const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.note=note.value;setTakeList(x,a);commit()}});
+    takes.append(h("div",{class:"nvtake"},h("b",{},"T"+t.n),h("span",{class:"mono note"},(t.tc||"")+(t.len?" · "+t.len:"")),marks,note,
+      h("button",{class:"nvdel",title:"Remove this take",onclick:async()=>{if(!(await ask("Remove take "+t.n+"?","It comes off the shot's take count and log.","Remove")))return;const x=R(r.id);setTakeList(x,takeList(x).filter(z=>z.n!==t.n));x.takes=Math.max(0,(Number(x.takes)||0)-1);syncMarks(x);commit();renderNotes()}},"✕")));
+  }
+  // notes, saved straight onto the shot for the whole team
+  const notes=h("div",{class:"nvnotes"});
+  for(const [k,l] of [["director","Director notes"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["props","Prop / set notes"]]){
+    const t=h("textarea",{rows:"2",placeholder:l}); t.value=r[k]||"";
+    t.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[k]=t.value;autosize(t);softCommit()}); t.addEventListener("change",commit);
+    notes.append(h("label",{},l,t)); requestAnimationFrame(()=>autosize(t));
+  }
+  body.append(h("section",{class:"nvwhat"},pics,info),h("section",{},h("h3",{},"Takes"),takes),h("section",{},h("h3",{},"Notes"),notes),h("section",{},h("h3",{},"Scribble"),scribblePad(r)));
+  v.append(body);
+}
+function fmtDur(ms){const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+// a drawing pad for finger or pencil; saved as a picture on the shot
+function scribblePad(r){
+  const wrap=h("div",{class:"scrib"}); const cv=h("canvas",{}); const strokes=[]; let cur=null, color="#111111", width=3, dirty=false;
+  const W=1200,H=720; cv.width=W; cv.height=H; const x=cv.getContext("2d");
+  let bg=null; const draw=()=>{x.fillStyle="#fff";x.fillRect(0,0,W,H);if(bg)x.drawImage(bg,0,0,W,H);x.lineCap="round";x.lineJoin="round";
+    for(const s of strokes){x.strokeStyle=s.c;x.beginPath();s.p.forEach((p,i)=>{x.lineWidth=s.w*(0.5+(p[2]||0.5));i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])});x.stroke()}};
+  if(r.scribble) imgSrc(r.scribble).then(s=>{if(!s)return;const im=new Image();im.onload=()=>{bg=im;draw()};im.src=s});
+  draw();
+  const pt=e=>{const b=cv.getBoundingClientRect();return [(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*H/b.height,e.pressure||0.5]};
+  cv.addEventListener("pointerdown",e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cur={c:color,w:color==="#ffffff"?24:width,p:[pt(e)]};strokes.push(cur);dirty=true;state()});
+  cv.addEventListener("pointermove",e=>{if(!cur)return;cur.p.push(pt(e));draw()});
+  const end=()=>{cur=null}; cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end);
+  const pens=h("span",{class:"pens"}); for(const [c,l] of [["#111111","Black"],["#d0342c","Red"],["#2f6fb0","Blue"],["#ffffff","Eraser"]]){const b=h("button",{class:"pen"+(c===color?" on":""),title:l,style:`background:${c}`,onclick:()=>{color=c;$$(".pen",pens).forEach(z=>z.classList.remove("on"));b.classList.add("on")}});pens.append(b)}
+  const saveBtn=h("button",{class:"btn small primary"},"Save to shot");
+  const state=()=>{saveBtn.disabled=!dirty;saveBtn.textContent=dirty?"Save to shot":"Saved"};
+  saveBtn.onclick=async()=>{saveBtn.disabled=true;saveBtn.textContent="Saving…";draw();
+    try{const data=cv.toDataURL("image/png");const ref=MODE==="team"?(await api("/api/image",{data})).ref:cv.toDataURL("image/jpeg",.85);const y=R(r.id);if(y){y.scribble=ref;commit()}dirty=false;state();toast("Scribble saved on shot "+(r.shot||""))}catch(e){toast("Couldn't save: "+e.message);saveBtn.disabled=false;saveBtn.textContent="Save to shot"}};
+  wrap.append(cv,h("div",{class:"toolbar"},pens,h("button",{class:"btn small",onclick:()=>{strokes.pop();dirty=true;draw();state()}},"Undo stroke"),h("button",{class:"btn small",onclick:()=>{strokes.length=0;bg=null;dirty=true;draw();state()}},"Clear"),saveBtn,
+    h("button",{class:"btn small",title:"Also put it in the first empty Storyboard box",onclick:()=>{const y=R(r.id);if(!y||!y.scribble){toast("Save the scribble first");return}const k=["ref1","ref2","ref3"].find(k=>!y[k]);if(!k){toast("The storyboard boxes are full");return}y[k]=y.scribble;commit();renderNotes();toast("Added to the storyboard")}},"Add to storyboard")));
+  state(); return wrap;
+}
+
 /* ===================== DIT names ===================== */
 function ditRows(){const d=D();return d?d.rows.filter(r=>!isBlock(r)&&!r.cut&&(P.ditShowDone||!r.done||Number(r.takes)>0)):[]}
 function renderDit(){
@@ -1619,7 +1857,7 @@ let importMode="new";
 function fileBase(){return (S.project.name||"Shotlist").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_")+"_"+new Date().toISOString().slice(0,10)}
 // the project file carries its storyboard pictures too, so it can be opened in another project or site
 async function saveFile(){
-  commit(); const refs=new Set(); S.days.forEach(d=>d.rows.forEach(r=>["ref1","ref2","ref3"].forEach(k=>{if(String(r[k]||"").startsWith("img:"))refs.add(r[k])})));
+  commit(); const refs=new Set(); S.days.forEach(d=>d.rows.forEach(r=>["ref1","ref2","ref3","scribble"].forEach(k=>{if(String(r[k]||"").startsWith("img:"))refs.add(r[k])})));
   const pictures={}; let n=0; for(const ref of refs){ toast(`Packing pictures: ${++n} of ${refs.size}…`); const du=await refToDataUrl(ref); if(du) pictures[ref]=du; }
   download(fileBase()+".shotlist.json",JSON.stringify({app:"shotlist-scheduler",version:VERSION,saved:new Date().toISOString(),doc:S,pictures}),"application/json");
   toast("Exported "+fileBase()+".shotlist.json"+(refs.size?` with ${Object.keys(pictures).length} picture${Object.keys(pictures).length===1?"":"s"}`:""));
@@ -1637,7 +1875,7 @@ function exportCSV(){
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
-const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",ref3:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
+const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",ref3:"",scribble:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
 const DAY_BLANK={kind:"schedule",status:"",dayNo:null,date:"",call:"09:00",wrap:"18:00",setupPct:100,shootPct:100,minSetup:0,origWrap:null};
 function normDoc(doc){
   const out={project:Object.assign({name:"",client:"",prodId:"",fps:"",dates:"",location:"",system:"",lead:"",notes:""},doc.project||{}),cfg:Object.assign({},CFG_DEFAULTS,doc.cfg||{}),people:(doc.people||[]).map(p=>Object.assign({id:uid("p"),group:"Crew",name:"",role:"",phone:"",email:"",notes:""},p)),cols:(doc.cols||[]).map(c=>Object.assign({id:uid("k").replace(/[^a-z0-9]/gi,""),label:"Column",type:"text",options:""},c)),days:[]};
@@ -1675,10 +1913,10 @@ async function importFile(file){
   try{const raw=JSON.parse(await file.text());doc=parseProjectFile(raw);pictures=(raw&&raw.pictures)||{}}catch(e){}
   if(!doc){toast("That isn't a project file this tool can read");return}
   // pictures packed in the file go back on their shots as data, then into whichever project receives them
-  for(const d of doc.days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3"]) if(r[k]&&pictures[r[k]]) r[k]=pictures[r[k]];
+  for(const d of doc.days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]&&pictures[r[k]]) r[k]=pictures[r[k]];
   if(importMode==="replace"){
     if(!(await ask("Replace this project?",MODE==="team"?"Everything in "+(S.project.name||"this project")+" is replaced for the whole team. You can Undo straight afterwards.":"Everything in "+(S.project.name||"this project")+" is replaced. You can Undo straight afterwards.","Replace")))return;
-    { const pend=[]; for(const d of doc.days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3"]) if(String(r[k]||"").startsWith("data:")) pend.push([r,k]);
+    { const pend=[]; for(const d of doc.days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3","scribble"]) if(String(r[k]||"").startsWith("data:")) pend.push([r,k]);
       let n=0; for(const [r,k] of pend){ toast(`Adding pictures: ${++n} of ${pend.length}…`); try{ r[k]=await storePicture(r[k]); }catch(e){ r[k]=""; } } }
     commit(); S.project=doc.project; S.cfg=doc.cfg; S.people=doc.people; S.cols=doc.cols; S.days=doc.days; commit(); P.activeByProject[pid()]=S.days[0]&&S.days[0].id; renderAll(); toast("Imported into this project");
   }else{
@@ -1835,6 +2073,10 @@ $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.togg
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
 $("#shareBtn").onclick=openShare;
+$("#slateBtn").onclick=openSlate; $("#notesBtn").onclick=openNotes;
+document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("input,textarea,select"))return;
+  if($("#slateView").classList.contains("open")){ if(e.key==="Escape")closeSlate(); else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "){e.preventDefault();clap()} }
+  else if($("#noteView").classList.contains("open")){ if(e.key==="Escape")closeNotes(); else if(e.key==="ArrowRight")notesStep(1); else if(e.key==="ArrowLeft")notesStep(-1); } });
 $("#keyGo").onclick=submitKey; $("#keyInput").addEventListener("keydown",e=>{if(e.key==="Enter")submitKey()});
 $("#archDayBtn").onclick=async()=>{const d=D();if(!d)return;if(!(await ask("Archive "+d.name+"?","The tab is put away for everyone. Nothing is deleted: restore it any time from the Archived tab at the end of the day tabs.","Archive day")))return;d.archived=true;P.activeByProject[pid()]=null;commit();savePrefs();renderAll();toast("Archived "+d.name+" - restore it from Archived")};
 $("#resetBtn").onclick=async()=>{const d=D();const seed=await getSeed();const o=seed&&(seed.days||[]).find(x=>x.id===d.id);if(!o){toast("This day wasn't imported, so there's nothing to reset to");return}

@@ -105,7 +105,7 @@ async function shrinkDataUrl(du){
 // a picture brought in from a file: shrunk, and uploaded to the open project on the team site
 async function storePicture(du){ const s=await shrinkDataUrl(du); return MODE==="team"?(await api("/api/image",{data:s})).ref:s; }
 // pictures waiting in a not-yet-created project are taken out, then put back once it's open
-function takeDataRefs(days){ const pend=[]; for(const d of days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3"]) if(String(r[k]||"").startsWith("data:")){pend.push({rid:r.id,k,data:r[k]});r[k]="";} return pend; }
+function takeDataRefs(days){ const pend=[]; for(const d of days) for(const r of d.rows) for(const k of ["ref1","ref2","ref3","scribble"]) if(String(r[k]||"").startsWith("data:")){pend.push({rid:r.id,k,data:r[k]});r[k]="";} return pend; }
 async function putDataRefs(pend){
   if(!pend.length) return; let n=0, failed=0;
   // upload them all first, then set them in one go (the project may still be loading while they upload)
