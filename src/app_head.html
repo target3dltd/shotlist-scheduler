@@ -392,6 +392,16 @@ input.shotno{font-weight:700;font-size:1.08em}
 .colmenu{position:relative}
 .colmenu .pop{position:absolute;right:0;top:110%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;box-shadow:0 8px 24px var(--shadow);display:none;z-index:40;min-width:15rem;max-height:70vh;overflow:auto}
 .colmenu.open .pop{display:block}
+/* header: buttons in small groups */
+header.top .toolbar{align-items:center;gap:.5rem}
+.tgroup{display:inline-flex;gap:.3rem;align-items:center}
+.tgroup+.tgroup,.tgroup+.onsetgroup{padding-left:.5rem;border-left:1px solid var(--line)}
+.btn.icon{min-width:2.1rem;justify-content:center;font-size:1.05em}
+.pop.menu{min-width:15rem;padding:.35rem}
+.pop.menu .mi{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:.45rem .6rem;color:var(--ink);font:inherit;cursor:pointer}
+.pop.menu .mi small{color:var(--muted);font-size:.78em}
+.pop.menu .mi:hover,.pop.menu .mi:focus-visible{background:var(--panel2);outline:none}
+.pop.menu hr{border:none;border-top:1px solid var(--line);margin:.25rem .3rem}
 .colmenu .pop label{display:flex;gap:.45rem;align-items:center;padding:2px 0;white-space:nowrap}
 .colmenu .pop .note{font-size:.85rem;color:var(--muted);margin:.2rem 0 .4rem}
 .addrow{margin-top:.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
@@ -426,6 +436,31 @@ body.keylocked > *:not(.modal):not(.toast){visibility:hidden}
 .sharelink{display:flex;gap:.4rem;align-items:center} .sharelink input{flex:1;min-width:0;font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-radius:6px;padding:.35rem .5rem}
 .safety{background:var(--info-bg);color:var(--info-ink);border-radius:6px;padding:.55rem .7rem;font-size:.92rem;margin:.6rem 0}
 .tabs{display:flex;gap:.3rem;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:.8rem 0 1rem}
+@media (max-width:700px){#setTabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch} #setTabs::-webkit-scrollbar{display:none} #setTabs>*{flex:0 0 auto}}
+/* Display settings: sections, switches, labelled sliders, colour swatches */
+.dsec{border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem .8rem;margin:0 0 .8rem;background:var(--panel)}
+.dsec h4{margin:0 0 .55rem;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.65rem 1.1rem;align-items:end}
+.dgrid label{display:flex;flex-direction:column;gap:.25rem;font-size:.9em}
+.dgrid select,.dgrid input:not([type=range]):not([type=color]){width:100%;border:1px solid var(--line);border-radius:6px;padding:.38rem .5rem;color:var(--ink);background:var(--field,var(--panel))}
+.dgrid label{color:var(--muted)} .dgrid label .rl span{color:var(--muted)}
+.dgrid .rng .rl{display:flex;justify-content:space-between;gap:.5rem} .dgrid .rng .rl b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+.dgrid .rng input{width:100%}
+.dswitches{display:grid;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr));gap:.15rem 1.1rem}
+.sw{display:flex;align-items:flex-start;gap:.6rem;padding:.35rem 0;cursor:pointer;font-size:.92em;line-height:1.3}
+.sw input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:2.3rem;height:1.3rem;border-radius:999px;background:var(--line2);position:relative;cursor:pointer;margin:0;transition:background .15s}
+.sw input::before{content:"";position:absolute;top:.15rem;left:.15rem;width:1rem;height:1rem;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.sw input:checked{background:var(--accent,#2f6fb0)} .sw input:checked::before{left:1.15rem}
+.sw input:focus-visible{outline:2px solid var(--accent,#2f6fb0);outline-offset:2px}
+.sw small{display:block;color:var(--muted)}
+.presets{display:flex;flex-wrap:wrap;gap:.35rem}
+.presets .btn{border-radius:999px}
+.swatches{display:flex;flex-wrap:wrap;gap:.5rem}
+.tlswatch{display:inline-flex;align-items:center;gap:.4rem;flex:0 0 auto;white-space:nowrap;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:.2rem .35rem .2rem .25rem;font-size:.88em;background:var(--panel2)}
+.tlswatch input[type=color]{width:1.7rem;height:1.7rem;border:none;border-radius:50%;padding:0;background:none;cursor:pointer}
+.tlswatch input[type=color]::-webkit-color-swatch-wrapper{padding:0} .tlswatch input[type=color]::-webkit-color-swatch{border:1px solid var(--line2);border-radius:50%}
+.tlswatch input[type=color]::-moz-color-swatch{border:1px solid var(--line2);border-radius:50%}
+.tlswatch button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 .2rem} .tlswatch button:hover{color:var(--ink)}
 .tabs button{border:1px solid transparent;border-bottom:none;background:transparent;padding:.45rem .8rem;border-radius:6px 6px 0 0;cursor:pointer;color:var(--muted)}
 .tabs button.on{border-color:var(--line);background:var(--panel2);color:var(--ink);font-weight:600;position:relative;top:1px}
 .form{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.8rem 1rem}
@@ -477,7 +512,6 @@ body.nosteps .mins.timing input{width:4.5em}
 @media (max-width:900px){
   header.top{padding:.7rem .8rem .6rem}
   #moreBtn{display:inline-block}
-  header.top:not(.more-open) .toolbar .opt{display:none}
   /* the day banner folds to the filters; Day settings opens the rest */
   #bandToggle{display:inline-flex;align-items:center;gap:.4rem;flex-basis:100%;justify-content:space-between;border:none;background:none;padding:0;color:var(--ink);font-weight:600;cursor:pointer;text-align:left}
   #bandToggle small{font-weight:400;color:var(--muted)}
@@ -560,20 +594,30 @@ body.nosteps .mins.timing input{width:4.5em}
     <span class="who noprint" id="who"></span>
     <span class="spacer"></span>
     <div class="toolbar noprint">
-      <button class="btn small" id="undoBtn" title="Undo your last change (Ctrl/Cmd+Z)">↶ Undo</button>
-      <button class="btn small" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
-      <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
-      <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
-      <button class="btn small opt" id="impBtn" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import</button>
-      <button class="btn small opt" id="xlsxBtn" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx</button>
-      <button class="btn small opt" id="csvBtn">Export CSV</button>
-      <button class="btn small opt" id="printBtn">Print / PDF</button>
-      <button class="btn small" id="moreBtn" aria-expanded="false" title="Import, export, print and activity">More ▾</button>
-      <button class="btn small opt" id="actBtn" title="Who changed what">Activity</button>
-      <button class="btn small icon" id="themeBtn" title="Switch light / dark">◐</button>
-      <button class="btn small" id="shareBtn" title="Invite someone to this project">Share</button>
-      <button class="btn small" id="setBtn">Settings</button>
-      <button class="btn small primary" id="helpBtn">Help</button>
+      <span class="tgroup">
+        <button class="btn small icon" id="undoBtn" title="Undo your last change (Ctrl/Cmd+Z)" aria-label="Undo">↶</button>
+        <button class="btn small icon" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo">↷</button>
+      </span>
+      <span class="tgroup">
+        <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
+        <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
+        <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity">File ▾</button>
+          <div class="pop menu" id="filePop" role="menu">
+            <button class="mi" id="impBtn" role="menuitem" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import… <small>sheet, CSV or storyboard PDF</small></button>
+            <hr>
+            <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
+            <button class="mi" id="csvBtn" role="menuitem">Export CSV <small>every day, one row per shot</small></button>
+            <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
+            <hr>
+            <button class="mi" id="actBtn" role="menuitem" title="Who changed what">Activity <small>who changed what</small></button>
+          </div></div>
+      </span>
+      <span class="tgroup">
+        <button class="btn small icon" id="themeBtn" title="Switch light / dark" aria-label="Switch light / dark">◐</button>
+        <button class="btn small" id="shareBtn" title="Invite someone to this project">Share</button>
+        <button class="btn small" id="setBtn">Settings</button>
+        <button class="btn small primary" id="helpBtn">Help</button>
+      </span>
       <span class="onsetgroup">
         <button class="btn small onset slate" id="slateBtn" title="Full-screen slate for the next shot, with timecode"><span class="clapicon" aria-hidden="true"></span>Slate</button>
         <button class="btn small onset notes" id="notesBtn" title="The current shot full screen: notes, scribbles, takes">Notes</button>

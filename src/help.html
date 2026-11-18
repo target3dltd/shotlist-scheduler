@@ -43,6 +43,7 @@
     <li>Each finished shot gets a <b>score</b>: the minutes it won back (+, green) or lost (−, red) against the plan. Your <b>streak</b> counts the shots in a row that held or beat the plan, next to the day's best streak and the total won back and lost. The bar shows where the day will wrap against the target, from an hour early to an hour late.</li>
     <li>It scores the time each shot was ticked as shot, so tick them as they finish (in the table, or Shot done in Slate View or Note View). Turn the panel off in Settings &gt; Display.</li>
     <li><b>Takes</b> and <b>Captured</b> (Mocap days) or <b>Raw footage</b> (Live Action days) cards appear once takes are logged: the day's takes, and the seconds recorded between each take's timecode in and out (Clap and Cut on the slate, or Roll and Cut in Note View), with the average per take and the project total.</li>
+    <li>On Mocap days a <b>Hero selects</b> card sits next to Captured: the seconds in takes marked <b>Hero</b> (in Note View), how many hero takes there are, and what share of the captured time they make up. Hero takes without a timecode out are counted but noted as not timed.</li>
   </ul>
 
   <h3>Slate View and Note View</h3>
@@ -113,7 +114,7 @@
 
   <h3>Spreadsheets</h3>
   <ul>
-    <li><b>Import</b> (under More on small screens, or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>File ▾ &gt; Import</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
     <li><b>Group retakes</b> merges consecutive rows with the same Shot # and Action into one shot with a take count. Hero / Safety / NG marks per take are noted in Director notes, e.g. <code>Hero: T7</code>.</li>
     <li>Tick <b>Rows are takes already recorded</b> when importing a log of what was shot. Leave it off for a plan, so the first take you log is T1.</li>
     <li>Headings that don't match anything are set to <b>+ New column</b>, which creates a project column named after the heading. Its type is worked out from the values: tick box, number, dropdown or text. Change any of them to Ignore if you don't want them.</li>
@@ -156,12 +157,17 @@
     <li>Pictures belong to their project: with project keys on, only people holding that project's key can see them.</li>
   </ul>
 
+  <h3>The header</h3>
+  <ul>
+    <li>From the left: <b>↶ ↷</b> undo and redo; <b>Columns</b>, <b>DIT names</b> and the <b>File ▾</b> menu (Import, Export .xlsx, Export CSV, Print / PDF, Activity); <b>◐</b> light / dark, <b>Share</b>, <b>Settings</b>, <b>Help</b>; then <b>Slate</b> and <b>Notes</b>.</li>
+  </ul>
+
   <h3>Tablets and phones</h3>
   <ul>
     <li>The tool works on iPads and other tablets, and on phones for quick checks and ticking shots off. Add it to your home screen (Share → Add to Home Screen) and it opens like an app.</li>
     <li>On narrower screens the <b>Shot #</b> column stays put while you swipe sideways along a row, so you always know which shot you're in.</li>
     <li>The day banner folds down to the <b>Show</b> and <b>Priority</b> filters. Tap <b>Day settings</b> to open the name, status, times and buffers.</li>
-    <li>Import, export, print and Activity move under <b>More ▾</b>. Day tabs and the summary cards scroll sideways.</li>
+    <li>Day tabs, the summary cards and the Settings tabs scroll sideways.</li>
     <li>Buttons and the − / + steppers get bigger on touch screens. Drag a column's right edge with your finger to resize it. To move a row, use the ↑ ↓ buttons in the row's last column if dragging the ⠿ handle is fiddly.</li>
   </ul>
 

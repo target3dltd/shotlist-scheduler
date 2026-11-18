@@ -1,24 +1,25 @@
 "use strict";
-const VERSION = "2.20.0";
+const VERSION = "2.21.0";
 const CHANGELOG = [
-  ["2.20.0","2026-11-18","Takes and Captured / Raw footage cards: the day's logged takes and the seconds recorded between each take's timecode in and out (Captured on Mocap days, Raw footage on Live Action). Pace panel on shoot days: a big +/- score, each finished shot's minutes won back or lost, your on-pace streak and best streak, and where the day will wrap against the target."],
-  ["2.19.0","2026-11-18","Cut in Slate View: Clap logs a take with its timecode in, Cut adds the timecode out and length. Note View shows in / out for every take (its Roll / Cut does the same), the slate shows the rolling take, and the .xlsx export fills TC IN / TC OUT from the logged takes. A jam is shared with the team, so every device on the project logs takes on the same timecode."],
-  ["2.18.0","2026-11-18","Clap sound in Slate View: a clap by default, or clapper sticks, a 1 kHz sync beep, your own sound file or none, with a volume control. Slate and Notes now sit at the end of the header as red and blue buttons."],
-  ["2.17.1","2026-11-18","Laptops: choose which audio input carries the LTC, open the slate in its own window for a second screen, and keyboard shortcuts in Slate View and Note View."],
-  ["2.17.0","2026-11-18","Slate View: a full-screen, customisable slate for the next shot, with time of day timecode or timecode jammed from LTC audio (e.g. a Tentacle Sync into the mic input) or typed in, free-running after the jam; clapping logs the take with its timecode. Note View: the current shot full screen with its pictures and script, editable notes, a scribble pad saved to the shot, a take logger (Roll / Cut, Good / NG / Hero / Safety) and Shot done. Both work on phones and tablets."],
-  ["2.16.1","2026-11-18","The jump-to-time box always opens fully on screen (above the row when there's no room below)."],
-  ["2.16.0","2026-11-18","Jump a row to a time: click a row's Start time, type when you want it to happen, and it moves to the slot where it starts closest to that time (with a preview of where it will land). Works for shots, breaks and tech rows."],
-  ["2.15.0","2026-11-18","Move shots between days: Move on a shot (or Move… in the recovery plan) sends it, and any others you tick, to another day or a new one, at the start or end. One click picks every shot not yet shot. Copy adds fresh copies instead. Moved shots keep everything and stay the same shot for the team."],
-  ["2.14.0","2026-11-18","Tech / turnaround rows: a purple row type for technical setups, resets and turnarounds, added with + Tech / turnaround or +Tech on a row. They take time like a break but have their own colour, total and timeline colour, and a tag on the row switches between Break and Tech."],
-  ["2.13.1","2026-11-18","A storyboard picture that won't load now says why in its box (click to retry) instead of staying blank, and the PDF import checks its pictures load back and says which days they went on."],
-  ["2.13.0","2026-11-18","Storyboard pictures from a PDF: Import reads a shot tracker PDF (e.g. a Google Sheets export), matches each picture to its shot number, including extra frames on rows below and across page breaks, and adds them after a preview. Shots now hold 3 pictures. Pictures now survive exports: the .xlsx export puts them in Storyboard columns and the project file packs them in, and importing either brings them back into whichever project receives them. Pictures on rows of sheets from elsewhere come in too."],
-  ["2.12.1","2026-11-18","Fix: renaming a project in Settings > Project now also renames it in the project list (Settings > Projects, the project key prompt), for everyone."],
-  ["2.12.0","2026-11-18","Project keys: with ADMIN_KEY set on the site, each project has its own key, people only see and open the projects whose keys they hold, and the server enforces it for the schedule, saves, activity and images. The admin opens everything. Change a key to cut someone off one job without touching the others; devices using the old key drop the project at once. Share includes the key, and Remove from this device takes a project off a machine."],
-  ["2.11.1","2026-11-18","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
-  ["2.11.0","2026-11-18","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
-  ["2.10.0","2026-11-17","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
-  ["2.9.0","2026-11-17","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
-  ["2.8.0","2026-11-17","Running delta: on the shoot day a Running card shows how far ahead (-) or behind (+) you are, from when shots were ticked off and the time now, with the projected wrap and a now line on the timeline. Recovery plan panel with amber and red gates (set in Settings > Team defaults): suggests shots to cut, ranked by setup and shooting time against priority and screen time, and wins such as moving a shot next to others at the same location to skip a setup. Cut takes a shot out of the timings without deleting it, and Restore brings it back."],
+  ["2.21.0","2026-11-18","Version history shows a date on the latest update only. Hero selects card on Mocap days: the seconds in takes marked Hero, next to Captured. Tidier header: buttons grouped, with Import, Export, Print and Activity in a File menu. Display settings regrouped into Presets, Colours, Text, Layout, Table and on-set tools, and Timeline colours, with switches and compact colour swatches. Settings tabs scroll in one row on phones."],
+  ["2.20.0","","Takes and Captured / Raw footage cards: the day's logged takes and the seconds recorded between each take's timecode in and out (Captured on Mocap days, Raw footage on Live Action). Pace panel on shoot days: a big +/- score, each finished shot's minutes won back or lost, your on-pace streak and best streak, and where the day will wrap against the target."],
+  ["2.19.0","","Cut in Slate View: Clap logs a take with its timecode in, Cut adds the timecode out and length. Note View shows in / out for every take (its Roll / Cut does the same), the slate shows the rolling take, and the .xlsx export fills TC IN / TC OUT from the logged takes. A jam is shared with the team, so every device on the project logs takes on the same timecode."],
+  ["2.18.0","","Clap sound in Slate View: a clap by default, or clapper sticks, a 1 kHz sync beep, your own sound file or none, with a volume control. Slate and Notes now sit at the end of the header as red and blue buttons."],
+  ["2.17.1","","Laptops: choose which audio input carries the LTC, open the slate in its own window for a second screen, and keyboard shortcuts in Slate View and Note View."],
+  ["2.17.0","","Slate View: a full-screen, customisable slate for the next shot, with time of day timecode or timecode jammed from LTC audio (e.g. a Tentacle Sync into the mic input) or typed in, free-running after the jam; clapping logs the take with its timecode. Note View: the current shot full screen with its pictures and script, editable notes, a scribble pad saved to the shot, a take logger (Roll / Cut, Good / NG / Hero / Safety) and Shot done. Both work on phones and tablets."],
+  ["2.16.1","","The jump-to-time box always opens fully on screen (above the row when there's no room below)."],
+  ["2.16.0","","Jump a row to a time: click a row's Start time, type when you want it to happen, and it moves to the slot where it starts closest to that time (with a preview of where it will land). Works for shots, breaks and tech rows."],
+  ["2.15.0","","Move shots between days: Move on a shot (or Move… in the recovery plan) sends it, and any others you tick, to another day or a new one, at the start or end. One click picks every shot not yet shot. Copy adds fresh copies instead. Moved shots keep everything and stay the same shot for the team."],
+  ["2.14.0","","Tech / turnaround rows: a purple row type for technical setups, resets and turnarounds, added with + Tech / turnaround or +Tech on a row. They take time like a break but have their own colour, total and timeline colour, and a tag on the row switches between Break and Tech."],
+  ["2.13.1","","A storyboard picture that won't load now says why in its box (click to retry) instead of staying blank, and the PDF import checks its pictures load back and says which days they went on."],
+  ["2.13.0","","Storyboard pictures from a PDF: Import reads a shot tracker PDF (e.g. a Google Sheets export), matches each picture to its shot number, including extra frames on rows below and across page breaks, and adds them after a preview. Shots now hold 3 pictures. Pictures now survive exports: the .xlsx export puts them in Storyboard columns and the project file packs them in, and importing either brings them back into whichever project receives them. Pictures on rows of sheets from elsewhere come in too."],
+  ["2.12.1","","Fix: renaming a project in Settings > Project now also renames it in the project list (Settings > Projects, the project key prompt), for everyone."],
+  ["2.12.0","","Project keys: with ADMIN_KEY set on the site, each project has its own key, people only see and open the projects whose keys they hold, and the server enforces it for the schedule, saves, activity and images. The admin opens everything. Change a key to cut someone off one job without touching the others; devices using the old key drop the project at once. Share includes the key, and Remove from this device takes a project off a machine."],
+  ["2.11.1","","No project data ships with the code any more, so a new site set up from the same repository starts empty. Help explains how to give another team its own private site."],
+  ["2.11.0","","Column group colours: subtle tints tie related columns together (Shot, Timing, Capture, Location, Story, Camera & look, Notes, Storyboard), adjustable or off in Settings > Display, and your own columns can join a group. Camera & lighting is now two columns, Camera and Lighting, also in the CSV and .xlsx."],
+  ["2.10.0","","Share button: a link that opens this project, and a ready-written invite to copy, email or share. The site password and team key are left out unless you choose to include them (send them separately to be safe), and the password is never saved. Optionally adds the person to Cast & crew."],
+  ["2.9.0","","Hero / safety links: on wrapped days a panel asks for a link (Google Drive or similar) to the file for every hero and safety take, with a reminder until they are all in. New Hero link and Safety link columns, also in the CSV and .xlsx exports. Print / PDF shows only the tab being printed, the tick box in the first column is no longer clipped, and rows stay whole across page breaks (only a row taller than a page splits) with a cell line at the bottom of every page. Help has a search box and a contents list, and reads more generally. Tabs that aren't open now sit behind the day banner."],
+  ["2.8.0","","Running delta: on the shoot day a Running card shows how far ahead (-) or behind (+) you are, from when shots were ticked off and the time now, with the projected wrap and a now line on the timeline. Recovery plan panel with amber and red gates (set in Settings > Team defaults): suggests shots to cut, ranked by setup and shooting time against priority and screen time, and wins such as moving a shot next to others at the same location to skip a setup. Cut takes a shot out of the timings without deleting it, and Restore brings it back."],
   ["2.7.1","","Print / PDF uses a small, still readable text size (about 6.5pt) with tight line spacing whatever your on-screen text size is, so rows stay short."],
   ["2.7.0","","Spreadsheet round trip: an exported .xlsx imported back restores the days exactly (name, Mocap / Live Action, date, times, script, refs, your own columns and their types), while still taking any edits made in the sheet. Before, a re-imported Live Action day came back as a Mocap day with a different set of columns. Also fixed: exporting failed when a project had a dropdown column, and importing into a new project now gives it its own new columns instead of adding them to the current project."],
   ["2.6.2","","Fix: after choosing Work offline you can get back. A Rejoin team project button appears in the header (and in Settings > Team & sync) whenever the team site is reachable; adding ?team to the address also rejoins."],
@@ -927,14 +928,17 @@ function renderStats(C){
 /* ===================== takes, captured seconds and pace ===================== */
 // length of a timed take (cut), in ms
 function takeMs(t){ if(Number(t.ms)>0) return Number(t.ms); const m=String(t.len||"").match(/^(\d+):(\d{2})$/); return t.out&&m?(+m[1]*60+ +m[2])*1000:0; }
-function takeStats(d){ let takes=0,timed=0,ms=0; for(const r of d.rows){ if(isBlock(r)||r.cut) continue; takes+=Number(r.takes)||0; for(const t of takeList(r)){ const x=takeMs(t); if(x>0){timed++;ms+=x} } } return {takes,timed,ms}; }
+function takeStats(d){ let takes=0,timed=0,ms=0,hero=0,heroMs=0,heroUntimed=0; for(const r of d.rows){ if(isBlock(r)||r.cut) continue; takes+=Number(r.takes)||0;
+  for(const t of takeList(r)){ const x=takeMs(t); if(x>0){timed++;ms+=x} if(t.mark==="hero"){hero++; if(x>0) heroMs+=x; else heroUntimed++;} } } return {takes,timed,ms,hero,heroMs,heroUntimed}; }
 function durSecs(ms){ const s=Math.round(ms/1000); return s<60?s+"s":s<3600?Math.floor(s/60)+"m "+String(s%60).padStart(2,"0")+"s":Math.floor(s/3600)+"h "+String(Math.floor(s/60)%60).padStart(2,"0")+"m"; }
 function takeCards(d,card){
   const st=takeStats(d); if(!st.takes&&!st.timed&&d.kind!=="capture") return [];
   const label=d.kind==="capture"?"Captured":"Raw footage";
   const proj=live().reduce((a,x)=>a+takeStats(x).ms,0);
   return [card("Takes",String(st.takes),st.timed?st.timed+" timed with in / out":"logged on the slate or in Notes"),
-    ...(st.timed?[card(label,durSecs(st.ms),`${Math.round(st.ms/1000)} seconds · avg ${durSecs(st.ms/st.timed)} a take`+(proj>st.ms?` · project ${durSecs(proj)}`:""))]:[])];
+    ...(st.timed?[card(label,durSecs(st.ms),`${Math.round(st.ms/1000)} seconds · avg ${durSecs(st.ms/st.timed)} a take`+(proj>st.ms?` · project ${durSecs(proj)}`:""))]:[]),
+    // Mocap: how much of the capture is hero selects
+    ...(d.kind==="capture"&&st.hero?[card("Hero selects",durSecs(st.heroMs),`${Math.round(st.heroMs/1000)} seconds · ${st.hero} hero take${st.hero===1?"":"s"}`+(st.ms?` · ${Math.round(st.heroMs/st.ms*100)}% of captured`:"")+(st.heroUntimed?` · ${st.heroUntimed} not timed`:""))]:[])];
 }
 // how each finished shot did against the plan: minutes won back (+) or lost (-), and the streak of shots that held pace
 function paceData(d,C){
@@ -1882,49 +1886,61 @@ function renderSetTab(){
     b.append(f);
   }
   else if(setTab==="display"){
-    b.append(h("p",{class:"note"},"Just for you, on this device. Try a preset, then fine-tune."));
+    b.append(h("p",{class:"note"},"Just for you, on this device. Pick a preset, then fine-tune anything below."));
+    const sec=(title,...kids)=>{const x=h("section",{class:"dsec"},h("h4",{},title),...kids);b.append(x);return x};
+    const after=fn=>()=>{savePrefs();applyDisplay();fn&&fn()};
+    const sel=(label,key,opts,fn,num)=>{const s=h("select",{});for(const [v,l] of opts)s.append(h("option",{value:v},l));s.value=String(P[key]);s.addEventListener("change",()=>{P[key]=num?Number(s.value):s.value;after(fn)()});return h("label",{},label,s)};
+    const range=(label,key,min,max,step,show,fn)=>{const out=h("b",{},show(P[key]));const i=h("input",{type:"range",min:String(min),max:String(max),step:String(step),value:String(P[key])});
+      i.addEventListener("input",()=>{P[key]=Number(i.value);out.textContent=show(P[key]);applyDisplay()});i.addEventListener("change",after(fn));return h("label",{class:"rng"},h("span",{class:"rl"},h("span",{},label),out),i)};
+    const sw=(label,sub,get,set)=>{const c=h("input",{type:"checkbox",role:"switch"});c.checked=get();c.addEventListener("change",()=>{set(c.checked);savePrefs();applyDisplay()});return h("label",{class:"sw"},c,h("span",{},label,sub?h("small",{},sub):null))};
+    const px=v=>v+"px", x2=v=>Number(v).toFixed(2), em=v=>Number(v)===0?"normal":"+"+Math.round(Number(v)*100)+"%";
     const presets={
       "Easy on the eyes":{theme:"warm",accent:"",font:"atkinson",fw:400,ui:14,tbl:15,lh:1.6,ls:0.01,density:"roomy",zebra:true,calm:true},
       "Night / dark set":{theme:"dim",accent:"",font:"atkinson",fw:400,ui:14,tbl:14,lh:1.55,ls:0.01,density:"comfortable",zebra:true,calm:true},
       "High contrast":{theme:"hc",accent:"",font:"atkinson",fw:500,ui:15,tbl:16,lh:1.55,ls:0.02,density:"roomy",zebra:true,calm:true},
       "Compact (fit more)":{theme:P.theme,font:"system",fw:400,ui:12,tbl:12,lh:1.3,ls:0,density:"compact",zebra:true},
       "Default":Object.assign({},DISPLAY_DEFAULTS)};
-    b.append(h("div",{class:"toolbar",style:"margin-bottom:1rem"},...Object.entries(presets).map(([n,v])=>h("button",{class:"btn small",onclick:()=>{Object.assign(P,v);savePrefs();applyDisplay();renderAll();renderSetTab();toast(n)}},n))));
-    const f=h("div",{class:"form"});
-    const sel=(label,key,opts,after,num)=>{const s=h("select",{});for(const [v,l] of opts)s.append(h("option",{value:v},l));s.value=String(P[key]);s.addEventListener("change",()=>{P[key]=num?Number(s.value):s.value;savePrefs();applyDisplay();after&&after()});f.append(h("label",{},label,s))};
-    const range=(label,key,min,max,step,unit,after)=>{const show=v=>unit==="px"?v+"px":unit==="x"?Number(v).toFixed(2):unit==="em"?(Number(v)===0?"normal":"+"+Math.round(Number(v)*100)+"%"):v;const out=h("span",{},show(P[key]));const i=h("input",{type:"range",min:String(min),max:String(max),step:String(step),value:String(P[key])});i.addEventListener("input",()=>{P[key]=Number(i.value);out.textContent=show(i.value);applyDisplay()});i.addEventListener("change",()=>{savePrefs();reflow();after&&after()});f.append(h("label",{},h("span",{},label," ",out),i))};
-    const tog=(label,key)=>{const c=h("input",{type:"checkbox"});c.checked=!!P[key];c.addEventListener("change",()=>{P[key]=c.checked;savePrefs();applyDisplay()});f.append(h("label",{class:"inline"},c,label))};
-    sel("Colour theme","theme",[["auto","Match my device (light / dark)"],["light","Light"],["warm","Warm paper (softer, less glare)"],["dim","Dim (soft dark grey)"],["dark","Dark"],["hc","High contrast"],["hcdark","High contrast dark"]]);
-    sel("Highlight colour","accent",[["","Theme default"],["#c2412d","Red"],["#d0700f","Orange"],["#2e7d4f","Green"],["#1f7a7a","Teal"],["#2f6fb0","Blue"],["#7a5ea8","Purple"],["#a33b6b","Magenta"]]);
-    sel("Font","font",[["system","System (default)"],["atkinson","Atkinson Hyperlegible (made for easier reading)"],["lexend","Lexend (wider, calmer letters)"],["serif","Serif"],["rounded","Rounded"],["mono","Monospace"]],()=>setTimeout(reflow,300));
-    sel("Text weight","fw",[["400","Regular"],["500","Medium"],["600","Semi-bold"]],null,true);
-    range("Interface text size","ui",11,20,1,"px"); range("Table text size","tbl",10,22,1,"px");
-    range("Line spacing","lh",1.2,2,0.05,"x"); range("Letter spacing","ls",0,0.08,0.01,"em");
-    sel("Row spacing","density",[["compact","Compact"],["comfortable","Comfortable"],["roomy","Roomy"]],()=>reflow());
-    sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll());
-    tog("Stripe alternate rows (easier to follow a row across)","zebra");
-    tog("Reduce motion (no flashing or fades)","calm");
-    tog("Show − / + buttons on Setup and Shoot times (untick to just type)","steppers");
-    { const i=h("input",{type:"checkbox"}); i.checked=P.showPace!==false; i.addEventListener("change",()=>{P.showPace=i.checked;savePrefs();renderPace(compute())}); f.append(h("label",{class:"inline"},i,"Show the Pace panel (ahead / behind score, streaks) on shoot days")); }
-    { const sel=h("select",{});[["off","Off"],["subtle","Subtle"],["strong","Stronger"]].forEach(([v,l])=>sel.append(h("option",{value:v},l)));sel.value=P.colTint||"subtle";
-      sel.addEventListener("change",()=>{P.colTint=sel.value;savePrefs();applyDisplay()});
-      f.append(h("label",{},"Column group colours (tints related columns: shot, timing, capture, story, camera & look, notes, storyboard)",sel)); }
-    tog("Highlight rows the team are working in, in each person's badge colour","peerRows");
-    const f2=h("div",{class:"form",id:"colourForm"});
-    const pick=(label,key,cssVar)=>{const cur=()=>(P.tl||{})[key]||getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()||"#888888";
-      const i=h("input",{type:"color",value:toHex(cur())});const def=h("button",{class:"btn small",title:"Back to the theme's colour"},"Theme default");
-      i.addEventListener("input",()=>{P.tl=Object.assign({},P.tl,{[key]:i.value});applyDisplay()});i.addEventListener("change",savePrefs);
-      def.onclick=()=>{P.tl=Object.assign({},P.tl,{[key]:""});savePrefs();applyDisplay();i.value=toHex(cur())};
-      f2.append(h("label",{},label,h("span",{class:"toolbar"},i,def)))};
-    pick("Timeline: setup","setup","--setup"); pick("Timeline: shooting","shoot","--shoot"); pick("Timeline: break / move","break","--break"); pick("Timeline: tech / turnaround","tech","--tech"); pick("Timeline: target wrap line","wrap","--bad");
+    sec("Presets",h("div",{class:"presets"},...Object.entries(presets).map(([n,v])=>h("button",{class:"btn small",onclick:()=>{Object.assign(P,v);savePrefs();applyDisplay();renderAll();renderSetTab();toast(n)}},n))));
+    // colours
     const bandSel=h("select",{});for(const [v,l] of BANDS)bandSel.append(h("option",{value:v},l));bandSel.value=BANDS.some(x=>x[0]===P.band)?P.band:"custom";
-    const bandPick=h("input",{type:"color",value:/^#/.test(P.band||"")?P.band:"#2f4858"});
+    const bandPick=h("input",{type:"color",value:/^#/.test(P.band||"")?P.band:"#2f4858",style:"width:2.4rem;height:2rem;padding:0;border:none;background:none"});
     const showPick=()=>{bandPick.style.display=bandSel.value==="custom"?"":"none"};showPick();
     bandSel.addEventListener("change",()=>{P.band=bandSel.value==="custom"?bandPick.value:bandSel.value;showPick();savePrefs();applyDisplay()});
     bandPick.addEventListener("input",()=>{P.band=bandPick.value;applyDisplay()});bandPick.addEventListener("change",savePrefs);
-    f2.append(h("label",{},"Day banner colour (behind the day settings and filters)",h("span",{class:"toolbar"},bandSel,bandPick)));
-    { const out=h("span",{},Math.round(P.bandMix)+"%");const i=h("input",{type:"range",min:"4",max:"40",step:"1",value:String(P.bandMix)});i.addEventListener("input",()=>{P.bandMix=Number(i.value);out.textContent=i.value+"%";applyDisplay()});i.addEventListener("change",savePrefs);f2.append(h("label",{},h("span",{},"Banner strength ",out),i)); }
-    b.append(f,h("h3",{style:"margin-top:1.2rem"},"Timeline and banner colours"),h("p",{class:"note"},"Also just for you. They follow your colour theme until you pick your own."),f2,h("div",{class:"toolbar",style:"margin-top:1rem"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[],tl:{}});invalidateCols();savePrefs();applyDisplay();renderAll();renderSetTab()}},"Reset display")));
+    const tint=h("select",{});[["off","Off"],["subtle","Subtle"],["strong","Stronger"]].forEach(([v,l])=>tint.append(h("option",{value:v},l)));tint.value=P.colTint||"subtle";
+    tint.addEventListener("change",()=>{P.colTint=tint.value;savePrefs();applyDisplay()});
+    sec("Colours",h("div",{class:"dgrid"},
+      sel("Colour theme","theme",[["auto","Match my device (light / dark)"],["light","Light"],["warm","Warm paper (softer, less glare)"],["dim","Dim (soft dark grey)"],["dark","Dark"],["hc","High contrast"],["hcdark","High contrast dark"]]),
+      sel("Highlight colour","accent",[["","Theme default"],["#c2412d","Red"],["#d0700f","Orange"],["#2e7d4f","Green"],["#1f7a7a","Teal"],["#2f6fb0","Blue"],["#7a5ea8","Purple"],["#a33b6b","Magenta"]]),
+      h("label",{title:"Tints related columns: shot, timing, capture, story, camera & look, notes, storyboard"},"Column group colours",tint),
+      h("label",{},"Day banner colour",h("span",{class:"toolbar",style:"flex-wrap:nowrap"},bandSel,bandPick)),
+      range("Banner strength","bandMix",4,40,1,v=>Math.round(v)+"%")));
+    sec("Text",h("div",{class:"dgrid"},
+      sel("Font","font",[["system","System (default)"],["atkinson","Atkinson Hyperlegible (easier reading)"],["lexend","Lexend (wider, calmer letters)"],["serif","Serif"],["rounded","Rounded"],["mono","Monospace"]],()=>setTimeout(reflow,300)),
+      sel("Text weight","fw",[["400","Regular"],["500","Medium"],["600","Semi-bold"]],null,true),
+      range("Interface text size","ui",11,20,1,px), range("Table text size","tbl",10,22,1,px),
+      range("Line spacing","lh",1.2,2,0.05,x2), range("Letter spacing","ls",0,0.08,0.01,em)));
+    sec("Layout",h("div",{class:"dgrid"},
+      sel("Row spacing","density",[["compact","Compact"],["comfortable","Comfortable"],["roomy","Roomy"]],()=>reflow()),
+      sel("Clock","clock",[["24","24-hour (14:30)"],["12","12-hour (2:30pm)"]],()=>renderAll())),
+      h("div",{class:"dswitches",style:"margin-top:.5rem"},
+        sw("Stripe alternate rows","easier to follow a row across",()=>!!P.zebra,v=>P.zebra=v),
+        sw("Reduce motion","no flashing or fades",()=>!!P.calm,v=>P.calm=v)));
+    sec("Table and on-set tools",h("div",{class:"dswitches"},
+      sw("− / + buttons on Setup and Shoot","turn off to just type the minutes",()=>P.steppers!==false,v=>P.steppers=v),
+      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>renderPace(compute()),0)}),
+      sw("Highlight rows the team are working in","in each person's badge colour (team site)",()=>!!P.peerRows,v=>P.peerRows=v)));
+    // timeline colours: a swatch each, with a reset back to the theme's colour
+    const sws=h("div",{class:"swatches",id:"colourForm"});
+    for(const [label,key,cssVar] of [["Setup","setup","--setup"],["Shooting","shoot","--shoot"],["Break / move","break","--break"],["Tech / turnaround","tech","--tech"],["Target wrap","wrap","--bad"]]){
+      const cur=()=>(P.tl||{})[key]||getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()||"#888888";
+      const i=h("input",{type:"color",value:toHex(cur()),"aria-label":label+" colour"});
+      i.addEventListener("input",()=>{P.tl=Object.assign({},P.tl,{[key]:i.value});applyDisplay()});i.addEventListener("change",savePrefs);
+      const r=h("button",{title:"Back to the theme's colour","aria-label":"Reset "+label},"↺");r.onclick=()=>{P.tl=Object.assign({},P.tl,{[key]:""});savePrefs();applyDisplay();i.value=toHex(cur())};
+      sws.append(h("span",{class:"tlswatch"},i,label,r));
+    }
+    sec("Timeline colours",h("p",{class:"note",style:"margin:0 0 .5rem"},"They follow your colour theme until you pick your own; ↺ goes back to the theme's."),sws);
+    b.append(h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{Object.assign(P,DISPLAY_DEFAULTS,{widths:{},colOrder:[],tl:{}});savePrefs();applyDisplay();renderAll();renderSetTab();toast("Display reset")}},"Reset all display settings")));
   }
   else if(setTab==="projects") renderProjectsTab(b);
   else if(setTab==="team"){
@@ -2196,7 +2212,7 @@ async function startLocal(){
 async function boot(){
   applyDisplay();
   $("#verLabel").textContent="v"+VERSION; $("#helpVer").textContent="Version v"+VERSION;
-  $("#changelog").append(...CHANGELOG.map(([v,d,t],i)=>h("li",{class:i>=4?"older":""},h("b",{},"v"+v),(d?" ("+d+")":"")+" - "+t)),h("li",{class:"more"},h("button",{class:"btn small",onclick:e=>{$("#changelog").classList.add("all");e.target.parentElement.remove()}},"Show all versions")));
+  $("#changelog").append(...CHANGELOG.map(([v,d,t],i)=>h("li",{class:i>=4?"older":""},h("b",{},"v"+v),(i===0&&d?" ("+d+")":"")+" - "+t)),h("li",{class:"more"},h("button",{class:"btn small",onclick:e=>{$("#changelog").classList.add("all");e.target.parentElement.remove()}},"Show all versions")));
   buildHelpNav();
   setTimeout(checkVersion,5000); setInterval(checkVersion,60000);
   if(/[?&]team\b/.test(location.search)&&P.mode==="local-forced"){P.mode=null;savePrefs()}
@@ -2229,7 +2245,6 @@ $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();r
 $("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});
 $("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
 $("#tlColours").onclick=e=>{e.preventDefault();openSettings("display");setTimeout(()=>{const f=$("#colourForm");if(f)f.scrollIntoView({block:"start"})},50)};
-$("#moreBtn").onclick=()=>{const t=$("header.top");const o=t.classList.toggle("more-open");$("#moreBtn").setAttribute("aria-expanded",o);$("#moreBtn").textContent=o?"Less ▴":"More ▾"};
 $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.toggle("open");$("#bandToggle").setAttribute("aria-expanded",o);$("#bandArrow").textContent=o?"▴":"▾"};
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
@@ -2286,7 +2301,9 @@ $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
-document.addEventListener("click",e=>{if(!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open")});
+document.addEventListener("click",e=>{if(!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+$("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
 $("#pasteBtn").onclick=()=>{$("#pasteText").value="";$("#pasteModal").classList.add("open");$("#pasteText").focus()};
 $("#pasteGo").onclick=()=>{const lines=$("#pasteText").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);const d=D();if(!lines.length||!d)return;
