@@ -1,6 +1,7 @@
 "use strict";
-const VERSION = "2.14.0";
+const VERSION = "2.15.0";
 const CHANGELOG = [
+  ["2.15.0","2026-11-18","Move shots between days: Move on a shot (or Move… in the recovery plan) sends it, and any others you tick, to another day or a new one, at the start or end. One click picks every shot not yet shot. Copy adds fresh copies instead. Moved shots keep everything and stay the same shot for the team."],
   ["2.14.0","2026-11-18","Tech / turnaround rows: a purple row type for technical setups, resets and turnarounds, added with + Tech / turnaround or +Tech on a row. They take time like a break but have their own colour, total and timeline colour, and a tag on the row switches between Break and Tech."],
   ["2.13.1","2026-11-18","A storyboard picture that won't load now says why in its box (click to retry) instead of staying blank, and the PDF import checks its pictures load back and says which days they went on."],
   ["2.13.0","2026-11-18","Storyboard pictures from a PDF: Import reads a shot tracker PDF (e.g. a Google Sheets export), matches each picture to its shot number, including extra frames on rows below and across page breaks, and adds them after a preview. Shots now hold 3 pictures. Pictures now survive exports: the .xlsx export puts them in Storyboard columns and the project file packs them in, and importing either brings them back into whichever project receives them. Pictures on rows of sheets from elsewhere come in too."],
@@ -71,6 +72,7 @@ function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;i
 const P=Object.assign({name:"",poll:3,peerRows:false,tl:{},steppers:true},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
+if(!P.v215){ if(P.widths&&P.widths.actions&&P.widths.actions<112) P.widths.actions=112; P.v215=true; }
 if(!P.v210){ for(const k of ["schedule","capture"]){const l=P.hiddenBy&&P.hiddenBy[k];if(l&&l.includes("camera")&&!l.includes("lighting"))l.push("lighting")} P.v210=true; }
 if(!P.v28){ if(P.hiddenBy&&P.hiddenBy.schedule&&!P.hiddenBy.schedule.includes("heroUrl")) P.hiddenBy.schedule.push("heroUrl","safetyUrl"); P.v28=true; }
 if(!P.v22){ for(const k of Object.keys(P.hiddenBy||{})) P.hiddenBy[k]=(P.hiddenBy[k]||[]).filter(x=>x!=="priority"); P.v22=true; }
@@ -159,7 +161,7 @@ function moveColumn(key,beforeKey){
 }
 function colMap(){ return Object.fromEntries(cols().map(c=>[c.key,c])); }
 function invalidateCols(){ _cols=null; }
-const DEFAULT_WIDTHS={lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:84};
+const DEFAULT_WIDTHS={lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
 const NO_SORT=["handle","refs","actions"];
 function partLabel(key){ if(String(key).startsWith("c_")){const c=colMap()[key];return c?c.label+(c.type==="flag"?" (tag when ticked)":""):null} return ID_PART_LABELS[key]||key; }
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
@@ -841,7 +843,7 @@ function renderBody(){
       else if(k==="actions"){
         const b=h("div",{class:"rowbtns"});
         b.append(h("button",{class:"mv",title:"Move up",onclick:()=>move(r.id,-1)},"↑"),h("button",{class:"mv",title:"Move down",onclick:()=>move(r.id,1)},"↓"),
-          h("button",{title:"Duplicate row",onclick:()=>dup(r.id)},"Dup"),h("button",{title:"Insert a break / move below",onclick:()=>insertBreakAfter(r.id)},"+Brk"),h("button",{class:"techbtn",title:"Insert tech / turnaround time below (technical setup, reset, turnaround)",onclick:()=>insertTechAfter(r.id)},"+Tech"),
+          ...(isBreak&&r.type!=="tech"?[]:[h("button",{class:"movebtn",title:"Move or copy this shot to another day",onclick:()=>openMove([r.id])},"Move")]),h("button",{title:"Duplicate row",onclick:()=>dup(r.id)},"Dup"),h("button",{title:"Insert a break / move below",onclick:()=>insertBreakAfter(r.id)},"+Brk"),h("button",{class:"techbtn",title:"Insert tech / turnaround time below (technical setup, reset, turnaround)",onclick:()=>insertTechAfter(r.id)},"+Tech"),
           ...(isBreak?[]:[h("button",{class:"cutbtn",title:r.cut?"Put this shot back in the schedule":"Cut this shot from the schedule (nothing is deleted)",onclick:()=>setCut([r.id],!r.cut)},r.cut?"Restore":"Cut")]),
           h("button",{title:"Delete row",onclick:()=>del(r.id)},"Del"));
         td.append(b);
@@ -990,7 +992,7 @@ function renderPlan(C){
     const enough=p.got>=p.need;
     body.append(h("div",{class:"planh"},`Shots to consider cutting (${enough?"together they save "+dur(p.got):"all of these only save "+dur(p.got)+" of the "+dur(p.need)+" needed"})`));
     const ul=h("ul",{});
-    p.cuts.forEach(x=>ul.append(h("li",{},shotBtn(x.r),h("span",{class:"note"},` · ${x.r.priority||"no priority"} · ${dur(x.save)} of setup and shooting${durSec(x.r.duration)?` · ${x.r.duration} on screen`:""}${x.last?" · top priority, last resort":""}`),h("button",{class:"btn small",onclick:()=>setCut([x.r.id],true)},"Cut"))));
+    p.cuts.forEach(x=>ul.append(h("li",{},shotBtn(x.r),h("span",{class:"note"},` · ${x.r.priority||"no priority"} · ${dur(x.save)} of setup and shooting${durSec(x.r.duration)?` · ${x.r.duration} on screen`:""}${x.last?" · top priority, last resort":""}`),h("button",{class:"btn small",onclick:()=>setCut([x.r.id],true)},"Cut"),h("button",{class:"btn small",title:"Move it to another day instead",onclick:()=>openMove([x.r.id])},"Move…"))));
     body.append(ul,h("button",{class:"btn small danger",onclick:()=>setCut(p.cuts.filter(x=>!x.last).map(x=>x.r.id),true)},"Cut the suggested shots"));
     body.append(h("p",{class:"note"},"Ranked by time it takes against priority and screen time: low priority, long setups and short screen time go first. Top priority shots are only listed as a last resort. Cutting takes the shot out of the timings; nothing is deleted."));
   }
@@ -1263,6 +1265,46 @@ function addDay(){
   commit(); const c=cfg(); const n=S.days.length+1;
   const d={id:uid("d"),name:"Day "+n,kind:"schedule",dayNo:n,date:"",call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,origWrap:null,rows:[]};
   S.days.push(d); P.activeByProject[pid()]=d.id; commit(); savePrefs(); renderAll();
+}
+
+/* ===================== move or copy shots to another day ===================== */
+let MOVE=null;
+function openMove(ids){
+  const d=D(); if(!d) return; MOVE={from:d.id,ids:new Set(ids)};
+  const b=$("#moveBody"); b.innerHTML="";
+  const others=live().filter(x=>x.id!==d.id);
+  const to=h("select",{}); others.forEach(x=>to.append(h("option",{value:x.id},(x.name||"Day")+(x.date?" · "+x.date:"")+(dayStatus(x)==="wrapped"?" (wrapped)":""))));
+  to.append(h("option",{value:"new"},"+ A new day"));
+  // default: the next ready day after this one, else the first other day
+  const ready=tabOrder().ready.filter(x=>x.id!==d.id); to.value=(ready.find(x=>(x.date||"")>=(d.date||""))||ready[0]||others[0]||{id:"new"}).id;
+  const where=h("select",{},h("option",{value:"end"},"At the end of the day"),h("option",{value:"start"},"At the start of the day"));
+  const list=h("div",{class:"movelist"});
+  const rows=d.rows.filter(r=>!isBlock(r)||r.type==="tech");
+  const count=h("b",{});
+  const upd=()=>{count.textContent=MOVE.ids.size+" selected";$("#moveGo").disabled=$("#copyGo").disabled=!MOVE.ids.size};
+  for(const r of rows){ const cb=h("input",{type:"checkbox"}); cb.checked=MOVE.ids.has(r.id);
+    cb.addEventListener("change",()=>{cb.checked?MOVE.ids.add(r.id):MOVE.ids.delete(r.id);upd()});
+    list.append(h("label",{class:"inline"+(r.done?" isdone":"")},cb,h("span",{},isBlock(r)?blockName(r):("Shot "+(r.shot||"-")+(r.action?" · "+r.action:r.description?" · "+String(r.description).slice(0,50):""))),r.done?h("span",{class:"note"}," (shot)"):r.cut?h("span",{class:"note"}," (cut)"):null)); }
+  const pick=f=>{MOVE.ids=new Set(rows.filter(f).map(r=>r.id));$$("input",list).forEach((cb,i)=>cb.checked=MOVE.ids.has(rows[i].id));upd()};
+  b.append(h("div",{class:"form"},h("label",{},"Move to",to),h("label",{},"Where",where)),
+    h("div",{class:"toolbar",style:"margin:.4rem 0"},count,h("button",{class:"btn small",onclick:()=>pick(r=>!r.done&&!isBlock(r))},"All not yet shot"),h("button",{class:"btn small",onclick:()=>pick(r=>!isBlock(r))},"All shots"),h("button",{class:"btn small",onclick:()=>pick(()=>false)},"None")),
+    list,
+    h("div",{class:"toolbar",style:"margin-top:.8rem"},h("button",{class:"btn primary",id:"moveGo",onclick:()=>doMove(to.value,where.value,false)},"Move"),h("button",{class:"btn",id:"copyGo",onclick:()=>doMove(to.value,where.value,true)},"Copy")),
+    h("p",{class:"note"},"Moving keeps everything about the shot (notes, pictures, priority, takes logged so far) and it's the same shot for the team, just on another day. Its times are worked out again for the new day, and its name picks up the new day number for the next takes. Copy leaves the original where it is and adds a fresh, unshot copy. One Undo puts it all back."));
+  upd(); $("#moveModal").classList.add("open");
+}
+function doMove(toId,where,copy){
+  const from=S.days.find(x=>x.id===MOVE.from); if(!from) return;
+  let to=toId==="new"?null:S.days.find(x=>x.id===toId);
+  if(!to){ const c=cfg(), n=S.days.length+1; to={id:uid("d"),name:"Day "+n,kind:from.kind||"schedule",dayNo:n,date:"",call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,origWrap:null,rows:[]}; S.days.push(to); }
+  const picked=from.rows.filter(r=>MOVE.ids.has(r.id)); if(!picked.length) return;
+  const moving=copy?picked.map(r=>Object.assign(clone(r),{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",origStart:"",cut:null})):picked;
+  // the planned time of day belonged to the old day
+  if(!copy){ from.rows=from.rows.filter(r=>!MOVE.ids.has(r.id)); moving.forEach(r=>{r.origStart=""}); }
+  to.rows=where==="start"?[...moving,...to.rows]:[...to.rows,...moving];
+  commit(); renderAll(); $("#moveModal").classList.remove("open");
+  const n=moving.length;
+  toast(`${copy?"Copied":"Moved"} ${n} ${n===1?"shot":"shots"} to ${to.name} - Undo to put ${n===1?"it":"them"} back`);
 }
 
 /* ===================== DIT names ===================== */

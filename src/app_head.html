@@ -224,6 +224,10 @@ td.num,th.num{text-align:center}
 tr.tech .kindtag{border-color:var(--tech);color:var(--tech)}
 tr.break:not(.tech) .kindtag{border-color:var(--break);color:color-mix(in srgb,var(--break) 70%,var(--ink))}
 .rowbtns .techbtn{color:var(--tech)}
+.movelist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:.4rem .6rem;display:flex;flex-direction:column;gap:.15rem}
+.movelist label.isdone span:first-of-type{color:var(--muted)}
+#moveBody .form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#moveBody .form select{width:100%;min-width:0}
 #grid tr.dragging{opacity:.4}
 #grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
 #grid tr.flash td{animation:flash 1.6s ease-out}
@@ -269,6 +273,7 @@ input.shotno{font-weight:700;font-size:1.08em}
 .ref .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:3px;font-size:.78em;padding:0 4px;cursor:pointer;display:none}
 .ref:hover .x{display:block}
 .rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.rowbtns button{white-space:nowrap;overflow:hidden;text-overflow:clip}
 .rowbtns button:last-child{grid-column:span 2}
 .rowbtns button{border:1px solid var(--line);background:var(--panel);border-radius:4px;cursor:pointer;font-size:.85em;padding:1px 5px;white-space:nowrap}
 .rowbtns button:hover{border-color:var(--line2)}
@@ -593,6 +598,12 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="toolbar"><button class="btn primary" id="keyGo">Open project</button></div>
   <div class="toolbar" id="keyOthers" style="margin-top:.6rem"></div>
   <p class="note">Each project has its own key, so you only see the projects you've been given. The key is kept on this device.</p>
+</div></div>
+
+<div class="modal" id="moveModal"><div class="box narrow">
+  <button class="btn small close" data-close>Close</button>
+  <h2>Move shots to another day</h2>
+  <div id="moveBody"></div>
 </div></div>
 
 <div class="modal" id="pdfModal"><div class="box">
