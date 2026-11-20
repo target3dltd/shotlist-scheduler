@@ -130,6 +130,58 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .fbi p{margin:.35rem 0;white-space:pre-wrap} .fbi small{color:var(--muted)}
 .fbi .acts{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
 @media print{.fbbtn,.fbpanel,.whopop{display:none!important}}
+/* frozen day */
+.frozenflag{margin:.4rem 0;padding:.4rem .7rem;border-radius:8px;background:var(--panel2);border:1px dashed var(--line2);font-size:.9em;line-height:1.9} .frozenflag .btn{margin-left:.4rem}
+.frozenflag[hidden]{display:none}
+body.dayfrozen #grid .handle,body.dayfrozen #grid .rowbtns .mv,body.dayfrozen #grid .rowbtns .movebtn,body.dayfrozen #grid .rowbtns button[title^="Duplicate"],body.dayfrozen #grid .rowbtns button[title^="Insert"],body.dayfrozen #grid .rowbtns button[title="Delete row"],body.dayfrozen .addrow{display:none!important}
+body.dayfrozen #grid .mins button{visibility:hidden} body.dayfrozen #grid .mins input{background:transparent;border-color:transparent}
+body.dayfrozen #grid td.jumpable{cursor:default}
+#freezeBtn[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+/* weather and daylight strip */
+.sky-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.35rem 0;font-size:.86em}
+.sky-row[hidden]{display:none}
+.sky{display:flex;gap:.35rem .9rem;flex-wrap:wrap;align-items:baseline}
+.sky .skyplace{font-weight:600}
+.skybit small{color:var(--muted);margin-right:.25rem} .skybit b{font-weight:600}
+.sky.long{flex-direction:column;gap:.25rem}
+.locpop{position:fixed;z-index:120;width:min(24rem,calc(100vw - 1rem));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 36px -10px rgba(0,0,0,.35);padding:.7rem}
+.locpop input[type=text]{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:.4rem .5rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
+.locres{margin-top:.4rem;max-height:14rem;overflow:auto} .locres .mi{display:block;width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:.4rem .5rem;color:var(--ink);font:inherit;cursor:pointer} .locres .mi:hover{background:var(--panel2)}
+/* call sheet / wrap report page */
+.docmodal .box{max-width:60rem}
+.dochbar{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;position:sticky;top:-1.4rem;background:var(--panel);padding:.2rem 0 .6rem;margin-bottom:.4rem;border-bottom:1px solid var(--line);z-index:2}
+.dochbar h2{margin:0;font-size:1.1rem}
+.doc{font-size:.95em}
+.dochead{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-end;border-bottom:2px solid var(--ink);padding-bottom:.5rem;margin-bottom:.7rem}
+.docproj{font-size:1.5rem;font-weight:700;line-height:1.1} .docsub{color:var(--muted)}
+.docday{text-align:right} .docday>div{font-size:1.2rem;font-weight:700} .docday small{color:var(--muted)}
+.kvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:.5rem;margin:0 0 .8rem}
+.kv{border:1px solid var(--line);border-radius:8px;padding:.4rem .6rem} .kv small{display:block;color:var(--muted);font-size:.75em;text-transform:uppercase;letter-spacing:.05em} .kv b{font-size:1.05rem}
+.kvs.big .kv b{font-size:1.2rem} .kv.bad b,.doctable .bad{color:var(--bad)} .kv.good b,.doctable .good{color:#2e7d4f}
+.docsec{margin:0 0 .9rem;break-inside:avoid-page} .docsec h3{margin:0 0 .35rem;font-size:.85rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.doc2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem} @media(max-width:700px){.doc2{grid-template-columns:1fr}}
+.doclabel{display:block;font-size:.8em;color:var(--muted);margin-bottom:.2rem}
+.docnote{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg));resize:vertical}
+.doctable{width:100%;border-collapse:collapse;font-size:.92em} .doctable th{text-align:left;font-size:.75em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--line2);padding:.3rem .4rem}
+.doctable td{border-bottom:1px solid var(--line);padding:.3rem .4rem;vertical-align:top} .doctable td.num{text-align:right} .doctable .nowrap{white-space:nowrap}
+.doctable tr.blk td{background:var(--break-bg);font-style:italic} .doctable tr.undone td{color:var(--muted)}
+.docfoot{color:var(--muted);font-size:.8em;margin-top:1rem}
+.ta-print{display:none;white-space:pre-wrap}
+/* shoot-ready check */
+.rdyhead{display:flex;align-items:center;gap:.8rem;margin:.4rem 0 .7rem} .rdybar{flex:1;height:.5rem;border-radius:999px;background:var(--panel2);overflow:hidden} .rdybar i{display:block;height:100%;background:#2e9d5b}
+.rdy{display:flex;gap:.6rem;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:0 0 .45rem}
+.rdy.ok{border-color:#2e9d5b55;background:#2e9d5b0d} .rdy.warn{border-color:#d39b2280;background:#d39b2212}
+.rdyck input{width:1.15rem;height:1.15rem;margin:.1rem 0 0} .rdyb{flex:1} .rdyb small{display:block;color:var(--muted);margin:.15rem 0 .3rem}
+@media print{
+  body.printdoc>*:not(#docModal){display:none!important}
+  body.printdoc #docModal{position:static;display:block!important;background:none;padding:0;page:docpage}
+  @page docpage{size:A4 portrait;margin:12mm}
+  body.printdoc #docModal .box{max-height:none;overflow:visible;box-shadow:none;padding:0;max-width:none}
+  body.printdoc .noprint,body.printdoc .dochbar{display:none!important}
+  body.printdoc .docnote{display:none} body.printdoc .ta-print{display:block}
+  body.printdoc .doc{font-size:10pt}
+  body.printdoc .kv{padding:.2rem .4rem} body.printdoc .doctable td{padding:.15rem .3rem}
+}
 .who span{width:1.7rem;height:1.7rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;border:2px solid var(--bg)}
 .controls{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-end;margin-top:.8rem}
 /* the day's banner: settings and filters sit on a tinted band that joins the open tab */
@@ -651,6 +703,9 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
             <button class="mi" id="csvBtn" role="menuitem">Export CSV <small>every day, one row per shot</small></button>
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
+            <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
+            <hr>
+            <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
             <hr>
             <button class="mi" id="actBtn" role="menuitem" title="Who changed what">Activity <small>who changed what</small></button>
           </div></div>
@@ -683,12 +738,17 @@ body.nosteps .mins.timing input{width:4.5em}
     <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
     <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
+      <button class="btn small" id="callSheetBtn" title="One-page call sheet for this day, to print or share">Call sheet</button>
+      <button class="btn small" id="wrapRepBtn" title="End-of-day summary: shots done, takes, seconds, hero selects and what carries over">Wrap report</button>
+      <button class="btn small" id="freezeBtn" aria-pressed="false" title="Lock this day's timings and running order once you're rolling. Ticks, takes, notes and cuts still work.">Freeze timings</button>
       <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
       <button class="btn small" id="archDayBtn" title="Put this day away. Nothing is deleted: restore it from the Archived tab">Archive day</button>
       <button class="btn small" id="resetBtn" title="Restore this day as originally imported">Reset day</button>
     </div>
   </div>
   <div class="stats" id="stats"></div>
+  <div class="sky-row noprint" id="sky" hidden></div>
+  <div class="frozenflag noprint" id="frozenFlag" hidden><b>Timings frozen</b> for this day: ticks, takes, notes and cuts still work. <button class="btn small" onclick="toggleFreeze()">Unfreeze</button></div>
   <div class="pace noprint" id="pace"></div>
   <div class="warnings" id="warnings"></div>
   <div class="plan noprint" id="plan"></div>
@@ -717,6 +777,11 @@ body.nosteps .mins.timing input{width:4.5em}
 </div></div>
 
 <!-- DIT names -->
+<div class="modal docmodal" id="docModal"><div class="box">
+  <div class="dochbar noprint"><h2 id="docTitle"></h2><span class="spacer"></span>
+    <button class="btn small" id="docCopy">Copy as text</button><button class="btn small primary" id="docPrint">Print / PDF</button><button class="btn small" data-close>Close</button></div>
+  <div class="doc" id="docBody"></div>
+</div></div>
 <div class="modal" id="ditModal"><div class="box">
   <button class="btn small close" data-close>Close</button>
   <h2>DIT names <small class="note" id="ditDay"></small></h2>

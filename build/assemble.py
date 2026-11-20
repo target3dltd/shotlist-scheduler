@@ -20,6 +20,7 @@ head = (src / "app_head.html").read_text()
 help_html = (src / "help.html").read_text()
 core = (src / "model_core.js").read_text()
 app = (src / "app.js").read_text().replace("/*__XLSX__*/", (src / "xlsx.js").read_text())
+app = app.replace("/*__SHOOT__*/", (src / "shoot.js").read_text())
 seed = json.loads(seed_path.read_text())
 
 version = re.search(r'const VERSION = "([\d.]+)"', app).group(1)

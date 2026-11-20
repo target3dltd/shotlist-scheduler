@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.22.1";
+const VERSION = "2.23.0";
 const CHANGELOG = [
-  ["2.22.1","2026-11-20","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
+  ["2.23.0","2026-11-20","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
+  ["2.22.1","","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
   ["2.22.0","","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
   ["2.21.0","","Version history shows a date on the latest update only. Hero selects card on Mocap days: the seconds in takes marked Hero, next to Captured. Tidier header: buttons grouped, with Import, Export, Print and Activity in a File menu. Display settings regrouped into Presets, Colours, Text, Layout, Table and on-set tools, and Timeline colours, with switches and compact colour swatches. Settings tabs scroll in one row on phones."],
   ["2.20.0","","Takes and Captured / Raw footage cards: the day's logged takes and the seconds recorded between each take's timecode in and out (Captured on Mocap days, Raw footage on Live Action). Pace panel on shoot days: a big +/- score, each finished shot's minutes won back or lost, your on-pace streak and best streak, and where the day will wrap against the target."],
@@ -271,6 +272,7 @@ function updUndo(){ $("#undoBtn").disabled=!undoStack.length; $("#redoBtn").disa
 
 /* ===================== team networking ===================== */
 async function api(path,body,opts={}){
+  if(SIM_OFFLINE>Date.now()&&!/feedback/.test(path)) throw new Error("Practice dropout: no connection");
   const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),opts.timeout||15000);
   try{
     const sep=path.includes("?")?"&":"?";
@@ -807,9 +809,10 @@ function minsCtl(r,key){
   const step=()=>Math.max(1,Number(cfg().stepMin)||5);
   const wrap=h("div",{}); const box=h("div",{class:"mins timing"});
   const inp=h("input",{type:"number",min:"0",step:String(step()),value:r[key]??0,"aria-label":key,"data-k":key});
+  if(isFrozen()){inp.readOnly=true;inp.title="Timings are frozen for this day";inp.addEventListener("focus",()=>frozenNo(),{once:true})}
   inp.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[key]=Math.max(0,Number(inp.value)||0);recalc()});
   inp.addEventListener("change",commit);
-  const bump=dir=>{const x=R(r.id);if(!x)return;x[key]=Math.max(0,(Number(x[key])||0)+dir*step());inp.value=x[key];recalc();commit()};
+  const bump=dir=>{if(frozenNo())return;const x=R(r.id);if(!x)return;x[key]=Math.max(0,(Number(x[key])||0)+dir*step());inp.value=x[key];recalc();commit()};
   box.append(h("button",{title:`-${step()} min`,onclick:()=>bump(-1)},"−"),inp,h("button",{title:`+${step()} min`,onclick:()=>bump(1)},"+"));
   wrap.append(box,h("div",{class:"eff","data-eff":key},""));
   return wrap;
@@ -966,7 +969,7 @@ function renderBody(){
       if(k==="handle"){
         const hd=h("div",{class:"ctl"});
         const g=h("span",{class:"handle",draggable:"true",title:"Drag to reorder"},"⠿");
-        g.addEventListener("dragstart",e=>{dragId=r.id;tr.classList.add("dragging");e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",r.id)});
+        g.addEventListener("dragstart",e=>{if(isFrozen()){e.preventDefault();frozenNo();return}dragId=r.id;tr.classList.add("dragging");e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",r.id)});
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(isBreak) hd.append(h("button",{class:"kindtag",title:r.type==="tech"?"Tech / turnaround time. Click to make it a break.":"A break or move. Click to make it tech / turnaround time.",onclick:()=>{const x=R(r.id);if(!x)return;const was=x.type;x.type=was==="tech"?"break":"tech";const c=cfg();if(!x.label||x.label===(was==="tech"?c.techLabel:c.breakLabel)||x.label===(was==="tech"?"Tech / turnaround":"Break"))x.label=x.type==="tech"?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break");commit();renderBody()}},r.type==="tech"?"Tech":"Break"));
@@ -1428,7 +1431,7 @@ function renderSettingsRow(){
   $("#projTitle").textContent=S.project.name||"Untitled project";
   if(!syncProjectName._t) syncProjectName._t=setTimeout(()=>{syncProjectName._t=null;syncProjectName(false)},1500); document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
 }
-function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); }
+function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); applyFreeze(); renderSky(); rebuildDoc(); }
 function renderAllKeepFocus(){
   const a=document.activeElement; let keep=null;
   if(a&&a.closest&&a.closest("#grid tbody")){const tr=a.closest("tr");keep={id:tr&&tr.dataset.id,k:a.dataset.k,s:a.selectionStart,e:a.selectionEnd}}
@@ -1448,13 +1451,13 @@ function newShot(extra={}){
     priority:"",perfCount:d.kind==="capture"?(prev.perfCount||1):"",performers:d.kind==="capture"?(prev.performers||""):"",genre:"",action:"",body:d.kind==="capture",face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
   return Object.assign(r,extra);
 }
-function addShot(){const d=D();if(!d)return;const r=newShot();d.rows.push(r);commit();renderBody();jump(r.id);const el=$(`#grid tbody tr[data-id="${r.id}"] [data-k="${d.kind==="capture"?"action":"shot"}"]`);if(el)el.focus()}
-function insertBreakAt(i,type="break"){const c=cfg();const d=D();const tech=type==="tech";const r={id:uid("r"),type:tech?"tech":"break",label:tech?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break"),shoot:Number(tech?c.techMin:c.breakMin)||(tech?15:30),setup:0,description:"",origStart:"",done:false,takes:0};d.rows.splice(i,0,r);commit();renderBody();jump(r.id)}
+function addShot(){const d=D();if(!d||frozenNo())return;const r=newShot();d.rows.push(r);commit();renderBody();jump(r.id);const el=$(`#grid tbody tr[data-id="${r.id}"] [data-k="${d.kind==="capture"?"action":"shot"}"]`);if(el)el.focus()}
+function insertBreakAt(i,type="break"){if(frozenNo())return;const c=cfg();const d=D();const tech=type==="tech";const r={id:uid("r"),type:tech?"tech":"break",label:tech?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break"),shoot:Number(tech?c.techMin:c.breakMin)||(tech?15:30),setup:0,description:"",origStart:"",done:false,takes:0};d.rows.splice(i,0,r);commit();renderBody();jump(r.id)}
 function insertTechAfter(id){const i=D().rows.findIndex(x=>x.id===id);insertBreakAt(i+1,"tech")}
 function insertBreakAfter(id){const i=D().rows.findIndex(x=>x.id===id);insertBreakAt(i+1)}
-function move(id,dir){const rows=D().rows;const i=rows.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=rows.length)return;[rows[i],rows[j]]=[rows[j],rows[i]];commit();renderBody()}
-function dup(id){const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const c=clone(rows[i]);c.id=uid("r");c.origStart="";c.done=false;c.takes=0;if(c.shot)c.shot+=" (copy)";rows.splice(i+1,0,c);commit();renderBody()}
-function del(id){const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const r=rows[i];const name=isBlock(r)?blockName(r).toLowerCase():("shot "+(r.shot||r.action||"(no number)"));rows.splice(i,1);commit();renderBody();toast("Deleted "+name+" - Undo to restore")}
+function move(id,dir){if(frozenNo())return;const rows=D().rows;const i=rows.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=rows.length)return;[rows[i],rows[j]]=[rows[j],rows[i]];commit();renderBody()}
+function dup(id){if(frozenNo())return;const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const c=clone(rows[i]);c.id=uid("r");c.origStart="";c.done=false;c.takes=0;if(c.shot)c.shot+=" (copy)";rows.splice(i+1,0,c);commit();renderBody()}
+function del(id){if(frozenNo())return;const rows=D().rows;const i=rows.findIndex(x=>x.id===id);const r=rows[i];const name=isBlock(r)?blockName(r).toLowerCase():("shot "+(r.shot||r.action||"(no number)"));rows.splice(i,1);commit();renderBody();toast("Deleted "+name+" - Undo to restore")}
 function addDay(){
   commit(); const c=cfg(); const n=S.days.length+1;
   const d={id:uid("d"),name:"Day "+n,kind:"schedule",dayNo:n,date:"",call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,origWrap:null,rows:[]};
@@ -1473,7 +1476,7 @@ function bestSlot(d,id,target){
   return best;
 }
 function jumpTarget(d,v){ let t=toMin(v); if(t<toMin(d.call||"09:00")&&wrapMin(d)>1440) t+=1440; return t; }
-function openJumpTime(id,td){
+function openJumpTime(id,td){if(frozenNo())return;
   closeJumpTime(); const d=D(); const r=d&&d.rows.find(x=>x.id===id); if(!r) return;
   const C=compute(), cur=C.rows[id].start;
   const inp=h("input",{type:"time",value:hhmm(cur%1440)}), hint=h("div",{class:"note"});
@@ -1502,7 +1505,7 @@ function closeJumpTime(){const p=$("#jumpPop");if(p)p.remove();document.removeEv
 
 /* ===================== move or copy shots to another day ===================== */
 let MOVE=null;
-function openMove(ids){
+function openMove(ids){if(frozenNo())return;
   const d=D(); if(!d) return; MOVE={from:d.id,ids:new Set(ids)};
   const b=$("#moveBody"); b.innerHTML="";
   const others=live().filter(x=>x.id!==d.id);
@@ -2411,7 +2414,7 @@ bindDay("dayName","name");bindDay("dayKind","kind");bindDay("dayStatus","status"
 bindDay("setupPct","setupPct",true);bindDay("shootPct","shootPct",true);bindDay("minSetup","minSetup",true);
 $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();renderBody()});
 $("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});
-$("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
+$("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.frozen=false;c.wrapNotes="";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
 $("#tlColours").onclick=e=>{e.preventDefault();openSettings("display");setTimeout(()=>{const f=$("#colourForm");if(f)f.scrollIntoView({block:"start"})},50)};
 $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.toggle("open");$("#bandToggle").setAttribute("aria-expanded",o);$("#bandArrow").textContent=o?"▴":"▾"};
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
@@ -2473,7 +2476,7 @@ document.addEventListener("click",e=>{if(!$("#colMenu").contains(e.target))$("#c
 $("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
-$("#pasteBtn").onclick=()=>{$("#pasteText").value="";$("#pasteModal").classList.add("open");$("#pasteText").focus()};
+$("#pasteBtn").onclick=()=>{if(frozenNo())return;$("#pasteText").value="";$("#pasteModal").classList.add("open");$("#pasteText").focus()};
 $("#pasteGo").onclick=()=>{const lines=$("#pasteText").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);const d=D();if(!lines.length||!d)return;
   const counts={};lines.forEach(a=>{const k=a.toLowerCase();counts[k]=(counts[k]||0)+1});
   for(const a of Object.keys(counts).length===lines.length?lines:[...new Set(lines.map(x=>x))]) d.rows.push(newShot({action:a,description:d.kind==="capture"?"":a}));
@@ -2501,4 +2504,5 @@ document.addEventListener("visibilitychange",()=>{if(MODE==="team"&&!document.hi
 window.addEventListener("online",()=>{if(MODE==="team"){backoff=0;scheduleFlush(100);scheduleSync(200)}});
 window.addEventListener("beforeunload",e=>{commit();if(MODE==="team"&&pending.length){e.preventDefault();e.returnValue=""}});
 
+/*__SHOOT__*/
 boot();
