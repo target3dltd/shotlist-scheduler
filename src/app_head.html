@@ -138,7 +138,15 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 @media(max-width:700px){.nvbody>.nvvhost.has-video{order:2}}
 .nvvhost{container-type:inline-size;min-width:0}
 /* sequences */
-#seqView{background:var(--bg);color:var(--ink)} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
+#seqView{background:var(--bg);color:var(--ink)}
+#grid tr.seqhead td{padding:0;background:color-mix(in srgb,var(--seq) 9%,var(--panel));border-top:2px solid var(--seq)}
+.seqhd{position:sticky;left:0;display:flex;gap:.45rem .7rem;align-items:center;flex-wrap:wrap;padding:.4rem .6rem;max-width:min(100vw - 3rem,1100px);font-size:.9em}
+.seqhd .fold{border:none;background:none;color:var(--ink);font-size:1rem;cursor:pointer;padding:0 .2rem;width:1.4rem}
+.seqhd .meta{color:var(--muted)} .seqhd b.t{font-variant-numeric:tabular-nums}
+.seqhd .mins2{display:inline-flex;gap:.25rem;align-items:center} .seqhd .mins2 input{width:3.6rem;padding:.15rem .3rem;border:1px solid var(--line);border-radius:5px;font:inherit;background:var(--field,var(--bg));color:var(--ink)}
+.seqhd .lnk{background:none;border:none;color:var(--accent,#2f6fb0);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.seqtimed{color:var(--muted);font-size:.85em;font-style:italic}
+@media print{.seqhd .fold,.seqhd .lnk,.seqhd .noprint{display:none}} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
 #grid tr.inseq td[data-col="handle"]{box-shadow:inset 4px 0 0 var(--seq)}
 .seqchip{border:none;border-radius:999px;padding:.2rem .6rem;background:color-mix(in srgb,var(--seq) 18%,var(--panel));color:var(--ink);font:inherit;font-size:.85em;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--seq);text-align:left;max-width:100%}
 .seqchip small{color:var(--muted)}
@@ -228,7 +236,7 @@ body.dayfrozen #grid td.jumpable{cursor:default}
 .docnote{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg));resize:vertical}
 .doctable{width:100%;border-collapse:collapse;font-size:.92em} .doctable th{text-align:left;font-size:.75em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--line2);padding:.3rem .4rem}
 .doctable td{border-bottom:1px solid var(--line);padding:.3rem .4rem;vertical-align:top} .doctable td.num{text-align:right} .doctable .nowrap{white-space:nowrap}
-.doctable tr.blk td{background:var(--break-bg);font-style:italic} .doctable tr.undone td{color:var(--muted)}
+.doctable tr.blk td{background:var(--break-bg);font-style:italic} .doctable.runorder tr.seq td{background:var(--panel2)} .doctable tr.undone td{color:var(--muted)}
 .docfoot{color:var(--muted);font-size:.8em;margin-top:1rem}
 .ta-print{display:none;white-space:pre-wrap}
 /* shoot-ready check */
@@ -793,6 +801,7 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
             <button class="mi" id="csvBtn" role="menuitem">Export CSV <small>every day, one row per shot</small></button>
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
+            <button class="mi" id="runOrderBtn" role="menuitem">Running order <small>one page for the day: times, shots, sequences</small></button>
             <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
             <hr>
             <button class="mi" id="dedupeBtn" role="menuitem">Remove duplicate pictures <small>the same storyboard frame twice on a shot</small></button>

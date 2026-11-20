@@ -27,7 +27,7 @@ function openDoc(title,build){
   const body=$("#docBody"); body.innerHTML=""; build(body); DOC.title=title; DOC.build=build;
 }
 const DOC={title:"",build:null};
-function rebuildDoc(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest("#docBody")&&/TEXTAREA|INPUT/.test(ae.tagName))return;if($("#docModal").classList.contains("open")&&DOC.build){const sc=$("#docModal .box").scrollTop;$("#docBody").innerHTML="";DOC.build($("#docBody"));$("#docModal .box").scrollTop=sc}}
+function rebuildDoc(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest("#docBody")&&(ae.tagName==="TEXTAREA"||(ae.tagName==="INPUT"&&!/checkbox|radio|button/.test(ae.type))))return;if($("#docModal").classList.contains("open")&&DOC.build){const sc=$("#docModal .box").scrollTop;$("#docBody").innerHTML="";DOC.build($("#docBody"));$("#docModal .box").scrollTop=sc}}
 function printDoc(){
   document.body.classList.add("printdoc");
   $$("#docBody textarea").forEach(t=>{const div=h("div",{class:"ta-print"},t.value||"");t.after(div)});
@@ -445,6 +445,78 @@ function applySeq(d,cur,ids,name){
   anchor.seqName=name;
   commit(); renderAll(); toast(`${cur?"Updated":"Grouped"} ${keep.length} shots as ${name||"a sequence"} - Undo to take it back`);
 }
+/* ---------- sequence rows in the table: fold, time as one, duplicate ---------- */
+function seqTimedRow(r){ if(!r||!r.seq) return false; const a=R(r.seq); return !!(a&&a.seq===a.id&&a.seqTime); }
+function seqFolded(id){ return !!((P.seqFold||{})[id]); }
+function setFold(id,on){ P.seqFold=P.seqFold||{}; if(on) P.seqFold[id]=true; else delete P.seqFold[id]; savePrefs(); renderBody(); }
+function seqSpan(a,C,d){ const m=seqMembers(a,d).filter(x=>!x.cut); if(!m.length) return null; const cs=m.map(x=>C.rows[x.id]).filter(Boolean);
+  return {start:Math.min(...cs.map(c=>c.setupStart)),end:Math.max(...cs.map(c=>c.end)),su:cs.reduce((t,c)=>t+c.su,0),sh:cs.reduce((t,c)=>t+c.sh,0)}; }
+// switch a sequence between per-shot timings and one setup / shoot for the whole sequence (the shots' own times are kept for switching back)
+function setSeqTime(id,on){ if(frozenNo()) return; const a=R(id); if(!a) return; const d=findRow(id).d;
+  if(on&&!a.seqTime&&!(Number(a.seqSetup)||Number(a.seqShoot))){ const m=seqMembers(a,d).filter(x=>!x.cut); a.seqSetup=Math.max(0,...m.map(x=>Number(x.setup)||0)); a.seqShoot=m.reduce((t,x)=>t+(Number(x.shoot)||0),0); }
+  a.seqTime=!!on; commit(); renderAll(); rebuildDoc(); if($("#seqView").classList.contains("open")) renderSeqView();
+  toast(on?`${seqTitle(a)} is timed as one: setup ${a.seqSetup} min, shoot ${a.seqShoot} min`:`${seqTitle(a)} back to per-shot timings`); }
+function setSeqMins(id,k,v){ if(frozenNo()) return; const a=R(id); if(!a) return; a[k]=Math.max(0,Math.round(Number(v)||0)); commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); }
+function dupSeq(id){
+  if(frozenNo()) return; const f=findRow(id); if(!f) return; const d=f.d, a=f.r, mem=seqMembers(a,d); if(!mem.length) return;
+  commit();
+  const copies=mem.map(m=>Object.assign({},m,{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:""}));
+  const na=copies[0]; for(const c of copies) c.seq=na.id;
+  const base=String(a.seqName||"Sequence").replace(/\s*\(\d+\)$/,""); let n=2; const names=new Set(d.rows.filter(x=>x.seq===x.id).map(x=>x.seqName)); while(names.has(`${base} (${n})`)) n++;
+  na.seqName=`${base} (${n})`; na.seqTime=a.seqTime; na.seqSetup=a.seqSetup; na.seqShoot=a.seqShoot; na.seqNotes=a.seqNotes;
+  for(const c of copies.slice(1)){ c.seqName=""; c.seqTime=false; c.seqSetup=0; c.seqShoot=0; c.seqNotes=""; }
+  const last=mem[mem.length-1]; d.rows.splice(d.rows.indexOf(last)+1,0,...copies);
+  commit(); renderAll(); toast(`Duplicated as ${na.seqName}: same shots, no takes yet - Undo to take it back`); return na.id;
+}
+function seqHeadRow(id,C,d,first){
+  const a=R(id), mem=seqMembers(a,d), sp=seqSpan(a,C,d), la=d.kind!=="capture", cov=la?seqCoverage(a):null, folded=seqFolded(id);
+  const fz=isFrozen(d), tl=takeList(a).length;
+  const box=h("div",{class:"seqhd"},
+    h("button",{class:"fold",title:folded?"Show the sequence's shots":"Fold the sequence into this row","aria-expanded":String(!folded),onclick:()=>setFold(id,!folded)},folded?"▸":"▾"),
+    h("button",{class:"seqchip",style:`--seq:${seqColor(id)}`,title:"Open Sequence View",onclick:()=>openSeqView(id)},seqTitle(a)),
+    h("span",{class:"meta"},`${seqRange(a,d)} · ${mem.length} shot${mem.length===1?"":"s"}`),
+    ...(sp?[h("b",{class:"t"},fmt(sp.start)+" → "+fmt(sp.end))]:[]));
+  if(a.seqTime){ const inp=(k,lab)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),"aria-label":lab+" minutes for the sequence",readOnly:fz});i.addEventListener("change",()=>setSeqMins(id,k,i.value));return h("label",{class:"mins2"},lab,i)};
+    box.append(inp("seqSetup","Setup"),inp("seqShoot","Shoot"),h("span",{class:"meta"},"min, whole sequence"),h("button",{class:"lnk noprint",onclick:()=>setSeqTime(id,false)},"time per shot")); }
+  else if(sp) box.append(h("span",{class:"meta"},`setup ${dur(sp.su)} · shoot ${dur(sp.sh)}`),h("button",{class:"lnk noprint",title:"One setup and shoot time for the whole sequence instead of per shot",onclick:()=>setSeqTime(id,true)},"time as one"));
+  box.append(h("span",{class:"meta"},`${tl} take${tl===1?"":"s"}`+(la&&mem.length?` · ${mem.length-cov.missing.length}/${mem.length} caught`:"")),
+    h("button",{class:"lnk noprint",onclick:()=>dupSeq(id)},"duplicate"),
+    ...(first&&Object.keys(P.seqFold||{}).length?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold={};savePrefs();renderBody()}},"unfold all")]:[]),
+    ...(first&&daySeqs(d).length>1&&daySeqs(d).some(x=>!seqFolded(x.id))?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold=P.seqFold||{};daySeqs(d).forEach(x=>P.seqFold[x.id]=true);savePrefs();renderBody()}},"fold all")]:[]));
+  return h("tr",{class:"seqhead"+(folded?" folded":""),"data-seq":id,style:`--seq:${seqColor(id)}`},h("td",{colspan:String(cols().length)},box));
+}
+
+/* ---------- running order: one simple page for the day ---------- */
+const RO={seqs:true,cut:false};
+function openRunningOrder(){ commit(); openDoc("Running order",b=>buildRunningOrder(b,D())); }
+function runningOrderRows(d){
+  const C=compute(d), out=[], done=new Set();
+  for(const r of d.rows){
+    if(r.cut&&!RO.cut) continue; const c=C.rows[r.id];
+    if(isBlock(r)){ out.push({kind:r.type==="tech"?"tech":"break",start:c.start,end:c.end,what:blockName(r),desc:"",loc:"",su:0,sh:c.sh}); continue; }
+    if(RO.seqs&&r.seq&&R(r.seq)){ if(done.has(r.seq)) continue; done.add(r.seq); const a=R(r.seq), sp=seqSpan(a,C,d)||{start:c.setupStart,end:c.end,su:c.su,sh:c.sh}, m=seqMembers(a,d).filter(x=>!x.cut||RO.cut);
+      out.push({kind:"seq",start:sp.start,end:sp.end,what:seqTitle(a)+" ("+seqRange(a,d)+")",desc:m.map(x=>(x.shot||"-")+(String(x.action||x.description||"").trim()?" "+String(x.action||x.description).trim().split(/[.\n]/)[0].slice(0,50):"")).join("; "),
+        loc:[...new Set(m.map(x=>x.location).filter(Boolean))].join(", "),su:sp.su,sh:sp.sh,vcs:m.some(x=>x.vcs)}); continue; }
+    out.push({kind:"shot",start:c.setupStart,end:c.end,what:"Shot "+(r.shot||"-"),desc:String((d.kind==="capture"?r.action:r.description)||r.action||r.description||"").replace(/\s+/g," ").slice(0,140),loc:r.location||"",su:c.su,sh:c.sh,cut:r.cut,vcs:r.vcs});
+  }
+  return {rows:out,C};
+}
+function buildRunningOrder(b,d){
+  d=S.days.find(x=>x.id===d.id)||d; const {rows,C}=runningOrderRows(d), pr=S.project;
+  b.append(h("div",{class:"dochead"},h("div",{},h("div",{class:"docproj"},pr.name||"Untitled project"),h("div",{class:"docsub"},"Running order")),
+    h("div",{class:"docday"},h("div",{},d.name),h("small",{},[longDate(d.date),"call "+fmt(toMin(d.call||"09:00")),"wrap "+fmt(C.wrap)+(C.wrap>wrapMin(d)?" (target "+fmt(wrapMin(d))+")":"")].join(" · ")))));
+  const opt=(k,l)=>{const c=h("input",{type:"checkbox"});c.checked=RO[k];c.addEventListener("change",()=>{RO[k]=c.checked;rebuildDoc()});return h("label",{class:"sw",style:"color:var(--ink)"},c,h("span",{},l))};
+  b.append(h("div",{class:"toolbar noprint",style:"margin:0 0 .6rem"},opt("seqs","One line per sequence"),opt("cut","Include cut shots"),h("button",{class:"btn small",onclick:()=>exportRunningOrder(d)},"Download CSV")));
+  const t=h("table",{class:"doctable runorder"},h("thead",{},h("tr",{},...["Time","What","Details","Location","Setup","Shoot"].map(x=>h("th",{},x)))));const tb=h("tbody",{});
+  for(const x of rows) tb.append(h("tr",{class:x.kind==="shot"?(x.cut?"undone":""):x.kind==="seq"?"seq":"blk"},h("td",{class:"nowrap"},fmt(x.start)+"-"+fmt(x.end)),h("td",{class:"nowrap"},h("b",{},x.what),x.vcs?" · VCS":""),h("td",{},x.desc),h("td",{},x.loc),
+    h("td",{class:"num"},x.su?String(Math.round(x.su)):""),h("td",{class:"num"},x.sh?String(Math.round(x.sh)):"")));
+  t.append(tb); b.append(t, h("p",{class:"docfoot"},`${pr.name||"Shotlist"} · ${d.name} · ${rows.filter(x=>x.kind!=="break"&&x.kind!=="tech").length} items · ${new Date().toLocaleString([], {dateStyle:"medium",timeStyle:"short"})}`));
+}
+function exportRunningOrder(d){ const {rows}=runningOrderRows(d);
+  const lines=[["Start","End","What","Details","Location","Setup (min)","Shoot (min)","VCS"].map(csvEsc).join(",")];
+  for(const x of rows) lines.push([fmt(x.start),fmt(x.end),x.what,x.desc,x.loc,x.su?Math.round(x.su):"",x.sh?Math.round(x.sh):"",x.vcs?"VCS":""].map(csvEsc).join(","));
+  download(fileBase()+"_"+String(d.name).replace(/[^\w\-]+/g,"_")+"_running_order.csv","\ufeff"+lines.join("\r\n"),"text/csv"); }
+
 /* Sequence View: the grouped shots in one place, with the sequence's takes and what each caught */
 const SQV={id:null};
 function daySeqs(d){d=d||D();return d?d.rows.filter(x=>x.seq&&x.seq===x.id&&!isBlock(x)):[]}
@@ -461,6 +533,7 @@ function renderSeqView(){
     h("button",{title:"Previous sequence",onclick:()=>seqStep(-1)},"‹"),
     h("div",{class:"nvtitle"},h("b",{},seqTitle(a)),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
+    h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
     h("button",{title:"Close",onclick:closeSeqView},"✕")));
   const body=h("div",{class:"nvbody"});
@@ -501,7 +574,12 @@ function renderSeqView(){
   const notes=h("section",{},h("h3",{},"Sequence notes"));
   const ta=h("textarea",{rows:"4",placeholder:"Blocking, what to watch for, pickups needed"}); ta.value=a.seqNotes||"";
   ta.addEventListener("input",()=>{const x=R(a.id);if(x){x.seqNotes=ta.value;softCommit()}}); ta.addEventListener("change",commit); notes.append(ta);
-  body.append(shots,takes,dit,notes); v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
+  const C=compute(d), sp=seqSpan(a,C,d);
+  const timing=h("section",{},h("h3",{},"Timing"));
+  if(a.seqTime){ const inp=(k,l)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),style:"width:5rem"});i.addEventListener("change",()=>setSeqMins(a.id,k,i.value));return h("label",{class:"mins2",style:"margin-right:1rem"},l+" ",i," min")};
+    timing.append(h("p",{},inp("seqSetup","Setup"),inp("seqShoot","Shoot")),h("p",{class:"note"},"One setup and shoot for the whole sequence. "+(sp?fmt(sp.start)+" → "+fmt(sp.end)+". ":""),h("button",{class:"go",onclick:()=>setSeqTime(a.id,false)},"Time per shot instead"))); }
+  else timing.append(h("p",{},sp?`${fmt(sp.start)} → ${fmt(sp.end)} · setup ${dur(sp.su)} · shoot ${dur(sp.sh)} (adding up each shot's own times)`:""),h("button",{class:"btn small",onclick:()=>setSeqTime(a.id,true)},"Time the sequence as one"));
+  body.append(shots,takes,timing,dit,notes); v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
 }
 
 /* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------
@@ -578,6 +656,7 @@ $("#callSheetBtn").onclick=openCallSheet;
 $("#wrapRepBtn").onclick=openWrapReport;
 $("#takesBtn").onclick=()=>exportTakes();
 $("#readyBtn").onclick=openReady;
+$("#runOrderBtn").onclick=openRunningOrder;
 $("#dedupeBtn").onclick=()=>dedupePictures();
 $("#docPrint").onclick=printDoc;
 $("#docCopy").onclick=async()=>{if(await copyText(docText()))toast("Copied as text, ready to paste into an email or message")};

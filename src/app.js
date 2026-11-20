@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.28.2";
+const VERSION = "2.29.0";
 const CHANGELOG = [
-  ["2.28.2","2026-11-20","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
+  ["2.29.0","2026-11-20","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
+  ["2.28.2","","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
   ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
   ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
   ["2.27.1","","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
@@ -680,7 +681,11 @@ function effShoot(r,d){ d=d||D(); if(isBlock(r)) return Number(r.shoot)||0; retu
 function wrapMin(d){const w=toMin(d.wrap||"18:00"),c=toMin(d.call||"09:00");return w<c?w+1440:w}
 function compute(d){
   d=d||D(); let t=toMin(d.call||"09:00"); const out={}; let setupT=0, shootT=0, breakT=0, techT=0;
-  for(const r of d.rows){ const su=r.cut?0:effSetup(r,d), sh=r.cut?0:effShoot(r,d); const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
+  // a sequence timed as one: its first shot carries the sequence's setup and shoot, the others take no time
+  const timed=new Map(); for(const r of d.rows) if(r.seq&&r.seq===r.id&&r.seqTime&&!r.cut) timed.set(r.id,r);
+  for(const r of d.rows){ const A=!isBlock(r)&&r.seq&&timed.get(r.seq); let su,sh;
+    if(A){ if(r.id===A.id){ const v={type:"shot",setup:A.seqSetup,shoot:A.seqShoot}; su=effSetup(v,d); sh=effShoot(v,d); } else { su=0; sh=0; } }
+    else { su=r.cut?0:effSetup(r,d); sh=r.cut?0:effShoot(r,d); } const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
     if(r.type==="tech") techT+=sh; else if(isBlock(r)) breakT+=sh; else {setupT+=su; shootT+=sh;} t=end; }
   return {rows:out, wrap:t, setupT, shootT, breakT, techT};
 }
@@ -1000,7 +1005,10 @@ function renderBody(){
   if(!d){renderViewbar(0);tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"No days yet. Use + Day to add one.")));return}
   const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
+  const seenSeq=new Set();
   shown.forEach(r=>{
+    // a sequence gets a header row above its first shot; folded, its shots are hidden under it
+    if(r.seq&&!isBlock(r)&&R(r.seq)){ if(!seenSeq.has(r.seq)){ seenSeq.add(r.seq); tb.append(seqHeadRow(r.seq,C,d,seenSeq.size===1)); } if(seqFolded(r.seq)) return; }
     const tr=h("tr",{"data-id":r.id,class:r.type==="tech"?"break tech":isBlock(r)?"break":""});
     const isBreak=isBlock(r);
     for(const c of cols()){
@@ -1022,6 +1030,7 @@ function renderBody(){
       else if(k==="seq"){ if(!isBreak) td.append(seqCell(r)); }
       else if(k==="shotId"){ if(!isBreak) td.append(nameCell(r)); }
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
+      else if((k==="setup"||k==="shoot")&&!isBreak&&seqTimedRow(r)){ td.className+=" num"; td.append(h("span",{class:"seqtimed",title:"Timed as part of "+seqTitle(seqAnchor(r))+": set its timing in the sequence row above"},"in seq")); }
       else if(k==="setup"){ td.className+=" num"; if(!isBreak) td.append(minsCtl(r,"setup")); }
       else if(k==="shoot"){ td.className+=" num"; td.append(minsCtl(r,"shoot")); }
       else if(k==="start"){ td.className+=" num jumpable"; td.title="Click to move this row to a time of day"; td.append(h("div",{class:"time","data-t":"start"}),h("div",{class:"orig","data-t":"setupfrom"})); td.addEventListener("click",()=>openJumpTime(r.id,td)); }

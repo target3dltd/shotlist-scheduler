@@ -138,7 +138,15 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 @media(max-width:700px){.nvbody>.nvvhost.has-video{order:2}}
 .nvvhost{container-type:inline-size;min-width:0}
 /* sequences */
-#seqView{background:var(--bg);color:var(--ink)} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
+#seqView{background:var(--bg);color:var(--ink)}
+#grid tr.seqhead td{padding:0;background:color-mix(in srgb,var(--seq) 9%,var(--panel));border-top:2px solid var(--seq)}
+.seqhd{position:sticky;left:0;display:flex;gap:.45rem .7rem;align-items:center;flex-wrap:wrap;padding:.4rem .6rem;max-width:min(100vw - 3rem,1100px);font-size:.9em}
+.seqhd .fold{border:none;background:none;color:var(--ink);font-size:1rem;cursor:pointer;padding:0 .2rem;width:1.4rem}
+.seqhd .meta{color:var(--muted)} .seqhd b.t{font-variant-numeric:tabular-nums}
+.seqhd .mins2{display:inline-flex;gap:.25rem;align-items:center} .seqhd .mins2 input{width:3.6rem;padding:.15rem .3rem;border:1px solid var(--line);border-radius:5px;font:inherit;background:var(--field,var(--bg));color:var(--ink)}
+.seqhd .lnk{background:none;border:none;color:var(--accent,#2f6fb0);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.seqtimed{color:var(--muted);font-size:.85em;font-style:italic}
+@media print{.seqhd .fold,.seqhd .lnk,.seqhd .noprint{display:none}} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
 #grid tr.inseq td[data-col="handle"]{box-shadow:inset 4px 0 0 var(--seq)}
 .seqchip{border:none;border-radius:999px;padding:.2rem .6rem;background:color-mix(in srgb,var(--seq) 18%,var(--panel));color:var(--ink);font:inherit;font-size:.85em;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--seq);text-align:left;max-width:100%}
 .seqchip small{color:var(--muted)}
@@ -228,7 +236,7 @@ body.dayfrozen #grid td.jumpable{cursor:default}
 .docnote{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg));resize:vertical}
 .doctable{width:100%;border-collapse:collapse;font-size:.92em} .doctable th{text-align:left;font-size:.75em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--line2);padding:.3rem .4rem}
 .doctable td{border-bottom:1px solid var(--line);padding:.3rem .4rem;vertical-align:top} .doctable td.num{text-align:right} .doctable .nowrap{white-space:nowrap}
-.doctable tr.blk td{background:var(--break-bg);font-style:italic} .doctable tr.undone td{color:var(--muted)}
+.doctable tr.blk td{background:var(--break-bg);font-style:italic} .doctable.runorder tr.seq td{background:var(--panel2)} .doctable tr.undone td{color:var(--muted)}
 .docfoot{color:var(--muted);font-size:.8em;margin-top:1rem}
 .ta-print{display:none;white-space:pre-wrap}
 /* shoot-ready check */
@@ -793,6 +801,7 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
             <button class="mi" id="csvBtn" role="menuitem">Export CSV <small>every day, one row per shot</small></button>
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
+            <button class="mi" id="runOrderBtn" role="menuitem">Running order <small>one page for the day: times, shots, sequences</small></button>
             <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
             <hr>
             <button class="mi" id="dedupeBtn" role="menuitem">Remove duplicate pictures <small>the same storyboard frame twice on a shot</small></button>
@@ -1194,6 +1203,9 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Sequence View</b> (click the chip, the banner in Note View, or tap the shot number in Slate View): the shots side by side with their storyboards, the DIT name to copy, ● Roll / ■ Cut, + Take, Good / NG / Hero / Safety and a note per take, sequence notes, and <b>Sequence done</b> (ticks every shot). ‹ › moves between the day's sequences; the same keys work as in Note View.</li>
     <li><b>Live Action</b>: every storyboard shot still needs catching, so each take has a tick per shot (or <b>All</b>). The shots show which takes caught them and <b>Still to get</b> lists what's missing. NG takes don't count. <b>Mocap</b>: a take records the whole action, so there are no ticks; framing is dealt with in post.</li>
     <li><b>Slate View</b> shows the sequence (and its range) for any of its shots, and Clap logs the sequence's take.</li>
+    <li><b>In the table</b> each sequence has a header row: its name, range, start and end, takes and (Live Action) how many shots are caught. <b>▾</b> folds the sequence into that row; <b>fold all</b> / <b>unfold all</b> appear on the first one. Folding is just for your screen.</li>
+    <li><b>Time as one</b> (header row or Sequence View): one setup and one shoot time for the whole sequence instead of per shot. It starts from the shots' longest setup and their shoots added up; type over them. The shots then show <i>in seq</i>. <b>Time per shot</b> switches back, with each shot's own times as they were.</li>
+    <li><b>Duplicate</b> (header row or Sequence View): a copy of the sequence straight after it, with the same shots, storyboards and timings, no takes, named "(2)", "(3)"... Handy for another pass.</li>
     <li><b>From the sheet</b>: a column headed <b>Seq</b> or <b>Sequence</b> groups shots with the same letter or name (/, -, n/a and none mean not in a sequence). When you update from a revised sheet, the preview lists each sequence's shots and offers to <b>put the running order in sequence order</b> (A, B, C... with shot numbers in order inside each, then the shots not in a sequence; breaks and tech rows stay where they are). One Undo takes it back.</li>
     <li><b>VCS</b>: tick the VCS column (in Camera &amp; look) for shots where the virtual camera is recorded into the take. It shows on the slate, in Note View and in Sequence View. Shown by default on Mocap days; on Live Action days turn it on from the Columns menu.</li>
   </ul>
@@ -1215,6 +1227,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Freeze timings</b> (day banner): once you're rolling, locks the day's setup and shoot minutes, the running order, call time and buffers, so nobody retimes or drags shots by accident. Ticking shots, takes, notes, text, marks and <b>Cut</b> still work for everyone. <b>Unfreeze</b> any time. A frozen day says so above the table.</li>
     <li><b>Call sheet</b> (day banner): one page with crew call, first shot, lunch and wrap, the location with weather and daylight, notes, cast and crew with phone numbers, and the running order. Type the address and notes straight into it; they're saved with the day and shared. <b>Print / PDF</b> prints just the call sheet (portrait), <b>Copy as text</b> is ready to paste into an email or message.</li>
     <li><b>Wrap report</b> (day banner): shots done out of planned, call and actual wrap against the target, takes, captured or raw seconds, hero selects, each shot's takes, marks and finish time against the plan, what carries over (with a button to move it to another day), cuts and your wrap notes.</li>
+    <li><b>Running order</b> (File menu): one page for the day with times, each shot or sequence (one line per sequence, listing its shots), location and minutes, plus breaks and tech. Untick <b>One line per sequence</b> to list every shot. Print / PDF, Copy as text, or <b>Download CSV</b>.</li>
     <li><b>Export takes</b> (File menu, and in the wrap report for one day): a CSV with one row per take: clip name, take, mark, timecode in and out, duration, when it was logged, take note, shot details and hero / safety links. Opens in Excel or Sheets, or hand it to the edit or DIT.</li>
     <li><b>Weather and daylight</b>: give a day a location (<b>Set location</b> under the day banner, or in the call sheet) by town, UK postcode, latitude and longitude, or <b>Use where I am now</b>. You then see sunrise, golden hour and sunset (worked out on your device), plus the forecast once the day is within 16 days: conditions, high and low, the chance of rain and when it's likeliest, and wind in mph. Only the place name or position is sent, to the free Open-Meteo forecast service (and postcodes.io for postcodes). Mocap days only show it when you set a location.</li>
   </ul>
@@ -1315,9 +1328,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.28.2";
+const VERSION = "2.29.0";
 const CHANGELOG = [
-  ["2.28.2","2026-11-20","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
+  ["2.29.0","2026-11-20","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
+  ["2.28.2","","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
   ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
   ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
   ["2.27.1","","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
@@ -1390,7 +1404,7 @@ const SEED = null;
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
@@ -2266,7 +2280,11 @@ function effShoot(r,d){ d=d||D(); if(isBlock(r)) return Number(r.shoot)||0; retu
 function wrapMin(d){const w=toMin(d.wrap||"18:00"),c=toMin(d.call||"09:00");return w<c?w+1440:w}
 function compute(d){
   d=d||D(); let t=toMin(d.call||"09:00"); const out={}; let setupT=0, shootT=0, breakT=0, techT=0;
-  for(const r of d.rows){ const su=r.cut?0:effSetup(r,d), sh=r.cut?0:effShoot(r,d); const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
+  // a sequence timed as one: its first shot carries the sequence's setup and shoot, the others take no time
+  const timed=new Map(); for(const r of d.rows) if(r.seq&&r.seq===r.id&&r.seqTime&&!r.cut) timed.set(r.id,r);
+  for(const r of d.rows){ const A=!isBlock(r)&&r.seq&&timed.get(r.seq); let su,sh;
+    if(A){ if(r.id===A.id){ const v={type:"shot",setup:A.seqSetup,shoot:A.seqShoot}; su=effSetup(v,d); sh=effShoot(v,d); } else { su=0; sh=0; } }
+    else { su=r.cut?0:effSetup(r,d); sh=r.cut?0:effShoot(r,d); } const start=t+su, end=start+sh; out[r.id]={setupStart:t,start,end,su,sh};
     if(r.type==="tech") techT+=sh; else if(isBlock(r)) breakT+=sh; else {setupT+=su; shootT+=sh;} t=end; }
   return {rows:out, wrap:t, setupT, shootT, breakT, techT};
 }
@@ -2586,7 +2604,10 @@ function renderBody(){
   if(!d){renderViewbar(0);tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"No days yet. Use + Day to add one.")));return}
   const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
+  const seenSeq=new Set();
   shown.forEach(r=>{
+    // a sequence gets a header row above its first shot; folded, its shots are hidden under it
+    if(r.seq&&!isBlock(r)&&R(r.seq)){ if(!seenSeq.has(r.seq)){ seenSeq.add(r.seq); tb.append(seqHeadRow(r.seq,C,d,seenSeq.size===1)); } if(seqFolded(r.seq)) return; }
     const tr=h("tr",{"data-id":r.id,class:r.type==="tech"?"break tech":isBlock(r)?"break":""});
     const isBreak=isBlock(r);
     for(const c of cols()){
@@ -2608,6 +2629,7 @@ function renderBody(){
       else if(k==="seq"){ if(!isBreak) td.append(seqCell(r)); }
       else if(k==="shotId"){ if(!isBreak) td.append(nameCell(r)); }
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
+      else if((k==="setup"||k==="shoot")&&!isBreak&&seqTimedRow(r)){ td.className+=" num"; td.append(h("span",{class:"seqtimed",title:"Timed as part of "+seqTitle(seqAnchor(r))+": set its timing in the sequence row above"},"in seq")); }
       else if(k==="setup"){ td.className+=" num"; if(!isBreak) td.append(minsCtl(r,"setup")); }
       else if(k==="shoot"){ td.className+=" num"; td.append(minsCtl(r,"shoot")); }
       else if(k==="start"){ td.className+=" num jumpable"; td.title="Click to move this row to a time of day"; td.append(h("div",{class:"time","data-t":"start"}),h("div",{class:"orig","data-t":"setupfrom"})); td.addEventListener("click",()=>openJumpTime(r.id,td)); }
@@ -5209,7 +5231,7 @@ function openDoc(title,build){
   const body=$("#docBody"); body.innerHTML=""; build(body); DOC.title=title; DOC.build=build;
 }
 const DOC={title:"",build:null};
-function rebuildDoc(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest("#docBody")&&/TEXTAREA|INPUT/.test(ae.tagName))return;if($("#docModal").classList.contains("open")&&DOC.build){const sc=$("#docModal .box").scrollTop;$("#docBody").innerHTML="";DOC.build($("#docBody"));$("#docModal .box").scrollTop=sc}}
+function rebuildDoc(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest("#docBody")&&(ae.tagName==="TEXTAREA"||(ae.tagName==="INPUT"&&!/checkbox|radio|button/.test(ae.type))))return;if($("#docModal").classList.contains("open")&&DOC.build){const sc=$("#docModal .box").scrollTop;$("#docBody").innerHTML="";DOC.build($("#docBody"));$("#docModal .box").scrollTop=sc}}
 function printDoc(){
   document.body.classList.add("printdoc");
   $$("#docBody textarea").forEach(t=>{const div=h("div",{class:"ta-print"},t.value||"");t.after(div)});
@@ -5627,6 +5649,78 @@ function applySeq(d,cur,ids,name){
   anchor.seqName=name;
   commit(); renderAll(); toast(`${cur?"Updated":"Grouped"} ${keep.length} shots as ${name||"a sequence"} - Undo to take it back`);
 }
+/* ---------- sequence rows in the table: fold, time as one, duplicate ---------- */
+function seqTimedRow(r){ if(!r||!r.seq) return false; const a=R(r.seq); return !!(a&&a.seq===a.id&&a.seqTime); }
+function seqFolded(id){ return !!((P.seqFold||{})[id]); }
+function setFold(id,on){ P.seqFold=P.seqFold||{}; if(on) P.seqFold[id]=true; else delete P.seqFold[id]; savePrefs(); renderBody(); }
+function seqSpan(a,C,d){ const m=seqMembers(a,d).filter(x=>!x.cut); if(!m.length) return null; const cs=m.map(x=>C.rows[x.id]).filter(Boolean);
+  return {start:Math.min(...cs.map(c=>c.setupStart)),end:Math.max(...cs.map(c=>c.end)),su:cs.reduce((t,c)=>t+c.su,0),sh:cs.reduce((t,c)=>t+c.sh,0)}; }
+// switch a sequence between per-shot timings and one setup / shoot for the whole sequence (the shots' own times are kept for switching back)
+function setSeqTime(id,on){ if(frozenNo()) return; const a=R(id); if(!a) return; const d=findRow(id).d;
+  if(on&&!a.seqTime&&!(Number(a.seqSetup)||Number(a.seqShoot))){ const m=seqMembers(a,d).filter(x=>!x.cut); a.seqSetup=Math.max(0,...m.map(x=>Number(x.setup)||0)); a.seqShoot=m.reduce((t,x)=>t+(Number(x.shoot)||0),0); }
+  a.seqTime=!!on; commit(); renderAll(); rebuildDoc(); if($("#seqView").classList.contains("open")) renderSeqView();
+  toast(on?`${seqTitle(a)} is timed as one: setup ${a.seqSetup} min, shoot ${a.seqShoot} min`:`${seqTitle(a)} back to per-shot timings`); }
+function setSeqMins(id,k,v){ if(frozenNo()) return; const a=R(id); if(!a) return; a[k]=Math.max(0,Math.round(Number(v)||0)); commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); }
+function dupSeq(id){
+  if(frozenNo()) return; const f=findRow(id); if(!f) return; const d=f.d, a=f.r, mem=seqMembers(a,d); if(!mem.length) return;
+  commit();
+  const copies=mem.map(m=>Object.assign({},m,{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:""}));
+  const na=copies[0]; for(const c of copies) c.seq=na.id;
+  const base=String(a.seqName||"Sequence").replace(/\s*\(\d+\)$/,""); let n=2; const names=new Set(d.rows.filter(x=>x.seq===x.id).map(x=>x.seqName)); while(names.has(`${base} (${n})`)) n++;
+  na.seqName=`${base} (${n})`; na.seqTime=a.seqTime; na.seqSetup=a.seqSetup; na.seqShoot=a.seqShoot; na.seqNotes=a.seqNotes;
+  for(const c of copies.slice(1)){ c.seqName=""; c.seqTime=false; c.seqSetup=0; c.seqShoot=0; c.seqNotes=""; }
+  const last=mem[mem.length-1]; d.rows.splice(d.rows.indexOf(last)+1,0,...copies);
+  commit(); renderAll(); toast(`Duplicated as ${na.seqName}: same shots, no takes yet - Undo to take it back`); return na.id;
+}
+function seqHeadRow(id,C,d,first){
+  const a=R(id), mem=seqMembers(a,d), sp=seqSpan(a,C,d), la=d.kind!=="capture", cov=la?seqCoverage(a):null, folded=seqFolded(id);
+  const fz=isFrozen(d), tl=takeList(a).length;
+  const box=h("div",{class:"seqhd"},
+    h("button",{class:"fold",title:folded?"Show the sequence's shots":"Fold the sequence into this row","aria-expanded":String(!folded),onclick:()=>setFold(id,!folded)},folded?"▸":"▾"),
+    h("button",{class:"seqchip",style:`--seq:${seqColor(id)}`,title:"Open Sequence View",onclick:()=>openSeqView(id)},seqTitle(a)),
+    h("span",{class:"meta"},`${seqRange(a,d)} · ${mem.length} shot${mem.length===1?"":"s"}`),
+    ...(sp?[h("b",{class:"t"},fmt(sp.start)+" → "+fmt(sp.end))]:[]));
+  if(a.seqTime){ const inp=(k,lab)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),"aria-label":lab+" minutes for the sequence",readOnly:fz});i.addEventListener("change",()=>setSeqMins(id,k,i.value));return h("label",{class:"mins2"},lab,i)};
+    box.append(inp("seqSetup","Setup"),inp("seqShoot","Shoot"),h("span",{class:"meta"},"min, whole sequence"),h("button",{class:"lnk noprint",onclick:()=>setSeqTime(id,false)},"time per shot")); }
+  else if(sp) box.append(h("span",{class:"meta"},`setup ${dur(sp.su)} · shoot ${dur(sp.sh)}`),h("button",{class:"lnk noprint",title:"One setup and shoot time for the whole sequence instead of per shot",onclick:()=>setSeqTime(id,true)},"time as one"));
+  box.append(h("span",{class:"meta"},`${tl} take${tl===1?"":"s"}`+(la&&mem.length?` · ${mem.length-cov.missing.length}/${mem.length} caught`:"")),
+    h("button",{class:"lnk noprint",onclick:()=>dupSeq(id)},"duplicate"),
+    ...(first&&Object.keys(P.seqFold||{}).length?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold={};savePrefs();renderBody()}},"unfold all")]:[]),
+    ...(first&&daySeqs(d).length>1&&daySeqs(d).some(x=>!seqFolded(x.id))?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold=P.seqFold||{};daySeqs(d).forEach(x=>P.seqFold[x.id]=true);savePrefs();renderBody()}},"fold all")]:[]));
+  return h("tr",{class:"seqhead"+(folded?" folded":""),"data-seq":id,style:`--seq:${seqColor(id)}`},h("td",{colspan:String(cols().length)},box));
+}
+
+/* ---------- running order: one simple page for the day ---------- */
+const RO={seqs:true,cut:false};
+function openRunningOrder(){ commit(); openDoc("Running order",b=>buildRunningOrder(b,D())); }
+function runningOrderRows(d){
+  const C=compute(d), out=[], done=new Set();
+  for(const r of d.rows){
+    if(r.cut&&!RO.cut) continue; const c=C.rows[r.id];
+    if(isBlock(r)){ out.push({kind:r.type==="tech"?"tech":"break",start:c.start,end:c.end,what:blockName(r),desc:"",loc:"",su:0,sh:c.sh}); continue; }
+    if(RO.seqs&&r.seq&&R(r.seq)){ if(done.has(r.seq)) continue; done.add(r.seq); const a=R(r.seq), sp=seqSpan(a,C,d)||{start:c.setupStart,end:c.end,su:c.su,sh:c.sh}, m=seqMembers(a,d).filter(x=>!x.cut||RO.cut);
+      out.push({kind:"seq",start:sp.start,end:sp.end,what:seqTitle(a)+" ("+seqRange(a,d)+")",desc:m.map(x=>(x.shot||"-")+(String(x.action||x.description||"").trim()?" "+String(x.action||x.description).trim().split(/[.\n]/)[0].slice(0,50):"")).join("; "),
+        loc:[...new Set(m.map(x=>x.location).filter(Boolean))].join(", "),su:sp.su,sh:sp.sh,vcs:m.some(x=>x.vcs)}); continue; }
+    out.push({kind:"shot",start:c.setupStart,end:c.end,what:"Shot "+(r.shot||"-"),desc:String((d.kind==="capture"?r.action:r.description)||r.action||r.description||"").replace(/\s+/g," ").slice(0,140),loc:r.location||"",su:c.su,sh:c.sh,cut:r.cut,vcs:r.vcs});
+  }
+  return {rows:out,C};
+}
+function buildRunningOrder(b,d){
+  d=S.days.find(x=>x.id===d.id)||d; const {rows,C}=runningOrderRows(d), pr=S.project;
+  b.append(h("div",{class:"dochead"},h("div",{},h("div",{class:"docproj"},pr.name||"Untitled project"),h("div",{class:"docsub"},"Running order")),
+    h("div",{class:"docday"},h("div",{},d.name),h("small",{},[longDate(d.date),"call "+fmt(toMin(d.call||"09:00")),"wrap "+fmt(C.wrap)+(C.wrap>wrapMin(d)?" (target "+fmt(wrapMin(d))+")":"")].join(" · ")))));
+  const opt=(k,l)=>{const c=h("input",{type:"checkbox"});c.checked=RO[k];c.addEventListener("change",()=>{RO[k]=c.checked;rebuildDoc()});return h("label",{class:"sw",style:"color:var(--ink)"},c,h("span",{},l))};
+  b.append(h("div",{class:"toolbar noprint",style:"margin:0 0 .6rem"},opt("seqs","One line per sequence"),opt("cut","Include cut shots"),h("button",{class:"btn small",onclick:()=>exportRunningOrder(d)},"Download CSV")));
+  const t=h("table",{class:"doctable runorder"},h("thead",{},h("tr",{},...["Time","What","Details","Location","Setup","Shoot"].map(x=>h("th",{},x)))));const tb=h("tbody",{});
+  for(const x of rows) tb.append(h("tr",{class:x.kind==="shot"?(x.cut?"undone":""):x.kind==="seq"?"seq":"blk"},h("td",{class:"nowrap"},fmt(x.start)+"-"+fmt(x.end)),h("td",{class:"nowrap"},h("b",{},x.what),x.vcs?" · VCS":""),h("td",{},x.desc),h("td",{},x.loc),
+    h("td",{class:"num"},x.su?String(Math.round(x.su)):""),h("td",{class:"num"},x.sh?String(Math.round(x.sh)):"")));
+  t.append(tb); b.append(t, h("p",{class:"docfoot"},`${pr.name||"Shotlist"} · ${d.name} · ${rows.filter(x=>x.kind!=="break"&&x.kind!=="tech").length} items · ${new Date().toLocaleString([], {dateStyle:"medium",timeStyle:"short"})}`));
+}
+function exportRunningOrder(d){ const {rows}=runningOrderRows(d);
+  const lines=[["Start","End","What","Details","Location","Setup (min)","Shoot (min)","VCS"].map(csvEsc).join(",")];
+  for(const x of rows) lines.push([fmt(x.start),fmt(x.end),x.what,x.desc,x.loc,x.su?Math.round(x.su):"",x.sh?Math.round(x.sh):"",x.vcs?"VCS":""].map(csvEsc).join(","));
+  download(fileBase()+"_"+String(d.name).replace(/[^\w\-]+/g,"_")+"_running_order.csv","\ufeff"+lines.join("\r\n"),"text/csv"); }
+
 /* Sequence View: the grouped shots in one place, with the sequence's takes and what each caught */
 const SQV={id:null};
 function daySeqs(d){d=d||D();return d?d.rows.filter(x=>x.seq&&x.seq===x.id&&!isBlock(x)):[]}
@@ -5643,6 +5737,7 @@ function renderSeqView(){
     h("button",{title:"Previous sequence",onclick:()=>seqStep(-1)},"‹"),
     h("div",{class:"nvtitle"},h("b",{},seqTitle(a)),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
+    h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
     h("button",{title:"Close",onclick:closeSeqView},"✕")));
   const body=h("div",{class:"nvbody"});
@@ -5683,7 +5778,12 @@ function renderSeqView(){
   const notes=h("section",{},h("h3",{},"Sequence notes"));
   const ta=h("textarea",{rows:"4",placeholder:"Blocking, what to watch for, pickups needed"}); ta.value=a.seqNotes||"";
   ta.addEventListener("input",()=>{const x=R(a.id);if(x){x.seqNotes=ta.value;softCommit()}}); ta.addEventListener("change",commit); notes.append(ta);
-  body.append(shots,takes,dit,notes); v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
+  const C=compute(d), sp=seqSpan(a,C,d);
+  const timing=h("section",{},h("h3",{},"Timing"));
+  if(a.seqTime){ const inp=(k,l)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),style:"width:5rem"});i.addEventListener("change",()=>setSeqMins(a.id,k,i.value));return h("label",{class:"mins2",style:"margin-right:1rem"},l+" ",i," min")};
+    timing.append(h("p",{},inp("seqSetup","Setup"),inp("seqShoot","Shoot")),h("p",{class:"note"},"One setup and shoot for the whole sequence. "+(sp?fmt(sp.start)+" → "+fmt(sp.end)+". ":""),h("button",{class:"go",onclick:()=>setSeqTime(a.id,false)},"Time per shot instead"))); }
+  else timing.append(h("p",{},sp?`${fmt(sp.start)} → ${fmt(sp.end)} · setup ${dur(sp.su)} · shoot ${dur(sp.sh)} (adding up each shot's own times)`:""),h("button",{class:"btn small",onclick:()=>setSeqTime(a.id,true)},"Time the sequence as one"));
+  body.append(shots,takes,timing,dit,notes); v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
 }
 
 /* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------
@@ -5760,6 +5860,7 @@ $("#callSheetBtn").onclick=openCallSheet;
 $("#wrapRepBtn").onclick=openWrapReport;
 $("#takesBtn").onclick=()=>exportTakes();
 $("#readyBtn").onclick=openReady;
+$("#runOrderBtn").onclick=openRunningOrder;
 $("#dedupeBtn").onclick=()=>dedupePictures();
 $("#docPrint").onclick=printDoc;
 $("#docCopy").onclick=async()=>{if(await copyText(docText()))toast("Copied as text, ready to paste into an email or message")};
