@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.29.0";
+const VERSION = "2.29.1";
 const CHANGELOG = [
-  ["2.29.0","2026-11-20","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
+  ["2.29.1","2026-11-20","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
+  ["2.29.0","","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
   ["2.28.2","","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
   ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
   ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
@@ -747,6 +748,7 @@ function visibleRows(C){
   const d=D(); if(!d) return [];
   const f=P.filters||{}; const hid=hidden(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
   let list=d.rows.filter(r=>{
+    if((P.view==="todo"||P.view==="nocut")&&r.cut&&!isBlock(r)) return false;
     if(P.view==="todo"&&r.done) return false;
     if(!prioFilterOk(r)) return false;
     return keys.every(k=>{
@@ -781,7 +783,7 @@ function renderViewbar(shown){
   const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hidden().includes(k)).length;
   const sorted=!!(P.sort&&P.sort.key);
   $("#grid").classList.toggle("sorted",sorted);
-  if(!d||(!sorted&&!fcount&&P.view!=="todo"&&!P.prioFilter)){vb.classList.remove("show");return}
+  if(!d||(!sorted&&!fcount&&(P.view||"all")==="all"&&!P.prioFilter)){vb.classList.remove("show");return}
   vb.classList.add("show");
   vb.append(h("span",{},`Showing ${shown} of ${d.rows.length} rows`));
   if(sorted){

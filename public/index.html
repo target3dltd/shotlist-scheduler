@@ -835,7 +835,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <div class="field"><label title="Scales every setup time">Setup buffer %</label><input type="number" id="setupPct" min="50" max="400" step="5"></div>
     <div class="field"><label title="Scales every shoot time">Shoot buffer %</label><input type="number" id="shootPct" min="50" max="400" step="5"></div>
     <div class="field"><label>Min setup (min)</label><input type="number" id="minSetup" min="0" max="120" step="5"></div>
-    <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
+    <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="nocut">Hide cut shots</option><option value="todo">Not yet shot (no cuts)</option></select></div>
     <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
       <button class="btn small" id="callSheetBtn" title="One-page call sheet for this day, to print or share">Call sheet</button>
@@ -1055,7 +1055,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Move</b> on a shot sends it to another day, e.g. pushing shots to the next day. Pick the day (or a new one) and whether it goes at the start or the end. Tick more shots in the list to move them together, or click <b>All not yet shot</b> to push the rest of the day. The shot keeps its notes, pictures, priority and logged takes, its times are worked out for the new day, and its name picks up the new day number for the next takes. <b>Copy</b> leaves the original and adds fresh, unshot copies. One Undo puts it all back. The recovery plan offers <b>Move…</b> next to its cut suggestions too.</li>
     <li><b>Tech / turnaround</b> rows (purple) are for technical setups, resets, re-rigs and turnarounds: time the day needs that isn't a shot or a break. Add one with <b>+ Tech / turnaround</b> under the table or <b>+Tech</b> on a row. Like breaks they just add their minutes (no buffer, no setup, no shot number, never suggested for cutting), but they're coloured differently, have their own total card and timeline colour, and show as Tech in the CSV and .xlsx. The <b>Break / Tech</b> tag on the row switches it between the two.</li>
     <li><b>+ Paste list of actions</b> turns a pasted list (one action per line) into shots.</li>
-    <li>Tick <b>Shot</b> when a setup is done. Use <b>Show → Not yet shot</b> to hide finished rows.</li>
+    <li>Tick <b>Shot</b> when a setup is done. Use <b>Show → Not yet shot</b> to hide finished and cut rows, or <b>Show → Hide cut shots</b> to hide just the cut ones. Cut shots still keep their place; Undo or Cut again brings them back.</li>
     <li>Click a reference image to enlarge it. Click an empty box to add an image, or hover and press ✕ to remove one.</li>
     <li><b>Move columns:</b> drag a column's heading left or right. A coloured line shows where it will land. A plain click still sorts. Your order is just for you and is used on every day. New columns slot in next to their usual neighbour. <b>Columns ▾ → Reset column order</b> puts them back.</li>
     <li><b>Column widths:</b> drag a column header's right edge. Double-click the edge to reset it.</li>
@@ -1328,9 +1328,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.29.0";
+const VERSION = "2.29.1";
 const CHANGELOG = [
-  ["2.29.0","2026-11-20","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
+  ["2.29.1","2026-11-20","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
+  ["2.29.0","","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
   ["2.28.2","","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
   ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
   ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
@@ -2346,6 +2347,7 @@ function visibleRows(C){
   const d=D(); if(!d) return [];
   const f=P.filters||{}; const hid=hidden(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
   let list=d.rows.filter(r=>{
+    if((P.view==="todo"||P.view==="nocut")&&r.cut&&!isBlock(r)) return false;
     if(P.view==="todo"&&r.done) return false;
     if(!prioFilterOk(r)) return false;
     return keys.every(k=>{
@@ -2380,7 +2382,7 @@ function renderViewbar(shown){
   const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hidden().includes(k)).length;
   const sorted=!!(P.sort&&P.sort.key);
   $("#grid").classList.toggle("sorted",sorted);
-  if(!d||(!sorted&&!fcount&&P.view!=="todo"&&!P.prioFilter)){vb.classList.remove("show");return}
+  if(!d||(!sorted&&!fcount&&(P.view||"all")==="all"&&!P.prioFilter)){vb.classList.remove("show");return}
   vb.classList.add("show");
   vb.append(h("span",{},`Showing ${shown} of ${d.rows.length} rows`));
   if(sorted){
