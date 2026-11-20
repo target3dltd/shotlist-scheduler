@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.27.1";
+const VERSION = "2.28.0";
 const CHANGELOG = [
-  ["2.27.1","2026-11-20","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
+  ["2.28.0","2026-11-20","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
+  ["2.27.1","","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
   ["2.27.0","","Columns menu: Hide all not in use hides every column that's empty on all days of this kind (Live Action or Mocap), and Show all brings them all back."],
   ["2.26.1","","The Google account Drive videos open with is now your own setting (per project, on your device), so the team no longer overwrite each other's email. Note View says which account a Drive video is playing as, with a link to change it."],
   ["2.26.0","","Note View panels can be moved and resized: drag ⠿ (top right of a panel) to move it, or use the arrow keys on it; drag the corner at the bottom right to make it wider (in whole columns) and taller. Double-click the corner to reset that panel; Reset layout in the header puts them all back. Kept on each device. A playing video carries on while you rearrange."],
@@ -83,7 +84,7 @@ function initials(s){return String(s||"?").trim().split(/\s+/).map(w=>w[0]).slic
 /* ===================== personal prefs (this device only) ===================== */
 const PREF_KEY="shotlist2-prefs";
 const HIDDEN_DEFAULT={
-  schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes","heroUrl","safetyUrl"],
+  schedule:["perfCount","performers","genre","action","body","face","glove","hero","safety","takes","heroUrl","safetyUrl","vcs"],
   capture:["duration","orig","script","camera","lighting","location"]
 };
 const DISPLAY_DEFAULTS={theme:"auto",accent:"",font:"system",fw:400,ui:13,tbl:13,lh:1.35,ls:0,density:"comfortable",zebra:false,calm:false,clock:"24",band:"",bandMix:10};
@@ -92,6 +93,7 @@ function toHex(c){c=String(c||"").trim();if(/^#[0-9a-f]{6}$/i.test(c))return c;i
 const P=Object.assign({name:"",poll:3,peerRows:false,tl:{},steppers:true},DISPLAY_DEFAULTS,{
   hiddenBy:clone(HIDDEN_DEFAULT),view:"all",widths:{},sort:null,filters:{},activeByProject:{},projectId:null,
   cid:uid("c"),mode:null,teamKey:"",ditShowDone:false},lsGet(PREF_KEY,{}));
+if(!P.v227){ if(P.hiddenBy&&P.hiddenBy.schedule&&!P.hiddenBy.schedule.includes("vcs")) P.hiddenBy.schedule.push("vcs"); P.v227=true; }
 if(!P.v215){ if(P.widths&&P.widths.actions&&P.widths.actions<112) P.widths.actions=112; P.v215=true; }
 if(!P.v210){ for(const k of ["schedule","capture"]){const l=P.hiddenBy&&P.hiddenBy[k];if(l&&l.includes("camera")&&!l.includes("lighting"))l.push("lighting")} P.v210=true; }
 if(!P.v28){ if(P.hiddenBy&&P.hiddenBy.schedule&&!P.hiddenBy.schedule.includes("heroUrl")) P.hiddenBy.schedule.push("heroUrl","safetyUrl"); P.v28=true; }
@@ -101,7 +103,7 @@ function savePrefs(){lsSet(PREF_KEY,P)}
 /* ===================== columns ===================== */
 // column groups: a subtle tint ties related columns together
 const COL_GROUPS=[["id","Shot","#5b6b7a"],["time","Timing","#2f6fb0"],["capture","Capture","#7a5ea8"],["place","Location","#b08a3e"],["story","Story","#2e7d4f"],["look","Camera & look","#1f7a7a"],["notes","Notes","#d0700f"],["refs","Storyboard","#b3264e"]];
-const GROUP_OF={shot:"id",priority:"id",shotId:"id",duration:"time",setup:"time",start:"time",shoot:"time",end:"time",orig:"time",
+const GROUP_OF={shot:"id",priority:"id",seq:"id",vcs:"look",shotId:"id",duration:"time",setup:"time",start:"time",shoot:"time",end:"time",orig:"time",
   takes:"capture",action:"capture",performers:"capture",perfCount:"capture",genre:"capture",body:"capture",face:"capture",glove:"capture",hero:"capture",safety:"capture",heroUrl:"capture",safetyUrl:"capture",
   location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs",video:"refs"};
 function groupOf(c){return c.custom?(c.group||""):(GROUP_OF[c.key]||"")}
@@ -109,6 +111,7 @@ const BASE_COLS=[
   {key:"handle",label:"",fixed:true},
   {key:"shot",label:"Shot #",fixed:true},
   {key:"priority",label:"Priority",type:"list"},
+  {key:"seq",label:"Sequence"},
   {key:"shotId",label:"Shot name (next take)"},
   {key:"duration",label:"Screen dur."},
   {key:"setup",label:"Setup (min)",fixed:true},
@@ -134,6 +137,7 @@ const BASE_COLS=[
   {key:"shotType",label:"Shot type",type:"note"},
   {key:"camera",label:"Camera",type:"note"},
   {key:"lighting",label:"Lighting",type:"note"},
+  {key:"vcs",label:"VCS",type:"flag"},
   {key:"vfx",label:"VFX notes",type:"note"},
   {key:"director",label:"Director notes",type:"note"},
   {key:"props",label:"Prop / set notes",type:"note"},
@@ -182,7 +186,7 @@ function moveColumn(key,beforeKey){
 }
 function colMap(){ return Object.fromEntries(cols().map(c=>[c.key,c])); }
 function invalidateCols(){ _cols=null; }
-const DEFAULT_WIDTHS={lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
+const DEFAULT_WIDTHS={seq:130,vcs:56,lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
 const NO_SORT=["handle","refs","actions"];
 function partLabel(key){ if(String(key).startsWith("c_")){const c=colMap()[key];return c?c.label+(c.type==="flag"?" (tag when ticked)":""):null} return ID_PART_LABELS[key]||key; }
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
@@ -623,7 +627,9 @@ function dayIndex(d){ return S.days.indexOf(d); }
 /* ===================== shot names ===================== */
 function cleanSeg(s){ return String(s==null?"":s).replace(/\s*[\/&]\s*/g,"+").replace(/[\\:*?"'<>|,;()\[\]{}!]+/g,"").trim(); }
 function isOn(v){ return v===true||v===1||/^(1|y|yes|true|x|✓|✔)$/i.test(String(v==null?"":v).trim()); }
-function shotNumber(r,d){
+// a sequence's first shot stands for the whole sequence: its number is the range (162-166, or 162+164+166)
+function shotNumber(r,d){ if(r&&r.seq&&r.seq===r.id&&d){ const rg=seqRange(r,d); if(rg) return rg; } return shotNumber0(r,d); }
+function shotNumber0(r,d){
   const c=cfg(); const pad=Math.max(1,Number(c.shotPad)||3);
   if(c.shotSource!=="running"&&r.shot&&String(r.shot).trim()){
     const s=String(r.shot).trim(); return /^\d+$/.test(s)?s.padStart(pad,"0"):s;
@@ -680,7 +686,7 @@ function compute(d){
 /* ===================== grid rendering ===================== */
 function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k])return DEFAULT_WIDTHS[k];const c=colMap()[k]||{};return c.type==="note"?200:c.type==="flag"?70:c.type==="number"?80:130}
 // print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
-const PRINT_W={handle:20,shot:32,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
+const PRINT_W={handle:20,shot:32,seq:56,vcs:24,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
 function printWidths(){
   if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
   const w={}, flex=[];
@@ -709,6 +715,7 @@ function cellVal(r,key,C){
   switch(key){
     case "shot": return isBlock(r)?blockName(r):(r.shot||"");
     case "shotId": return shotName(r,D(),nextTake(r,D()));
+    case "seq": return r.seq?seqTitle(seqAnchor(r)):"";
     case "setup": return isBlock(r)?0:c.su;
     case "shoot": return c.sh;
     case "start": return c.start;
@@ -1010,6 +1017,7 @@ function renderBody(){
         td.append(hd);
       }
       else if(k==="shot"){ td.append(isBreak?textCell(r,"label",false):textCell(r,"shot",false,{ph:"-"})); }
+      else if(k==="seq"){ if(!isBreak) td.append(seqCell(r)); }
       else if(k==="shotId"){ if(!isBreak) td.append(nameCell(r)); }
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
       else if(k==="setup"){ td.className+=" num"; if(!isBreak) td.append(minsCtl(r,"setup")); }
@@ -1024,6 +1032,7 @@ function renderBody(){
         b.append(h("button",{class:"mv",title:"Move up",onclick:()=>move(r.id,-1)},"↑"),h("button",{class:"mv",title:"Move down",onclick:()=>move(r.id,1)},"↓"),
           ...(isBreak&&r.type!=="tech"?[]:[h("button",{class:"movebtn",title:"Move or copy this shot to another day",onclick:()=>openMove([r.id])},"Move")]),h("button",{title:"Duplicate row",onclick:()=>dup(r.id)},"Dup"),h("button",{title:"Insert a break / move below",onclick:()=>insertBreakAfter(r.id)},"+Brk"),h("button",{class:"techbtn",title:"Insert tech / turnaround time below (technical setup, reset, turnaround)",onclick:()=>insertTechAfter(r.id)},"+Tech"),
           ...(isBreak?[]:[h("button",{class:"cutbtn",title:r.cut?"Put this shot back in the schedule":"Cut this shot from the schedule (nothing is deleted)",onclick:()=>setCut([r.id],!r.cut)},r.cut?"Restore":"Cut")]),
+          ...(isBreak?[]:[h("button",{class:"seqbtn",title:r.seq?"Change this shot's sequence":"Group this shot with others into a sequence you shoot in one go",onclick:()=>openSeqDialog(r.id)},"Seq")]),
           h("button",{title:"Delete row",onclick:()=>del(r.id)},"Del"));
         td.append(b);
       }
@@ -1039,6 +1048,7 @@ function renderBody(){
       tr.append(td);
     }
     if(r.done) tr.classList.add("done");
+    if(r.seq&&!isBreak){ tr.classList.add("inseq"); tr.style.setProperty("--seq",seqColor(r.seq)); }
     if(r.cut){ tr.classList.add("cut"); tr.title="Cut from the schedule: it takes no time. Restore it from the row buttons or the plan panel."; }
     if(!isBlock(r)) paintPrio(null,tr,r.priority);
     tr.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"));tr.classList.add("dropbefore")});
@@ -1759,9 +1769,9 @@ function soundPicker(c){
 
 /* ===================== Slate View ===================== */
 const SLV={id:null,raf:0};
-function openSlate(id){const d=D();if(!d)return;const r=(typeof id==="string"&&R(id))||upNext(d);SLV.id=r&&r.id;$("#slateView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderSlate();tickSlate()}
+function openSlate(id){const d=D();if(!d)return;const r=seqAnchor((typeof id==="string"&&R(id))||upNext(d));SLV.id=r&&r.id;$("#slateView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderSlate();tickSlate()}
 function closeSlate(){rememberView(null);$("#slateView").classList.remove("open");document.body.classList.remove("viewopen");cancelAnimationFrame(SLV.raf);stopLtc();keepAwake(false);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
-function slateStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===SLV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));SLV.id=s[i].id;renderSlate()}
+function slateStep(dir){const s=runningShots().filter(r=>!r.seq||r.seq===r.id||!R(r.seq));if(!s.length)return;let i=s.findIndex(r=>r.id===SLV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));SLV.id=s[i].id;renderSlate()}
 function tickSlate(){const el=$("#slTc");if(el&&$("#slateView").classList.contains("open")){el.textContent=tcString(nowTcMs(),slateFps());
   // while a take rolls: its number, timecode in and running length
   const now=Date.now(); if(!SLV.rt||now-SLV.rt>250){SLV.rt=now;const r=SLV.id&&R(SLV.id),t=rollingTake(r),m=$("#slMsg"),cb=$("#slCut");
@@ -1784,9 +1794,9 @@ function renderSlate0(){
   if(sh.dir) top.append(cell("Director",c.dir||S.project.lead));
   if(sh.dop) top.append(cell("Camera / DOP",c.dop));
   const mid=h("div",{class:"slrow big"});
-  if(sh.shot){ const c=cell("Shot",r?(r.shot||r.action||"-"):"-","huge");
+  if(sh.shot){ const c=cell(r&&r.seq?"Sequence"+(seqAnyVcs(r)?" · VCS":""):"Shot"+(r&&r.vcs?" · VCS":""),r?(r.seq?seqRange(r,d)||r.shot:(r.shot||r.action||"-")):"-","huge");
     // tap the shot number to open the same shot in Note View (looks the same, just clickable)
-    if(r){ const go=()=>{closeSlate();openNotes(r.id)}; c.classList.add("slgo"); c.setAttribute("role","button"); c.tabIndex=0; c.title="Open this shot in Note View";
+    if(r){ const go=()=>{closeSlate();r.seq?openSeqView(r.seq):openNotes(r.id)}; c.classList.add("slgo"); c.setAttribute("role","button"); c.tabIndex=0; c.title=r.seq?"Open this sequence in Sequence View":"Open this shot in Note View";
       c.addEventListener("click",go); c.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.stopPropagation();go()}}); }
     mid.append(c); }
   if(sh.take) mid.append(cell("Take",String(take),"huge"));
@@ -1804,7 +1814,7 @@ function renderSlate0(){
     h("button",{title:"Previous shot",onclick:()=>slateStep(-1)},"‹"),
     h("button",{class:"clap",onclick:()=>clap()},c.logOnClap?"Clap · log take":"Clap"),
     h("button",{class:"cutb",id:"slCut",title:"Cut: timecode out on the take that's rolling (X)",onclick:()=>slateCut()},"■ Cut"),
-    h("button",{title:"Mark this shot done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){x.done=true;x.doneAt=dayClock(D());commit();renderBody()}const n=upNext();SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
+    h("button",{title:"Mark this shot (or the whole sequence) done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){for(const m of (x.seq?seqMembers(x):[x])){m.done=true;m.doneAt=dayClock(D())}commit();renderBody()}const n=seqAnchor(upNext());SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
     h("button",{title:"Next shot",onclick:()=>slateStep(1)},"›"),
     h("span",{class:"slgrow"}),
     h("button",{title:"Slate settings and timecode",onclick:()=>slateSettings()},"⚙"),
@@ -1889,7 +1899,8 @@ function renderNotes(){
   if(r.action) info.append(h("p",{},h("b",{},r.action)));
   if(r.description) info.append(h("p",{},r.description));
   if(r.script) info.append(h("blockquote",{},r.script));
-  const chips=[["Location",r.location],["Shot type",r.shotType],["Name",shotName(r,d,nextTake(r,d))]].filter(x=>x[1]);
+  if(r.seq){ const a=seqAnchor(r); info.prepend(h("div",{class:"seqbanner",style:`--seq:${seqColor(r.seq)}`},h("b",{},"Part of sequence "+seqTitle(a)),` (${seqRange(a,d)}). `,h("button",{class:"go",onclick:()=>{closeNotes();openSeqView(r.seq)}},"Open Sequence View"))); }
+  const chips=[["Location",r.location],["Shot type",r.shotType],["VCS",r.vcs?"yes":""],["Name",shotName(r,d,nextTake(r,d))]].filter(x=>x[1]);
   if(chips.length) info.append(h("div",{class:"nvchips"},...chips.map(([a,b])=>h("span",{},h("small",{},a+" "),b))));
   // takes
   const takes=h("div",{class:"nvtakes"});
@@ -2483,6 +2494,12 @@ document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const k=e.key.toLowerCase();
   if($("#slateView").classList.contains("open")){ if(e.key==="Escape"){if($("#slSet").classList.contains("open"))$("#slSet").classList.remove("open");else closeSlate()} else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "||k==="c"){e.preventDefault();clap()} else if(k==="x"||k==="."){e.preventDefault();slateCut()} else if(k==="f")toggleFull($("#slateView")); }
+  else if($("#seqView").classList.contains("open")){ const a=SQV.id&&R(SQV.id);
+    if(e.key==="Escape")closeSeqView(); else if(e.key==="ArrowRight")seqStep(1); else if(e.key==="ArrowLeft")seqStep(-1);
+    else if(k==="r"&&a){if(rollingTake(a))cutTake(a.id);else logTake(a.id,a&&D().kind!=="capture"?{caught:[]}:{});renderSeqView()}
+    else if(k==="t"&&a){logTake(a.id,D().kind!=="capture"?{caught:[]}:{});renderSeqView()}
+    else if(["g","n","h","s"].includes(k)&&a){const l=takeList(a);const last=l[l.length-1];if(last){const m={g:"good",n:"ng",h:"hero",s:"safety"}[k];last.mark=last.mark===m?"":m;setTakeList(a,l);syncMarks(a);commit();renderSeqView()}}
+    else if(k==="f")toggleFull($("#seqView")); }
   else if($("#noteView").classList.contains("open")){ const r=NV.id&&R(NV.id);
     if(e.key==="Escape")closeNotes(); else if(e.key==="ArrowRight")notesStep(1); else if(e.key==="ArrowLeft")notesStep(-1);
     else if(k==="r"&&r){if(rollingTake(r))cutTake(r.id);else logTake(r.id);renderNotes()}

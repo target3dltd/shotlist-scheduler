@@ -387,6 +387,123 @@ function videoCell(r){
   return w;
 }
 
+/* ---------- sequences: shots grouped and shot in one go ----------
+   A sequence is the shots sharing r.seq; its first shot (the anchor, whose id is the sequence id) carries the
+   sequence's takes, name and notes, so Slate, Roll / Cut, timecode, take counts and exports all work as for a shot.
+   Its DIT name uses the shot range. On Live Action days each take records which shots it caught. */
+function seqMembers(r,d){ if(!r||!r.seq) return []; const f=findRow(r.id); d=d||(f&&f.d); if(!d) return []; return d.rows.filter(x=>x.seq===r.seq&&!isBlock(x)); }
+function seqAnchor(r){ if(!r||!r.seq) return r; const f=findRow(r.seq); return f&&f.r.seq===r.seq?f.r:r; }
+function seqRange(a,d){ const f=findRow(a.id); d=d||(f&&f.d); if(!d) return ""; const m=seqMembers(a,d); if(m.length<2) return "";
+  const nums=m.map(x=>shotNumber0(x,d)).sort(COLLATE.compare); const all=d.rows.filter(x=>!isBlock(x)); const idx=m.map(x=>all.indexOf(x));
+  // next to each other in the shot list: lowest to highest number; spread out: each one
+  const together=idx.every((v,i)=>!i||v===idx[i-1]+1); return together?nums[0]+"-"+nums[nums.length-1]:nums.join("+"); }
+function seqTitle(a){ return (a&&a.seqName)||("Shots "+(seqRange(a)||"")); }
+function seqColor(id){ return colorFor("seq"+id); }
+function seqAnyVcs(a){ return seqMembers(a).some(x=>x.vcs); }
+function seqCoverage(a){ const mem=seqMembers(a), caught=new Map();
+  for(const t of takeList(a)){ if(t.mark==="ng") continue; for(const id of (t.caught||[])){ if(!caught.has(id)) caught.set(id,[]); caught.get(id).push(t.n); } }
+  return {mem,caught,missing:mem.filter(m=>!caught.has(m.id))}; }
+function seqCell(r){
+  if(!r.seq) return h("button",{class:"seqadd",title:"Group this shot with others into a sequence",onclick:()=>openSeqDialog(r.id)},"+");
+  const a=seqAnchor(r);
+  return h("button",{class:"seqchip",style:`--seq:${seqColor(r.seq)}`,title:"Open Sequence View",onclick:()=>openSeqView(r.seq)},seqTitle(a),r.id===a.id?h("small",{}," · "+takeList(a).length+" take"+(takeList(a).length===1?"":"s")):null);
+}
+// group: pick the shots on this day that are shot together
+function openSeqDialog(rowId){
+  const f=findRow(rowId); if(!f) return; const d=f.d, r=f.r; if(frozenNo()) return;
+  const shots=d.rows.filter(x=>!isBlock(x)); const cur=r.seq?seqAnchor(r):null;
+  const pick=new Set(cur?seqMembers(cur,d).map(x=>x.id):[r.id,(shots[shots.indexOf(r)+1]||{}).id].filter(Boolean));
+  const m=h("div",{class:"modal open",id:"seqModal"}), box=h("div",{class:"box",style:"max-width:36rem"}); m.append(box);
+  const close=()=>m.remove();
+  const name=h("input",{type:"text",value:cur?cur.seqName||"":"",placeholder:"e.g. Tavern fight",maxlength:"60"});
+  const list=h("div",{class:"seqpick"});
+  shots.forEach(x=>{ const cb=h("input",{type:"checkbox"}); cb.checked=pick.has(x.id); cb.addEventListener("change",()=>{cb.checked?pick.add(x.id):pick.delete(x.id);upd()});
+    const other=x.seq&&(!cur||x.seq!==cur.seq)?h("small",{class:"note"}," (in "+seqTitle(seqAnchor(x))+")"):null;
+    list.append(h("label",{},cb,h("b",{},x.shot||"-"),h("span",{}," "+String(x.action||x.description||"").slice(0,70)),other)); });
+  const info=h("p",{class:"note"}); const save=h("button",{class:"btn primary"},cur?"Save":"Group");
+  const upd=()=>{ const n=pick.size; save.disabled=n<2; info.textContent=n<2?"Tick at least two shots.":`${n} shots. Takes are logged once for the sequence; on Live Action days you tick which shots each take caught.`; };
+  save.onclick=()=>{ applySeq(d,cur,[...pick],name.value.trim()); close(); };
+  box.append(h("button",{class:"btn small close",onclick:close},"Close"),h("h2",{},cur?"Sequence":"Group into a sequence"),
+    h("p",{class:"note"},"Shots you shoot in one go. They keep their own rows and storyboards; the sequence gets one set of takes and a DIT name covering the shot range."),
+    h("label",{class:"stack"},"Name (optional)",name),list,info,
+    h("div",{class:"toolbar"},save,cur?h("button",{class:"btn",onclick:()=>{applySeq(d,cur,[],"");close()}},"Ungroup"):null,h("button",{class:"btn",onclick:close},"Cancel")));
+  document.body.append(m); upd(); name.focus();
+  m.addEventListener("click",e=>{if(e.target===m)close()});
+}
+function applySeq(d,cur,ids,name){
+  commit();
+  const keep=d.rows.filter(x=>ids.includes(x.id)&&!isBlock(x));   // in day order
+  const oldMem=cur?seqMembers(cur,d):[];
+  for(const x of oldMem) if(!ids.includes(x.id)) x.seq="";
+  if(keep.length<2){ for(const x of keep) x.seq=""; if(cur){cur.seqName="";} commit(); renderAll(); toast(cur?"Ungrouped - Undo to put it back":"Pick at least two shots"); return; }
+  const anchor=keep[0];
+  // the sequence's takes, name and notes live on its first shot; if that changes they move with it
+  if(cur&&cur.id!==anchor.id){ for(const k of ["takeLog","seqNotes"]) {anchor[k]=cur[k]||"";cur[k]=""} anchor.takes=cur.takes; cur.takes=0; cur.seqName=""; }
+  // shots taken from another sequence leave it (that sequence keeps going if it still has two shots)
+  for(const x of keep){ if(x.seq&&x.seq!==(cur&&cur.seq)){ const other=seqAnchor(x); x.seq=""; const rest=seqMembers(other,d).filter(y=>y.id!==x.id); if(rest.length<2) rest.forEach(y=>y.seq=""); else if(other.id===x.id){ const na=rest[0]; for(const y of rest) y.seq=na.id; na.seqName=x.seqName; na.takeLog=x.takeLog; na.takes=x.takes; na.seqNotes=x.seqNotes; x.takeLog=""; x.takes=0; x.seqName=""; x.seqNotes=""; } } }
+  for(const x of keep) x.seq=anchor.id;
+  anchor.seqName=name;
+  commit(); renderAll(); toast(`${cur?"Updated":"Grouped"} ${keep.length} shots as ${name||"a sequence"} - Undo to take it back`);
+}
+/* Sequence View: the grouped shots in one place, with the sequence's takes and what each caught */
+const SQV={id:null};
+function daySeqs(d){d=d||D();return d?d.rows.filter(x=>x.seq&&x.seq===x.id&&!isBlock(x)):[]}
+function openSeqView(id){ const a=R(id); if(!a) return; const f=findRow(id); if(f&&D()&&f.d.id!==D().id){P.activeByProject[pid()]=f.d.id;savePrefs();renderAll()}
+  SQV.id=id; $("#seqView").classList.add("open"); document.body.classList.add("viewopen"); keepAwake(true); renderSeqView(); }
+function closeSeqView(){ rememberView(null); $("#seqView").classList.remove("open"); document.body.classList.remove("viewopen"); clearInterval(SQV.timer); keepAwake(false); renderBody(); }
+function seqStep(dir){ const l=daySeqs(); if(!l.length) return; let i=l.findIndex(x=>x.id===SQV.id); i=Math.max(0,Math.min(l.length-1,(i<0?0:i)+dir)); SQV.id=l[i].id; renderSeqView(); }
+function renderSeqView(){
+  const v=$("#seqView"); v.innerHTML=""; const d=D(), a=SQV.id&&R(SQV.id);
+  if(!a||!a.seq){ closeSeqView(); return; }
+  rememberView("seq",a.id);
+  const la=d.kind!=="capture", mem=seqMembers(a,d), cov=seqCoverage(a), take=nextTake(a,d), name=shotName(a,d,take);
+  v.append(h("div",{class:"nvhead"},
+    h("button",{title:"Previous sequence",onclick:()=>seqStep(-1)},"‹"),
+    h("div",{class:"nvtitle"},h("b",{},seqTitle(a)),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
+    h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
+    h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
+    h("button",{title:"Close",onclick:closeSeqView},"✕")));
+  const body=h("div",{class:"nvbody"});
+  // DIT name for the next take
+  const dit=h("section",{},h("h3",{},"DIT name"),h("div",{class:"seqdit"},h("code",{},name||"-"),h("button",{class:"btn small",onclick:async()=>{if(await copyText(name))toast("Copied "+name)}},"Copy")),
+    h("p",{class:"note"},"Covers shots "+seqRange(a,d)+". "+(la?"Every storyboard shot still needs catching: tick what each take got.":"Mocap: each take records the whole action; framing is set in post.")));
+  // the shots
+  const shots=h("section",{class:"seqshots"},h("h3",{},`Shots (${mem.length})`));
+  for(const m of mem){ const got=cov.caught.get(m.id); const im=h("img",{alt:""}); if(m.ref1) imgSrc(m.ref1).then(s=>{if(s)im.src=s});
+    shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):"")},m.ref1?im:h("div",{class:"noimg"}),
+      h("div",{},h("b",{},"Shot "+(m.shot||"-")),m.vcs?h("span",{class:"pill"},"VCS"):null,h("p",{},String(m.action||m.description||"").slice(0,120)),
+        la?h("small",{},got?"Caught in "+got.map(n=>"T"+n).join(", "):"Not caught yet"):null,
+        h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Notes"))));
+  }
+  if(la) shots.append(h("p",{class:"seqcov "+(cov.missing.length?"miss":"got")},cov.missing.length?`Still to get: ${cov.missing.map(m=>m.shot||"?").join(", ")}`:"Every shot caught"+(takeList(a).length?"":" (no takes yet)")));
+  // takes
+  const takes=h("section",{},h("h3",{},"Takes"));
+  const rolling=rollingTake(a); const extra=()=>la?{caught:[]}:{};
+  const clock=h("span",{class:"mono nvclock"},rolling?fmtDur(Date.now()-rolling.at):"0:00");
+  clearInterval(SQV.timer); if(rolling) SQV.timer=setInterval(()=>{const t=rollingTake(R(a.id));if(t)clock.textContent=fmtDur(Date.now()-t.at);else{clearInterval(SQV.timer);renderSeqView()}},250);
+  takes.append(h("div",{class:"toolbar"},h("button",{class:"btn"+(rolling?" rolling":""),onclick:()=>{rollingTake(R(a.id))?cutTake(a.id):logTake(a.id,extra());renderSeqView()}},rolling?"■ Cut":"● Roll"),clock,
+    h("button",{class:"btn",onclick:()=>{logTake(a.id,extra());renderSeqView()}},"+ Take"),
+    h("button",{class:"btn primary",title:"Mark every shot in the sequence done",onclick:()=>{for(const m of seqMembers(R(a.id))){m.done=true;m.doneAt=dayClock(D())}commit();toast("Sequence done");const n=daySeqs().find(x=>!seqMembers(x).every(y=>y.done));if(n){SQV.id=n.id}renderSeqView()}},"Sequence done ✓")));
+  const list=takeList(a).slice().reverse();
+  if(!list.length) takes.append(h("p",{class:"note"},"No takes yet. ● Roll logs a take for the whole sequence with its timecode in, ■ Cut adds the timecode out; Clap and Cut in Slate View do the same."+(la?" Then tick the shots each take caught.":"")));
+  const edit=(n,fn)=>{const x=R(a.id);const l=takeList(x);const t=l.find(z=>z.n===n);if(!t)return;fn(t);setTakeList(x,l);syncMarks(x);commit();renderSeqView()};
+  for(const t of list){
+    const marks=h("span",{class:"nvmarks"});
+    for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>edit(t.n,z=>{z.mark=z.mark===m?"":m})},l));
+    const row=h("div",{class:"nvtake"},h("b",{},"T"+t.n),h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),marks);
+    if(la){ const ticks=h("span",{class:"seqticks"},h("small",{class:"note"},"Caught:"));
+      for(const m of mem){ const on=(t.caught||[]).includes(m.id); ticks.append(h("button",{class:"tick"+(on?" on":""),title:(on?"Caught":"Not caught")+": shot "+(m.shot||""),onclick:()=>edit(t.n,z=>{const c=new Set(z.caught||[]);c.has(m.id)?c.delete(m.id):c.add(m.id);z.caught=mem.map(y=>y.id).filter(id=>c.has(id))})},m.shot||"?")); }
+      ticks.append(h("button",{class:"tick all",onclick:()=>edit(t.n,z=>{z.caught=(z.caught||[]).length===mem.length?[]:mem.map(y=>y.id)})},(t.caught||[]).length===mem.length?"None":"All"));
+      row.append(ticks); }
+    const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>edit(t.n,z=>{z.note=note.value})); row.append(note);
+    takes.append(row);
+  }
+  const notes=h("section",{},h("h3",{},"Sequence notes"));
+  const ta=h("textarea",{rows:"4",placeholder:"Blocking, what to watch for, pickups needed"}); ta.value=a.seqNotes||"";
+  ta.addEventListener("input",()=>{const x=R(a.id);if(x){x.seqNotes=ta.value;softCommit()}}); ta.addEventListener("change",commit); notes.append(ta);
+  body.append(shots,takes,dit,notes); v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
+}
+
 /* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------
    Panels are reordered with CSS order and sized with grid spans, never moved in the page, so a playing video carries on. */
 const NV_CARDS=["what","video","takes","notes","scribble"];
@@ -451,7 +568,7 @@ function restoreView(){
   if(!s||s.pid!==pid()) return;
   let n=0; const t=setInterval(()=>{ n++;
     if(S&&S.days&&S.days.some(d=>d.rows.some(r=>r.id===s.id))){ clearInterval(t);
-      const f=findRow(s.id); if(f&&!f.d.archived){ P.activeByProject[pid()]=f.d.id; renderAll(); s.view==="slate"?openSlate(s.id):openNotes(s.id); } }
+      const f=findRow(s.id); if(f&&!f.d.archived){ P.activeByProject[pid()]=f.d.id; renderAll(); s.view==="slate"?openSlate(s.id):s.view==="seq"?openSeqView(s.id):openNotes(s.id); } }
     else if(n>60) clearInterval(t); },150);
 }
 

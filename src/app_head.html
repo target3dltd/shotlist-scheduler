@@ -137,6 +137,29 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .nvbody>.nvvhost.has-video{order:1}
 @media(max-width:700px){.nvbody>.nvvhost.has-video{order:2}}
 .nvvhost{container-type:inline-size;min-width:0}
+/* sequences */
+#seqView{background:var(--bg);color:var(--ink)} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
+#grid tr.inseq td[data-col="handle"]{box-shadow:inset 4px 0 0 var(--seq)}
+.seqchip{border:none;border-radius:999px;padding:.2rem .6rem;background:color-mix(in srgb,var(--seq) 18%,var(--panel));color:var(--ink);font:inherit;font-size:.85em;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--seq);text-align:left;max-width:100%}
+.seqchip small{color:var(--muted)}
+.seqadd{border:1px dashed var(--line2);background:none;color:var(--muted);border-radius:999px;width:1.8rem;height:1.6rem;cursor:pointer;opacity:.5} tr:hover .seqadd{opacity:1}
+@media print{.seqadd{display:none}}
+.seqpick{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:.3rem;margin:.6rem 0}
+.seqpick label{display:flex;gap:.5rem;align-items:baseline;padding:.3rem .4rem;border-radius:6px;cursor:pointer} .seqpick label:hover{background:var(--panel2)}
+label.stack{display:flex;flex-direction:column;gap:.25rem;font-size:.9em} label.stack input{border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
+.seqbanner{border-left:4px solid var(--seq);background:color-mix(in srgb,var(--seq) 10%,transparent);padding:.4rem .6rem;border-radius:6px;margin:0 0 .5rem;font-size:.9em}
+.seqbanner .go,.seqshot .go{background:none;border:none;padding:0;color:var(--accent,#2f6fb0);cursor:pointer;font:inherit;text-decoration:underline}
+#seqView .nvbody>.seqshots{grid-column:1/-1}
+.seqshots{display:flex;flex-wrap:wrap;gap:.6rem;align-content:flex-start} .seqshots>h3,.seqshots>.seqcov{flex-basis:100%;margin:0}
+.seqshot{display:flex;gap:.5rem;width:min(100%,19rem);border:1px solid var(--line);border-radius:8px;padding:.45rem;background:var(--panel2)}
+.seqshot img,.seqshot .noimg{width:7.5rem;height:4.4rem;object-fit:cover;border-radius:5px;background:#fff;flex:0 0 auto;border:1px solid var(--line)}
+.seqshot p{margin:.15rem 0;font-size:.85em;line-height:1.3} .seqshot small{display:block;font-size:.78em}
+.seqshot.got{border-color:#2e9d5b} .seqshot.got small{color:#2e7d4f} .seqshot.miss{border-color:#d39b22} .seqshot.miss small{color:#a26a00}
+.seqcov{font-weight:600;padding:.35rem .6rem;border-radius:6px} .seqcov.miss{background:#d39b221f;color:#8a5a00} .seqcov.got{background:#2e9d5b1a;color:#2e7d4f}
+.seqdit{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap} .seqdit code{font-size:1rem;background:var(--panel2);padding:.3rem .5rem;border-radius:5px;word-break:break-all}
+.seqticks{display:flex;gap:.25rem;flex-wrap:wrap;align-items:center;flex-basis:100%;margin:.2rem 0}
+.seqticks .tick{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:5px;padding:.2rem .5rem;font:inherit;font-size:.85em;cursor:pointer}
+.seqticks .tick.on{background:#2e9d5b;border-color:#2e9d5b;color:#fff} .seqticks .tick.all{border-style:dashed}
 /* movable, resizable panels */
 .nvbody>section{position:relative;min-width:0}
 .nvbody>section.sized{overflow:auto}
@@ -915,6 +938,7 @@ body.nosteps .mins.timing input{width:4.5em}
 <!-- Netlify Forms: lets the site owner get an email for each report (Forms > Form notifications). Never shown. -->
 <form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden><input name="type"><input name="title"><textarea name="details"></textarea><input name="from"><input name="contact"><input name="project"><textarea name="context"></textarea><input name="bot-field"></form>
 <div class="viewer" id="slateView" role="dialog" aria-label="Slate"></div>
+<div class="viewer" id="seqView" role="dialog" aria-label="Sequence"></div>
 <div class="viewer" id="noteView" role="dialog" aria-label="Shot notes"></div>
 
 <div class="modal" id="moveModal"><div class="box narrow">
