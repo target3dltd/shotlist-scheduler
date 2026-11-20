@@ -132,12 +132,16 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 @media print{.fbbtn,.fbpanel,.whopop{display:none!important}}
 .slc.slgo{cursor:pointer} .slc.slgo:focus{outline:none} .slc.slgo:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:6px}
 /* reference video in Note View */
-.nvvhost{padding:0 1rem 1rem;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
-.nvvhost .nvvideo{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem 1rem}
+/* panels in Note View: the video sits beside the storyboard when the shot has one, otherwise a small box at the end */
+.nvbody>.nvwhat{order:0} .nvbody>.nvtk{order:2} .nvbody>.nvnt,.nvbody>.nvsc{order:3} .nvbody>.nvvhost{order:4}
+.nvbody>.nvvhost.has-video{order:1}
+@media(max-width:700px){.nvbody>.nvvhost.has-video{order:2}}
+.nvvhost{container-type:inline-size;min-width:0}
+.nvvhost .vstage[hidden]{display:none}
 .nvvideo h3{margin:0 0 .6rem}
-.nvvideo .vwrap{display:grid;grid-template-columns:minmax(0,1fr) 17rem;gap:1rem;align-items:start}
-@media(max-width:900px){.nvvideo .vwrap{grid-template-columns:1fr}}
-.vstage{position:relative;width:100%;aspect-ratio:16/9;max-height:62vh;background:#000;border-radius:8px;overflow:hidden;margin:0 auto}
+.nvvhost .vwrap{display:grid;grid-template-columns:1fr;gap:.6rem;align-items:start}
+@container (min-width:44rem){.nvvhost .vwrap{grid-template-columns:minmax(0,1fr) 15rem;gap:1rem}}
+.vstage{position:relative;width:100%;aspect-ratio:16/9;max-height:52vh;background:#000;border-radius:8px;overflow:hidden;margin:0 auto}
 .vstage iframe,.vstage video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .vstage video.mirror{transform:scaleX(-1)}
 .vtabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:0 0 .5rem}

@@ -326,12 +326,12 @@ const VID={i:0,rowId:null};
 function setVideoLinks(id,links){const x=R(id);if(!x)return;x.video=links.join("\n");commit()}
 function videoSection(r){
   const links=videoLinks(r); if(VID.rowId!==r.id){VID.rowId=r.id;VID.i=0} if(VID.i>=links.length) VID.i=Math.max(0,links.length-1);
-  const sec=h("section",{class:"nvvideo"},h("h3",{},"Reference video"));
+  const sec=h("div",{class:"nvvideo"},h("h3",{},"Reference video"));
   const stage=h("div",{class:"vstage"}), ctl=h("div",{class:"vctl"});
   const main=h("div",{});
   if(links.length>1) main.append(h("div",{class:"vtabs",role:"tablist"},...links.map((u,i)=>h("button",{role:"tab","aria-selected":String(i===VID.i),onclick:()=>{VID.i=i;updateVideoHost(R(r.id))}},"Video "+(i+1)))));
   main.append(stage,ctl);
-  if(!links.length) stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},h("b",{style:"color:#fff"},"No video for this shot yet"),h("br"),"Paste a Google Drive link on the right to play rehearsal or reference footage here.")));
+  if(!links.length) stage.hidden=true;
   else{
     const e=videoEmbed(links[VID.i]);
     if(e.kind==="file"){
@@ -371,7 +371,8 @@ function videoSection(r){
 }
 function updateVideoHost(r){
   const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,pr.vidAccount,pr.vidFolder,pr.vidBase].join("|");
-  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(videoSection(r));
+  host.classList.toggle("has-video",videoLinks(r).length>0);
+  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r).childNodes);
 }
 // in the table: the links, plus ▶ to open the shot in Note View
 function videoCell(r){
@@ -380,6 +381,19 @@ function videoCell(r){
   i.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.video=videoLinks({video:i.value}).join("\n");commit();renderBody()});
   w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Note View",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
   return w;
+}
+
+/* ---------- stay in Slate / Note View across a reload (this browser tab only) ---------- */
+function rememberView(view,id){ try{ if(view&&id) sessionStorage.setItem("shotlist-view",JSON.stringify({view,id,pid:pid(),day:(D()||{}).id})); else sessionStorage.removeItem("shotlist-view"); }catch(e){} }
+let viewRestored=false;
+function restoreView(){
+  if(viewRestored||BOOT_VIEW) return; viewRestored=true;
+  let s=null; try{ s=JSON.parse(sessionStorage.getItem("shotlist-view")||"null"); }catch(e){}
+  if(!s||s.pid!==pid()) return;
+  let n=0; const t=setInterval(()=>{ n++;
+    if(S&&S.days&&S.days.some(d=>d.rows.some(r=>r.id===s.id))){ clearInterval(t);
+      const f=findRow(s.id); if(f&&!f.d.archived){ P.activeByProject[pid()]=f.d.id; renderAll(); s.view==="slate"?openSlate(s.id):openNotes(s.id); } }
+    else if(n>60) clearInterval(t); },150);
 }
 
 /* ---------- wiring ---------- */
