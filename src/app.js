@@ -1,7 +1,9 @@
 "use strict";
-const VERSION = "2.29.1";
+const VERSION = "2.30.0";
 const CHANGELOG = [
-  ["2.29.1","2026-11-20","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
+  ["2.30.0","2026-11-20","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
+  ["2.29.2","","Double-click a sequence's name (header row, Sequence column or Sequence View) to rename it. Each shot's ▾ in the Sequence column moves it to another sequence, takes it out, or starts a new sequence with it; + puts a shot into one."],
+  ["2.29.1","","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
   ["2.29.0","","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
   ["2.28.2","","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
   ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
@@ -1065,7 +1067,7 @@ function renderBody(){
     if(r.cut){ tr.classList.add("cut"); tr.title="Cut from the schedule: it takes no time. Restore it from the row buttons or the plan panel."; }
     if(!isBlock(r)) paintPrio(null,tr,r.priority);
     tr.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"));tr.classList.add("dropbefore")});
-    tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
+    tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;if(String(dragId).startsWith("seq:")){const a=R(dragId.slice(4));dragId=null;if(a)moveRowsTo(seqMembers(a).map(x=>x.id),r.id,false);return}const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
     tb.append(tr);
   });
   recalc(); applyPeerRows();

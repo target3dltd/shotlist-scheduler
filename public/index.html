@@ -141,15 +141,23 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 #seqView{background:var(--bg);color:var(--ink)}
 #grid tr.seqhead td{padding:0;background:color-mix(in srgb,var(--seq) 9%,var(--panel));border-top:2px solid var(--seq)}
 .seqhd{position:sticky;left:0;display:flex;gap:.45rem .7rem;align-items:center;flex-wrap:wrap;padding:.4rem .6rem;max-width:min(100vw - 3rem,1100px);font-size:.9em}
+.seqhd .seqgrip{cursor:grab;color:var(--muted)} #grid tr.seqhead.dropbefore td{box-shadow:inset 0 3px 0 var(--accent,#2f6fb0)} #grid tr.seqhead.dropafter td{box-shadow:inset 0 -3px 0 var(--accent,#2f6fb0)}
 .seqhd .fold{border:none;background:none;color:var(--ink);font-size:1rem;cursor:pointer;padding:0 .2rem;width:1.4rem}
 .seqhd .meta{color:var(--muted)} .seqhd b.t{font-variant-numeric:tabular-nums}
 .seqhd .mins2{display:inline-flex;gap:.25rem;align-items:center} .seqhd .mins2 input{width:3.6rem;padding:.15rem .3rem;border:1px solid var(--line);border-radius:5px;font:inherit;background:var(--field,var(--bg));color:var(--ink)}
 .seqhd .lnk{background:none;border:none;color:var(--accent,#2f6fb0);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.seqhd .seqtime{border:none;background:none;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);cursor:pointer;padding:.05rem .3rem;border-radius:5px;text-decoration:underline dotted;text-underline-offset:3px} .seqhd .seqtime:hover{background:var(--panel2)}
+.seqinside{color:#8a5a00;background:#d39b221f;border-radius:5px;padding:.05rem .4rem;font-weight:600}
 .seqtimed{color:var(--muted);font-size:.85em;font-style:italic}
 @media print{.seqhd .fold,.seqhd .lnk,.seqhd .noprint{display:none}} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
 #grid tr.inseq td[data-col="handle"]{box-shadow:inset 4px 0 0 var(--seq)}
 .seqchip{border:none;border-radius:999px;padding:.2rem .6rem;background:color-mix(in srgb,var(--seq) 18%,var(--panel));color:var(--ink);font:inherit;font-size:.85em;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--seq);text-align:left;max-width:100%}
 .seqchip small{color:var(--muted)}
+.seqcell{display:inline-flex;gap:.25rem;align-items:center;max-width:100%}
+.seqmore{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;cursor:pointer;padding:.05rem .35rem;font-size:.8rem;opacity:.6} tr:hover .seqmore,.seqmore:focus-visible{opacity:1}
+input.seqrename{font:inherit;font-size:.9em;padding:.15rem .45rem;border:1.5px solid var(--accent,#2f6fb0);border-radius:999px;width:11rem;background:var(--field,var(--bg));color:var(--ink)}
+.seqmenu .mi{display:block;width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:.4rem .5rem;color:var(--ink);font:inherit;cursor:pointer} .seqmenu .mi:hover{background:var(--panel2)} .seqmenu .mi small{color:var(--muted)}
+@media print{.seqmore{display:none}}
 .seqadd{border:1px dashed var(--line2);background:none;color:var(--muted);border-radius:999px;width:1.8rem;height:1.6rem;cursor:pointer;opacity:.5} tr:hover .seqadd{opacity:1}
 @media print{.seqadd{display:none}}
 .seqpick{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:.3rem;margin:.6rem 0}
@@ -158,6 +166,10 @@ label.stack{display:flex;flex-direction:column;gap:.25rem;font-size:.9em} label.
 .seqbanner{border-left:4px solid var(--seq);background:color-mix(in srgb,var(--seq) 10%,transparent);padding:.4rem .6rem;border-radius:6px;margin:0 0 .5rem;font-size:.9em}
 .seqbanner .go,.seqshot .go{background:none;border:none;padding:0;color:var(--accent,#2f6fb0);cursor:pointer;font:inherit;text-decoration:underline}
 #seqView .nvbody>.seqshots{grid-column:1/-1}
+#sqBody>section{order:3} #sqBody>.sqshots{order:0} #sqBody>.sqtk{order:2} #sqBody>.sqvhost{order:9;container-type:inline-size;min-width:0} #sqBody>.sqvhost.has-video{order:1}
+.sqvhost .vwrap{display:grid;grid-template-columns:1fr;gap:.6rem;align-items:start}
+@container (min-width:44rem){.sqvhost .vwrap{grid-template-columns:minmax(0,1fr) 15rem;gap:1rem}}
+.sqvhost .vstage[hidden]{display:none}
 .seqshots{display:flex;flex-wrap:wrap;gap:.6rem;align-content:flex-start} .seqshots>h3,.seqshots>.seqcov{flex-basis:100%;margin:0}
 .seqshot{display:flex;gap:.5rem;width:min(100%,19rem);border:1px solid var(--line);border-radius:8px;padding:.45rem;background:var(--panel2)}
 .seqshot img,.seqshot .noimg{width:7.5rem;height:4.4rem;object-fit:cover;border-radius:5px;background:#fff;flex:0 0 auto;border:1px solid var(--line)}
@@ -1204,6 +1216,10 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Live Action</b>: every storyboard shot still needs catching, so each take has a tick per shot (or <b>All</b>). The shots show which takes caught them and <b>Still to get</b> lists what's missing. NG takes don't count. <b>Mocap</b>: a take records the whole action, so there are no ticks; framing is dealt with in post.</li>
     <li><b>Slate View</b> shows the sequence (and its range) for any of its shots, and Clap logs the sequence's take.</li>
     <li><b>In the table</b> each sequence has a header row: its name, range, start and end, takes and (Live Action) how many shots are caught. <b>▾</b> folds the sequence into that row; <b>fold all</b> / <b>unfold all</b> appear on the first one. Folding is just for your screen.</li>
+    <li><b>Rename</b>: double-click the sequence's name (in its header row, the Sequence column or Sequence View), type, Enter. <b>One shot at a time</b>: the <b>▾</b> next to a shot's sequence moves it to another sequence, takes it out, or starts a new sequence with it; the <b>+</b> on a shot that isn't in one adds it to a sequence. If you take out a sequence's first shot, the sequence and its takes carry on with the next.</li>
+    <li><b>Moving things around a sequence</b>: drag a break, lunch or shot onto a sequence's header row, folded or not: drop on its top half to put it above the sequence, its bottom half for below. Drag the header's <b>⠿</b> to move the whole sequence (all its shots together). If a break, lunch or another shot ends up between a sequence's shots, the header row says so: <b>move after</b> or <b>move before</b> puts it outside the sequence in one click.</li>
+    <li><b>Start a sequence at a time</b>: click its times on the header row (e.g. 09:00 → 10:15), type the time it should start and press Enter. All its shots move together to the slot that starts closest; the preview says where before you confirm.</li>
+    <li><b>Reference video for a sequence</b>: Sequence View has its own video panel. Paste Google Drive (or other) links there, as in Note View; it sits beside the shots once there's a video, and keeps playing while you mark takes. Shots that have their own videos show <b>▶ shot video</b>.</li>
     <li><b>Time as one</b> (header row or Sequence View): one setup and one shoot time for the whole sequence instead of per shot. It starts from the shots' longest setup and their shoots added up; type over them. The shots then show <i>in seq</i>. <b>Time per shot</b> switches back, with each shot's own times as they were.</li>
     <li><b>Duplicate</b> (header row or Sequence View): a copy of the sequence straight after it, with the same shots, storyboards and timings, no takes, named "(2)", "(3)"... Handy for another pass.</li>
     <li><b>From the sheet</b>: a column headed <b>Seq</b> or <b>Sequence</b> groups shots with the same letter or name (/, -, n/a and none mean not in a sequence). When you update from a revised sheet, the preview lists each sequence's shots and offers to <b>put the running order in sequence order</b> (A, B, C... with shot numbers in order inside each, then the shots not in a sequence; breaks and tech rows stay where they are). One Undo takes it back.</li>
@@ -1328,9 +1344,11 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.29.1";
+const VERSION = "2.30.0";
 const CHANGELOG = [
-  ["2.29.1","2026-11-20","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
+  ["2.30.0","2026-11-20","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
+  ["2.29.2","","Double-click a sequence's name (header row, Sequence column or Sequence View) to rename it. Each shot's ▾ in the Sequence column moves it to another sequence, takes it out, or starts a new sequence with it; + puts a shot into one."],
+  ["2.29.1","","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
   ["2.29.0","","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
   ["2.28.2","","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
   ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
@@ -1405,7 +1423,7 @@ const SEED = null;
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
@@ -2664,7 +2682,7 @@ function renderBody(){
     if(r.cut){ tr.classList.add("cut"); tr.title="Cut from the schedule: it takes no time. Restore it from the row buttons or the plan panel."; }
     if(!isBlock(r)) paintPrio(null,tr,r.priority);
     tr.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"));tr.classList.add("dropbefore")});
-    tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
+    tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId)return;if(String(dragId).startsWith("seq:")){const a=R(dragId.slice(4));dragId=null;if(a)moveRowsTo(seqMembers(a).map(x=>x.id),r.id,false);return}const rows=D().rows;const from=rows.findIndex(x=>x.id===dragId);let to=rows.findIndex(x=>x.id===r.id);if(from<0||to<0||from===to){dragId=null;return}const [m]=rows.splice(from,1);if(from<to)to--;rows.splice(to,0,m);dragId=null;commit();renderBody()});
     tb.append(tr);
   });
   recalc(); applyPeerRows();
@@ -5490,7 +5508,7 @@ function buildReady(b){
 /* ---------- reference / rehearsal video, by link (Google Drive first) ---------- */
 // a shot's links are kept one per line in r.video; videos stay in Drive (or wherever) and play from there
 // links are kept one per line; with a project base address a plain file name (SH030_rehearsal.mp4) is enough
-function videoLinks(r){return String((r&&r.video)||"").split(/\s*[\n,]\s*|\s+(?=https?:|ftp:|<iframe)/i).map(s=>s.trim()).filter(Boolean).filter(s=>/^(https?:|ftp:)\/\//i.test(s)||/<iframe/i.test(s)||(vidBase()&&/\.\w{2,5}$/.test(s)))}
+function videoLinks(r,f="video"){return String((r&&r[f])||"").split(/\s*[\n,]\s*|\s+(?=https?:|ftp:|<iframe)/i).map(s=>s.trim()).filter(Boolean).filter(s=>/^(https?:|ftp:)\/\//i.test(s)||/<iframe/i.test(s)||(vidBase()&&/\.\w{2,5}$/.test(s)))}
 function vidBase(){const b=String((S&&S.project&&S.project.vidBase)||"").trim();return /^https?:\/\//i.test(b)?b.replace(/\/*$/,"/"):""}
 // the Google account to open Drive files with is each person's own, kept on their device per project (never shared)
 function vidAccount(){return String(((P.vidAccounts||{})[pid()])||"").trim()}
@@ -5532,14 +5550,16 @@ function renderVideoSettings(b){
   if(src) f.append(field("vidFolder","Project video folder (link, for the team to browse)","https://…","url"));
   b.append(h("h3",{style:"margin-top:1.2rem"},"Reference video"),h("p",{class:"note"},"Rehearsal and reference videos stay where they're stored; each shot only keeps the link. "+(tips[src]||"Pick where this project keeps its videos. Each project can use a different place or Google account.")),f);
 }
-const VID={i:0,rowId:null};
-function setVideoLinks(id,links){const x=R(id);if(!x)return;x.video=links.join("\n");commit()}
-function videoSection(r){
-  const links=videoLinks(r); if(VID.rowId!==r.id){VID.rowId=r.id;VID.i=0} if(VID.i>=links.length) VID.i=Math.max(0,links.length-1);
+const VID={i:0,key:null};
+function setVideoLinks(id,links,f="video"){const x=R(id);if(!x)return;x[f]=links.join("\n");commit()}
+// opt.field: which links (a shot's "video", a sequence's "seqVideo"); opt.host: where the player lives
+function videoSection(r,opt={}){
+  const F=opt.field||"video", hostSel=opt.host||"#nvVideoHost", redraw=()=>{const x=R(r.id);if(x)updateVideoHost(x,opt)};
+  const links=videoLinks(r,F); const vk=F+"|"+r.id; if(VID.key!==vk){VID.key=vk;VID.i=0} if(VID.i>=links.length) VID.i=Math.max(0,links.length-1);
   const sec=h("div",{class:"nvvideo"},h("h3",{},"Reference video"));
   const stage=h("div",{class:"vstage"}), ctl=h("div",{class:"vctl"});
   const main=h("div",{});
-  if(links.length>1) main.append(h("div",{class:"vtabs",role:"tablist"},...links.map((u,i)=>h("button",{role:"tab","aria-selected":String(i===VID.i),onclick:()=>{VID.i=i;updateVideoHost(R(r.id))}},"Video "+(i+1)))));
+  if(links.length>1) main.append(h("div",{class:"vtabs",role:"tablist"},...links.map((u,i)=>h("button",{role:"tab","aria-selected":String(i===VID.i),onclick:()=>{VID.i=i;redraw()}},"Video "+(i+1)))));
   main.append(stage,ctl);
   if(!links.length) stage.hidden=true;
   else{
@@ -5560,18 +5580,18 @@ function videoSection(r){
       stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},"This link can't play inside the app (",e.name,"). ",h("a",{href:links[VID.i],target:"_blank",rel:"noopener noreferrer",style:"color:#fff"},"Open it in a new tab"),".")));
     }else{
       stage.append(h("iframe",{src:e.src,allow:"autoplay; fullscreen; picture-in-picture",allowfullscreen:"",referrerpolicy:"no-referrer-when-downgrade",title:"Reference video for shot "+(r.shot||"")}));
-      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive"+(vidAccount()?" as "+vidAccount():"")+". Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file. ",h("a",{href:"#",onclick:ev=>{ev.preventDefault();closeNotes();openSettings&&openSettings("project")}},vidAccount()?"Change account":"Pick which Google account")));
+      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive"+(vidAccount()?" as "+vidAccount():"")+". Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file. ",h("a",{href:"#",onclick:ev=>{ev.preventDefault();if($("#seqView").classList.contains("open"))closeSeqView();else closeNotes();openSettings&&openSettings("project")}},vidAccount()?"Change account":"Pick which Google account")));
       if(e.kind==="folder") ctl.append(h("span",{class:"note"},"A Drive folder: pick a video and it opens in a new tab. Link each shot to its own file to play it here."));
     }
   }
   // the links: add, open, remove
   const list=h("div",{class:"vlist"});
   links.forEach((u,i)=>list.append(h("div",{},h("a",{href:videoEmbed(u).open,target:"_blank",rel:"noopener noreferrer",title:videoUrl(u)},"Video "+(i+1)+": "+(/^https?:|<iframe/i.test(u)?videoEmbed(u).name:u)),
-    h("button",{title:"Remove this link","aria-label":"Remove video "+(i+1),onclick:()=>{setVideoLinks(r.id,links.filter((x,j)=>j!==i));renderNotes()}},"✕"))));
+    h("button",{title:"Remove this link","aria-label":"Remove video "+(i+1),onclick:()=>{setVideoLinks(r.id,links.filter((x,j)=>j!==i),F);redraw()}},"✕"))));
   const ph={drive:"Paste a Google Drive link",dropbox:"Paste a Dropbox link",onedrive:"Paste the OneDrive embed code",box:"Paste a Box link",server:"Type a file name or paste a link"}[S.project.vidSource]||"Paste a Google Drive or other video link";
   const inp=h("input",{type:"text",placeholder:ph,spellcheck:"false"});
   const add=()=>{const v=inp.value.trim(); if(!v) return; if(!videoLinks({video:v}).length){toast(vidBase()?"Type a file name with its extension, or paste a link":"That doesn't look like a link. To type file names, set a web address in Settings, Project");return}
-    setVideoLinks(r.id,[...links,v]); VID.i=links.length; renderNotes(); toast(videoEmbed(v).kind==="link"?"Link saved: it opens in a new tab":"Video added to shot "+(r.shot||""))};
+    setVideoLinks(r.id,[...links,v],F); VID.i=links.length; redraw(); toast(videoEmbed(v).kind==="link"?"Link saved: it opens in a new tab":(F==="seqVideo"?"Video added to "+seqTitle(r):"Video added to shot "+(r.shot||"")))};
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
   inp.addEventListener("paste",()=>setTimeout(add,30));
   sec.append(h("div",{class:"vwrap"},main,h("div",{class:"vside"},list,inp,h("button",{class:"btn small",onclick:add},links.length?"+ Add another video":"Add video"),
@@ -5579,10 +5599,10 @@ function videoSection(r){
     h("p",{class:"note",style:"margin:0"},(S.project.vidSource==="server"?"Type the file's name as it is in the project folder.":S.project.vidSource==="onedrive"?"In OneDrive: the video, Embed, then copy the code.":"In Drive: right-click the video, Share, then Copy link. Share it with the team (or set it to Anyone with the link) so it plays for everyone.")+" Each shot can have several videos. Where they're kept is set per project in Settings, Project.")) ));
   return sec;
 }
-function updateVideoHost(r){
-  const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,vidAccount(),pr.vidFolder,pr.vidBase].join("|");
-  host.classList.toggle("has-video",videoLinks(r).length>0);
-  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r).childNodes); cardControls(host); applyNvLayout();
+function updateVideoHost(r,opt={}){
+  const F=opt.field||"video"; const host=$(opt.host||"#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=F+"|"+r.id+"|"+(r[F]||"")+"|"+VID.i+"|"+[pr.vidSource,vidAccount(),pr.vidFolder,pr.vidBase].join("|");
+  host.classList.toggle("has-video",videoLinks(r,F).length>0);
+  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r,opt).childNodes); if(!opt.host){ cardControls(host); applyNvLayout(); }
 }
 // in the table: the links, plus ▶ to open the shot in Note View
 function videoCell(r){
@@ -5610,9 +5630,58 @@ function seqCoverage(a){ const mem=seqMembers(a), caught=new Map();
   for(const t of takeList(a)){ if(t.mark==="ng") continue; for(const id of (t.caught||[])){ if(!caught.has(id)) caught.set(id,[]); caught.get(id).push(t.n); } }
   return {mem,caught,missing:mem.filter(m=>!caught.has(m.id))}; }
 function seqCell(r){
-  if(!r.seq) return h("button",{class:"seqadd",title:"Group this shot with others into a sequence",onclick:()=>openSeqDialog(r.id)},"+");
-  const a=seqAnchor(r);
-  return h("button",{class:"seqchip",style:`--seq:${seqColor(r.seq)}`,title:"Open Sequence View",onclick:()=>openSeqView(r.seq)},seqTitle(a),r.id===a.id?h("small",{}," · "+takeList(a).length+" take"+(takeList(a).length===1?"":"s")):null);
+  const w=h("span",{class:"seqcell"});
+  if(r.seq){ const a=seqAnchor(r); w.append(seqChip(a,r.id===a.id?h("small",{}," · "+takeList(a).length+" take"+(takeList(a).length===1?"":"s")):null)); }
+  w.append(h("button",{class:r.seq?"seqmore":"seqadd",title:r.seq?"Move this shot to another sequence, or take it out":"Put this shot in a sequence","aria-label":"Sequence options",onclick:e=>{e.stopPropagation();seqMenu(e.currentTarget,r.id)}},r.seq?"▾":"+"));
+  return w;
+}
+// the sequence's name as a chip: click opens Sequence View, double-click renames it in place
+function seqChip(a,extra){
+  const chip=h("button",{class:"seqchip",style:`--seq:${seqColor(a.seq)}`,title:"Click: Sequence View · Double-click: rename"},seqTitle(a),extra||null);
+  let t=null; chip.addEventListener("click",e=>{e.stopPropagation();clearTimeout(t);t=setTimeout(()=>openSeqView(a.seq),260)});
+  chip.addEventListener("dblclick",e=>{e.preventDefault();e.stopPropagation();clearTimeout(t);renameSeqInline(chip,a.id)});
+  return chip;
+}
+function renameSeqInline(el,id){
+  if(frozenNo()) return; const a=R(id); if(!a) return;
+  const i=h("input",{type:"text",value:a.seqName||"",placeholder:"Sequence name",maxlength:"60",class:"seqrename","aria-label":"Sequence name"});
+  let done=false; const save=keep=>{ if(done) return; done=true; const v=i.value.trim(); if(keep&&v!==(a.seqName||"")){ const x=R(id); if(x){x.seqName=v;commit();toast(v?"Renamed to "+v:"Name cleared")} } renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); };
+  i.addEventListener("keydown",e=>{e.stopPropagation(); if(e.key==="Enter"){e.preventDefault();save(true)} if(e.key==="Escape"){e.preventDefault();save(false)}});
+  i.addEventListener("blur",()=>save(true)); i.addEventListener("click",e=>e.stopPropagation());
+  el.replaceWith(i); i.focus(); i.select();
+}
+// one shot's sequence: move it to another, take it out, or start a new one with it
+function seqMenu(anchor,id){
+  $$(".locpop").forEach(x=>x.remove()); const f=findRow(id); if(!f) return; const d=f.d, r=f.r;
+  const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+  const item=(label,fn,sub)=>h("button",{class:"mi",role:"menuitem",onclick:()=>{close();fn()}},label,sub?h("small",{}," "+sub):null);
+  const others=daySeqs(d).filter(a=>a.seq!==r.seq);
+  pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},"Shot "+(r.shot||"-")+(r.seq?" · in "+seqTitle(seqAnchor(r)):"")));
+  if(r.seq) pop.append(item("Open Sequence View",()=>openSeqView(r.seq)),item("Rename this sequence",()=>{const c=$(`#grid tr.seqhead[data-seq="${r.seq}"] .seqchip`);if(c)renameSeqInline(c,r.seq)}));
+  if(others.length){ pop.append(h("div",{class:"note",style:"margin:.4rem .3rem .2rem"},r.seq?"Move to":"Add to"));
+    for(const a of others) pop.append(item(seqTitle(a),()=>moveToSeq(id,a.id),seqRange(a,d))); }
+  pop.append(item("New sequence with this shot",()=>moveToSeq(id,"new")));
+  if(r.seq) pop.append(item("Take it out of the sequence",()=>moveToSeq(id,"")));
+  if(!r.seq) pop.append(item("Group with other shots…",()=>openSeqDialog(id)));
+  document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); const top=b.bottom+6+pop.offsetHeight>innerHeight?Math.max(8,b.top-pop.offsetHeight-6):b.bottom+6;
+  pop.style.top=top+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+function moveToSeq(id,target){
+  if(frozenNo()) return; const f=findRow(id); if(!f) return; const d=f.d, r=f.r; commit();
+  const SEQF=["seqName","takeLog","seqNotes","seqTime","seqSetup","seqShoot","seqVideo"], blank={seqName:"",takeLog:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0,seqVideo:""};
+  // leaving: if it was the sequence's first shot, the sequence's takes, name and timing pass to the next one
+  if(r.seq){ const a=seqAnchor(r), rest=seqMembers(a,d).filter(x=>x.id!==r.id);
+    if(a.id===r.id&&rest.length){ const na=rest[0]; for(const k of SEQF) na[k]=r[k]; na.takes=r.takes; rest.forEach(x=>x.seq=na.id); }
+    // its takes went with the sequence; a sequence of one keeps them on the shot
+    if(a.id===r.id){ if(rest.length){ Object.assign(r,blank); r.takes=0; } else Object.assign(r,{seqName:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0}); }
+    r.seq=""; }
+  let msg="";
+  if(target==="new"){ const names=new Set(daySeqs(d).map(x=>x.seqName)); let n=1; while(names.has("Sequence "+n)) n++; r.seq=r.id; r.seqName="Sequence "+n; msg=`Shot ${r.shot||""} starts ${r.seqName}: double-click its name to rename it`; }
+  else if(target){ const ta=R(target); if(ta){ r.seq=ta.seq; msg=`Shot ${r.shot||""} moved to ${seqTitle(ta)}`; } }
+  else msg=`Shot ${r.shot||""} taken out of the sequence`;
+  commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); toast(msg+" - Undo to put it back");
 }
 // group: pick the shots on this day that are shot together
 function openSeqDialog(rowId){
@@ -5644,7 +5713,7 @@ function applySeq(d,cur,ids,name){
   if(keep.length<2){ for(const x of keep) x.seq=""; if(cur){cur.seqName="";} commit(); renderAll(); toast(cur?"Ungrouped - Undo to put it back":"Pick at least two shots"); return; }
   const anchor=keep[0];
   // the sequence's takes, name and notes live on its first shot; if that changes they move with it
-  if(cur&&cur.id!==anchor.id){ for(const k of ["takeLog","seqNotes"]) {anchor[k]=cur[k]||"";cur[k]=""} anchor.takes=cur.takes; cur.takes=0; cur.seqName=""; }
+  if(cur&&cur.id!==anchor.id){ for(const k of ["takeLog","seqNotes","seqVideo"]) {anchor[k]=cur[k]||"";cur[k]=""} anchor.takes=cur.takes; cur.takes=0; cur.seqName=""; }
   // shots taken from another sequence leave it (that sequence keeps going if it still has two shots)
   for(const x of keep){ if(x.seq&&x.seq!==(cur&&cur.seq)){ const other=seqAnchor(x); x.seq=""; const rest=seqMembers(other,d).filter(y=>y.id!==x.id); if(rest.length<2) rest.forEach(y=>y.seq=""); else if(other.id===x.id){ const na=rest[0]; for(const y of rest) y.seq=na.id; na.seqName=x.seqName; na.takeLog=x.takeLog; na.takes=x.takes; na.seqNotes=x.seqNotes; x.takeLog=""; x.takes=0; x.seqName=""; x.seqNotes=""; } } }
   for(const x of keep) x.seq=anchor.id;
@@ -5679,17 +5748,67 @@ function seqHeadRow(id,C,d,first){
   const fz=isFrozen(d), tl=takeList(a).length;
   const box=h("div",{class:"seqhd"},
     h("button",{class:"fold",title:folded?"Show the sequence's shots":"Fold the sequence into this row","aria-expanded":String(!folded),onclick:()=>setFold(id,!folded)},folded?"▸":"▾"),
-    h("button",{class:"seqchip",style:`--seq:${seqColor(id)}`,title:"Open Sequence View",onclick:()=>openSeqView(id)},seqTitle(a)),
+    seqChip(a),
     h("span",{class:"meta"},`${seqRange(a,d)} · ${mem.length} shot${mem.length===1?"":"s"}`),
-    ...(sp?[h("b",{class:"t"},fmt(sp.start)+" → "+fmt(sp.end))]:[]));
+    ...(sp?[(()=>{const t=h("button",{class:"t seqtime",title:"Click to move the whole sequence to a time of day"},fmt(sp.start)+" → "+fmt(sp.end));t.addEventListener("click",e=>{e.stopPropagation();openSeqJumpTime(id,t)});return t})()]:[]));
   if(a.seqTime){ const inp=(k,lab)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),"aria-label":lab+" minutes for the sequence",readOnly:fz});i.addEventListener("change",()=>setSeqMins(id,k,i.value));return h("label",{class:"mins2"},lab,i)};
     box.append(inp("seqSetup","Setup"),inp("seqShoot","Shoot"),h("span",{class:"meta"},"min, whole sequence"),h("button",{class:"lnk noprint",onclick:()=>setSeqTime(id,false)},"time per shot")); }
   else if(sp) box.append(h("span",{class:"meta"},`setup ${dur(sp.su)} · shoot ${dur(sp.sh)}`),h("button",{class:"lnk noprint",title:"One setup and shoot time for the whole sequence instead of per shot",onclick:()=>setSeqTime(id,true)},"time as one"));
+  // rows that sit between the sequence's shots (a lunch left in the middle): say so, with a one-click way out
+  const all=d.rows, idx=mem.map(m=>all.indexOf(m)).filter(i=>i>=0), lo=Math.min(...idx), hi=Math.max(...idx);
+  const inside=idx.length>1?all.slice(lo,hi+1).filter(r=>r.seq!==id&&!r.cut):[];
+  if(inside.length){ const names=inside.map(r=>isBlock(r)?blockName(r):"Shot "+(r.shot||"-"));
+    box.append(h("span",{class:"seqinside"},`${names.slice(0,3).join(", ")}${names.length>3?" and "+(names.length-3)+" more":""} ${inside.length===1?"sits":"sit"} inside this sequence`),
+      h("button",{class:"lnk noprint",title:"Put them straight after the sequence's last shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[hi].id,true)},"move after"),
+      h("button",{class:"lnk noprint",title:"Put them straight before the sequence's first shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[lo].id,false)},"move before")); }
   box.append(h("span",{class:"meta"},`${tl} take${tl===1?"":"s"}`+(la&&mem.length?` · ${mem.length-cov.missing.length}/${mem.length} caught`:"")),
     h("button",{class:"lnk noprint",onclick:()=>dupSeq(id)},"duplicate"),
     ...(first&&Object.keys(P.seqFold||{}).length?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold={};savePrefs();renderBody()}},"unfold all")]:[]),
     ...(first&&daySeqs(d).length>1&&daySeqs(d).some(x=>!seqFolded(x.id))?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold=P.seqFold||{};daySeqs(d).forEach(x=>P.seqFold[x.id]=true);savePrefs();renderBody()}},"fold all")]:[]));
-  return h("tr",{class:"seqhead"+(folded?" folded":""),"data-seq":id,style:`--seq:${seqColor(id)}`},h("td",{colspan:String(cols().length)},box));
+  // drag: the ⠿ moves the whole sequence; rows dropped on the header land above it (top half) or below it (bottom half)
+  const grip=h("span",{class:"handle seqgrip",draggable:"true",title:"Drag to move the whole sequence"},"⠿");
+  grip.addEventListener("dragstart",e=>{if(isFrozen()){e.preventDefault();frozenNo();return}dragId="seq:"+id;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",dragId)});
+  grip.addEventListener("dragend",()=>{dragId=null;$$("tr.dropbefore,tr.dropafter").forEach(x=>x.classList.remove("dropbefore","dropafter"))});
+  box.prepend(grip);
+  const tr=h("tr",{class:"seqhead"+(folded?" folded":""),"data-seq":id,style:`--seq:${seqColor(id)}`},h("td",{colspan:String(cols().length)},box));
+  const below=e=>{const b=tr.getBoundingClientRect();return e.clientY>b.top+b.height/2};
+  tr.addEventListener("dragover",e=>{if(!dragId||dragId==="seq:"+id)return;e.preventDefault();$$("tr.dropbefore,tr.dropafter").forEach(x=>x.classList.remove("dropbefore","dropafter"));tr.classList.add(below(e)?"dropafter":"dropbefore")});
+  tr.addEventListener("dragleave",()=>tr.classList.remove("dropbefore","dropafter"));
+  tr.addEventListener("drop",e=>{e.preventDefault();if(!dragId||dragId==="seq:"+id)return;const m=seqMembers(R(id));if(!m.length)return;
+    const moving=String(dragId).startsWith("seq:")?seqMembers(R(dragId.slice(4))).map(x=>x.id):[dragId]; dragId=null;
+    below(e)?moveRowsTo(moving,m[m.length-1].id,true):moveRowsTo(moving,m[0].id,false)});
+  return tr;
+}
+// type a time: the whole sequence moves (its shots together) to the slot that starts closest to it
+function seqSlot(d,ids,target){
+  const block=d.rows.filter(r=>ids.includes(r.id)), rest=d.rows.filter(r=>!ids.includes(r.id)); let best=null;
+  for(let i=0;i<=rest.length;i++){ const trial=[...rest.slice(0,i),...block,...rest.slice(i)], C=compute(Object.assign({},d,{rows:trial})), st=C.rows[block[0].id].setupStart;
+    const diff=Math.abs(st-target); if(!best||diff<best.diff-0.01) best={i,start:st,diff,before:rest[i]||null,after:rest[i-1]||null,rows:trial}; }
+  return best;
+}
+function openSeqJumpTime(id,el){
+  if(frozenNo()) return; closeJumpTime(); const d=D(), a=R(id); if(!a) return; const ids=seqMembers(a,d).map(r=>r.id); const sp=seqSpan(a,compute(),d); if(!sp) return;
+  const inp=h("input",{type:"time",value:hhmm(sp.start%1440)}), hint=h("div",{class:"note"}), name=seqTitle(a);
+  const nb=n=>n?(isBlock(n)?blockName(n):"shot "+(n.shot||"-")):"";
+  const preview=()=>{ if(!inp.value){hint.textContent="";return} const b=seqSlot(d,ids,jumpTarget(d,inp.value));
+    hint.textContent=(Math.round(b.diff)<=1?"Starts at ":"Closest it can start: ")+fmt(b.start)+(b.after&&b.before?` (between ${nb(b.after)} and ${nb(b.before)})`:b.before?" (first in the day)":" (last in the day)"); };
+  const go=()=>{ if(!inp.value) return; const b=seqSlot(d,ids,jumpTarget(d,inp.value)); closeJumpTime();
+    if(b.rows.map(r=>r.id).join()===d.rows.map(r=>r.id).join()){toast(name+" already starts closest to that time");return}
+    d.rows=b.rows; commit(); renderBody(); renderStats(compute()); toast(`${name} now starts at ${fmt(seqSpan(R(id),compute(),d).start)} - Undo to put it back`); };
+  inp.addEventListener("input",preview); inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}if(e.key==="Escape")closeJumpTime()});
+  const pop=h("div",{class:"jumppop",id:"jumpPop"},h("label",{},`Move ${name} (all ${ids.length} shots) to start at`,inp),hint,
+    h("div",{class:"toolbar"},h("button",{class:"btn small primary",onclick:go},"Move"),h("button",{class:"btn small",onclick:closeJumpTime},"Cancel")));
+  pop.style.visibility="hidden"; document.body.append(pop); preview();
+  const bb=el.getBoundingClientRect(), ph=pop.offsetHeight, pw=pop.offsetWidth; const top=bb.bottom+4+ph<=innerHeight-8?bb.bottom+4:Math.max(8,bb.top-4-ph);
+  pop.style.left=Math.max(8,Math.min(innerWidth-pw-8,bb.left))+"px"; pop.style.top=top+"px"; pop.style.visibility="";
+  setTimeout(()=>{inp.focus();document.addEventListener("mousedown",jumpOutside,true)},0);
+}
+// move rows (one, or a sequence's shots together) before or after another row
+function moveRowsTo(ids,target,after){
+  if(frozenNo()) return; const d=D(); if(!d||ids.includes(target)) return;
+  const moving=d.rows.filter(x=>ids.includes(x.id)); if(!moving.length) return;
+  const rest=d.rows.filter(x=>!ids.includes(x.id)); let i=rest.findIndex(x=>x.id===target); if(i<0) return; if(after) i++;
+  rest.splice(i,0,...moving); d.rows=rest; commit(); renderBody(); renderStats(compute());
 }
 
 /* ---------- running order: one simple page for the day ---------- */
@@ -5728,21 +5847,24 @@ const SQV={id:null};
 function daySeqs(d){d=d||D();return d?d.rows.filter(x=>x.seq&&x.seq===x.id&&!isBlock(x)):[]}
 function openSeqView(id){ const a=R(id); if(!a) return; const f=findRow(id); if(f&&D()&&f.d.id!==D().id){P.activeByProject[pid()]=f.d.id;savePrefs();renderAll()}
   SQV.id=id; $("#seqView").classList.add("open"); document.body.classList.add("viewopen"); keepAwake(true); renderSeqView(); }
-function closeSeqView(){ rememberView(null); $("#seqView").classList.remove("open"); document.body.classList.remove("viewopen"); clearInterval(SQV.timer); keepAwake(false); renderBody(); }
+function closeSeqView(){ rememberView(null); const vh=$("#sqVideoHost"); if(vh){vh.innerHTML="";vh.dataset.key=""} $("#seqView").classList.remove("open"); document.body.classList.remove("viewopen"); clearInterval(SQV.timer); keepAwake(false); renderBody(); }
 function seqStep(dir){ const l=daySeqs(); if(!l.length) return; let i=l.findIndex(x=>x.id===SQV.id); i=Math.max(0,Math.min(l.length-1,(i<0?0:i)+dir)); SQV.id=l[i].id; renderSeqView(); }
 function renderSeqView(){
-  const v=$("#seqView"); v.innerHTML=""; const d=D(), a=SQV.id&&R(SQV.id);
-  if(!a||!a.seq){ closeSeqView(); return; }
+  // like Note View: the panels are redrawn, the video player isn't (marking a take doesn't restart it)
+  const v=$("#seqView"); const host=$("#sqVideoHost")||h("section",{id:"sqVideoHost",class:"sqvhost"});
+  let body=$("#sqBody"); if(!body) body=h("div",{class:"nvbody",id:"sqBody"}); if(host.parentNode!==body) body.append(host);
+  [...v.children].forEach(c=>{if(c!==body)c.remove()}); [...body.children].forEach(c=>{if(c!==host)c.remove()});
+  const d=D(), a=SQV.id&&R(SQV.id);
+  if(!a||!a.seq){ host.innerHTML=""; host.dataset.key=""; closeSeqView(); return; }
   rememberView("seq",a.id);
   const la=d.kind!=="capture", mem=seqMembers(a,d), cov=seqCoverage(a), take=nextTake(a,d), name=shotName(a,d,take);
-  v.append(h("div",{class:"nvhead"},
+  const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous sequence",onclick:()=>seqStep(-1)},"‹"),
-    h("div",{class:"nvtitle"},h("b",{},seqTitle(a)),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
+    h("div",{class:"nvtitle"},(()=>{const t=h("b",{title:"Double-click to rename",style:"cursor:text"},seqTitle(a));t.addEventListener("dblclick",()=>renameSeqInline(t,a.id));return t})(),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
     h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
-    h("button",{title:"Close",onclick:closeSeqView},"✕")));
-  const body=h("div",{class:"nvbody"});
+    h("button",{title:"Close",onclick:closeSeqView},"✕"));
   // DIT name for the next take
   const dit=h("section",{},h("h3",{},"DIT name"),h("div",{class:"seqdit"},h("code",{},name||"-"),h("button",{class:"btn small",onclick:async()=>{if(await copyText(name))toast("Copied "+name)}},"Copy")),
     h("p",{class:"note"},"Covers shots "+seqRange(a,d)+". "+(la?"Every storyboard shot still needs catching: tick what each take got.":"Mocap: each take records the whole action; framing is set in post.")));
@@ -5752,7 +5874,8 @@ function renderSeqView(){
     shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):"")},m.ref1?im:h("div",{class:"noimg"}),
       h("div",{},h("b",{},"Shot "+(m.shot||"-")),m.vcs?h("span",{class:"pill"},"VCS"):null,h("p",{},String(m.action||m.description||"").slice(0,120)),
         la?h("small",{},got?"Caught in "+got.map(n=>"T"+n).join(", "):"Not caught yet"):null,
-        h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Notes"))));
+        h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Notes"),
+        videoLinks(m).length?h("button",{class:"go",style:"margin-left:.6rem",title:"This shot has its own reference video",onclick:()=>{closeSeqView();openNotes(m.id)}},"▶ shot video"):null)));
   }
   if(la) shots.append(h("p",{class:"seqcov "+(cov.missing.length?"miss":"got")},cov.missing.length?`Still to get: ${cov.missing.map(m=>m.shot||"?").join(", ")}`:"Every shot caught"+(takeList(a).length?"":" (no takes yet)")));
   // takes
@@ -5785,7 +5908,11 @@ function renderSeqView(){
   if(a.seqTime){ const inp=(k,l)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),style:"width:5rem"});i.addEventListener("change",()=>setSeqMins(a.id,k,i.value));return h("label",{class:"mins2",style:"margin-right:1rem"},l+" ",i," min")};
     timing.append(h("p",{},inp("seqSetup","Setup"),inp("seqShoot","Shoot")),h("p",{class:"note"},"One setup and shoot for the whole sequence. "+(sp?fmt(sp.start)+" → "+fmt(sp.end)+". ":""),h("button",{class:"go",onclick:()=>setSeqTime(a.id,false)},"Time per shot instead"))); }
   else timing.append(h("p",{},sp?`${fmt(sp.start)} → ${fmt(sp.end)} · setup ${dur(sp.su)} · shoot ${dur(sp.sh)} (adding up each shot's own times)`:""),h("button",{class:"btn small",onclick:()=>setSeqTime(a.id,true)},"Time the sequence as one"));
-  body.append(shots,takes,timing,dit,notes); v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
+  shots.classList.add("sqshots"); takes.classList.add("sqtk");
+  for(const sec of [shots,takes,timing,dit,notes]) body.insertBefore(sec,host);
+  if(body.parentNode!==v) v.append(body); v.insertBefore(head,body);
+  updateVideoHost(a,{field:"seqVideo",host:"#sqVideoHost"});
+  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
 }
 
 /* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------

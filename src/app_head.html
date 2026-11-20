@@ -141,15 +141,23 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 #seqView{background:var(--bg);color:var(--ink)}
 #grid tr.seqhead td{padding:0;background:color-mix(in srgb,var(--seq) 9%,var(--panel));border-top:2px solid var(--seq)}
 .seqhd{position:sticky;left:0;display:flex;gap:.45rem .7rem;align-items:center;flex-wrap:wrap;padding:.4rem .6rem;max-width:min(100vw - 3rem,1100px);font-size:.9em}
+.seqhd .seqgrip{cursor:grab;color:var(--muted)} #grid tr.seqhead.dropbefore td{box-shadow:inset 0 3px 0 var(--accent,#2f6fb0)} #grid tr.seqhead.dropafter td{box-shadow:inset 0 -3px 0 var(--accent,#2f6fb0)}
 .seqhd .fold{border:none;background:none;color:var(--ink);font-size:1rem;cursor:pointer;padding:0 .2rem;width:1.4rem}
 .seqhd .meta{color:var(--muted)} .seqhd b.t{font-variant-numeric:tabular-nums}
 .seqhd .mins2{display:inline-flex;gap:.25rem;align-items:center} .seqhd .mins2 input{width:3.6rem;padding:.15rem .3rem;border:1px solid var(--line);border-radius:5px;font:inherit;background:var(--field,var(--bg));color:var(--ink)}
 .seqhd .lnk{background:none;border:none;color:var(--accent,#2f6fb0);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.seqhd .seqtime{border:none;background:none;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);cursor:pointer;padding:.05rem .3rem;border-radius:5px;text-decoration:underline dotted;text-underline-offset:3px} .seqhd .seqtime:hover{background:var(--panel2)}
+.seqinside{color:#8a5a00;background:#d39b221f;border-radius:5px;padding:.05rem .4rem;font-weight:600}
 .seqtimed{color:var(--muted);font-size:.85em;font-style:italic}
 @media print{.seqhd .fold,.seqhd .lnk,.seqhd .noprint{display:none}} #seqView textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg))}
 #grid tr.inseq td[data-col="handle"]{box-shadow:inset 4px 0 0 var(--seq)}
 .seqchip{border:none;border-radius:999px;padding:.2rem .6rem;background:color-mix(in srgb,var(--seq) 18%,var(--panel));color:var(--ink);font:inherit;font-size:.85em;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--seq);text-align:left;max-width:100%}
 .seqchip small{color:var(--muted)}
+.seqcell{display:inline-flex;gap:.25rem;align-items:center;max-width:100%}
+.seqmore{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;cursor:pointer;padding:.05rem .35rem;font-size:.8rem;opacity:.6} tr:hover .seqmore,.seqmore:focus-visible{opacity:1}
+input.seqrename{font:inherit;font-size:.9em;padding:.15rem .45rem;border:1.5px solid var(--accent,#2f6fb0);border-radius:999px;width:11rem;background:var(--field,var(--bg));color:var(--ink)}
+.seqmenu .mi{display:block;width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:.4rem .5rem;color:var(--ink);font:inherit;cursor:pointer} .seqmenu .mi:hover{background:var(--panel2)} .seqmenu .mi small{color:var(--muted)}
+@media print{.seqmore{display:none}}
 .seqadd{border:1px dashed var(--line2);background:none;color:var(--muted);border-radius:999px;width:1.8rem;height:1.6rem;cursor:pointer;opacity:.5} tr:hover .seqadd{opacity:1}
 @media print{.seqadd{display:none}}
 .seqpick{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:.3rem;margin:.6rem 0}
@@ -158,6 +166,10 @@ label.stack{display:flex;flex-direction:column;gap:.25rem;font-size:.9em} label.
 .seqbanner{border-left:4px solid var(--seq);background:color-mix(in srgb,var(--seq) 10%,transparent);padding:.4rem .6rem;border-radius:6px;margin:0 0 .5rem;font-size:.9em}
 .seqbanner .go,.seqshot .go{background:none;border:none;padding:0;color:var(--accent,#2f6fb0);cursor:pointer;font:inherit;text-decoration:underline}
 #seqView .nvbody>.seqshots{grid-column:1/-1}
+#sqBody>section{order:3} #sqBody>.sqshots{order:0} #sqBody>.sqtk{order:2} #sqBody>.sqvhost{order:9;container-type:inline-size;min-width:0} #sqBody>.sqvhost.has-video{order:1}
+.sqvhost .vwrap{display:grid;grid-template-columns:1fr;gap:.6rem;align-items:start}
+@container (min-width:44rem){.sqvhost .vwrap{grid-template-columns:minmax(0,1fr) 15rem;gap:1rem}}
+.sqvhost .vstage[hidden]{display:none}
 .seqshots{display:flex;flex-wrap:wrap;gap:.6rem;align-content:flex-start} .seqshots>h3,.seqshots>.seqcov{flex-basis:100%;margin:0}
 .seqshot{display:flex;gap:.5rem;width:min(100%,19rem);border:1px solid var(--line);border-radius:8px;padding:.45rem;background:var(--panel2)}
 .seqshot img,.seqshot .noimg{width:7.5rem;height:4.4rem;object-fit:cover;border-radius:5px;background:#fff;flex:0 0 auto;border:1px solid var(--line)}
