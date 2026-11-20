@@ -93,7 +93,7 @@ h1 small{font-weight:400;color:var(--muted);font-size:.9rem;margin-left:.4rem}
 .status.live i{background:var(--ok)} .status.busy i{background:var(--warn)} .status.off i{background:var(--bad)}
 .who{display:flex;gap:.25rem;align-items:center;background:none;border:1px solid transparent;border-radius:999px;padding:.1rem .3rem .1rem .15rem;cursor:pointer;font:inherit;color:var(--ink)}
 .who:empty{display:none} .who:hover,.who[aria-expanded=true]{border-color:var(--line);background:var(--panel)}
-.who .wn{font-size:.78rem;color:var(--muted);margin-left:.35rem;white-space:nowrap}
+.who span.wn{width:auto;height:auto;border:none;border-radius:0;font-weight:600;padding:0;color:var(--muted);font-size:.78rem;margin-left:.5rem;white-space:nowrap}
 .whopop{display:none;position:fixed;z-index:60;width:min(22rem,calc(100vw - 1rem));max-height:min(70vh,32rem);overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 36px -10px rgba(0,0,0,.35);padding:.6rem}
 .whopop.open{display:block}
 .whopop h4{margin:.3rem .3rem .4rem;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -473,6 +473,11 @@ body.keylocked > *:not(.modal):not(.toast){visibility:hidden}
 #shareBody textarea{width:100%;min-height:9rem;font-family:inherit;border:1px solid var(--line);border-radius:6px;padding:.5rem}
 .sharelink{display:flex;gap:.4rem;align-items:center} .sharelink input{flex:1;min-width:0;font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-radius:6px;padding:.35rem .5rem}
 .safety{background:var(--info-bg);color:var(--info-ink);border-radius:6px;padding:.55rem .7rem;font-size:.92rem;margin:.6rem 0}
+table.people td.grab{width:2.4rem;white-space:nowrap;padding-right:0}
+table.people .handle{cursor:grab;touch-action:none;user-select:none;color:var(--muted);font-size:1.05rem;padding:.2rem .3rem;border-radius:4px;display:inline-block;line-height:1}
+table.people .handle:hover{background:var(--panel2);color:var(--ink)}
+table.people tr.dragging{opacity:.55;background:var(--panel2)} table.people tr.dragging .handle{cursor:grabbing}
+table.people td.mv{white-space:nowrap} table.people td.mv .btn{padding:.15rem .4rem;min-width:0}
 .tabs{display:flex;gap:.3rem;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:.8rem 0 1rem}
 @media (max-width:700px){#setTabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch} #setTabs::-webkit-scrollbar{display:none} #setTabs>*{flex:0 0 auto}}
 /* Display settings: sections, switches, labelled sliders, colour swatches */

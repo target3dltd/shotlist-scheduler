@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.22.0";
+const VERSION = "2.22.1";
 const CHANGELOG = [
-  ["2.22.0","2026-11-18","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
+  ["2.22.1","2026-11-20","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
+  ["2.22.0","","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
   ["2.21.0","","Version history shows a date on the latest update only. Hero selects card on Mocap days: the seconds in takes marked Hero, next to Captured. Tidier header: buttons grouped, with Import, Export, Print and Activity in a File menu. Display settings regrouped into Presets, Colours, Text, Layout, Table and on-set tools, and Timeline colours, with switches and compact colour swatches. Settings tabs scroll in one row on phones."],
   ["2.20.0","","Takes and Captured / Raw footage cards: the day's logged takes and the seconds recorded between each take's timecode in and out (Captured on Mocap days, Raw footage on Live Action). Pace panel on shoot days: a big +/- score, each finished shot's minutes won back or lost, your on-pace streak and best streak, and where the day will wrap against the target."],
   ["2.19.0","","Cut in Slate View: Clap logs a take with its timecode in, Cut adds the timecode out and length. Note View shows in / out for every take (its Roll / Cut does the same), the slate shows the rolling take, and the .xlsx export fills TC IN / TC OUT from the logged takes. A jam is shared with the team, so every device on the project logs takes on the same timecode."],
@@ -1923,11 +1924,18 @@ function renderSetTab(){
   else if(setTab==="people"){
     for(const group of ["Cast","Crew"]){
       b.append(h("h3",{},group));
-      const t=h("table",{class:"plain"}); t.append(h("thead",{},h("tr",{},...["Name",group==="Cast"?"Character / role":"Role","Phone","Email","Notes",""].map(x=>h("th",{},x)))));
+      const t=h("table",{class:"plain people","data-group":group}); t.append(h("thead",{},h("tr",{},...["",  "Name",group==="Cast"?"Character / role":"Role","Phone","Email","Notes",""].map(x=>h("th",{},x)))));
       const tb=h("tbody",{});
-      S.people.filter(p=>(p.group||"Crew")===group).forEach(p=>{
+      const list=S.people.filter(p=>(p.group||"Crew")===group);
+      list.forEach((p,idx)=>{
         const cell=(k)=>{const i=h("input",{value:p[k]||""});bindDoc(i,null,v=>{const q=S.people.find(x=>x.id===p.id);if(q)q[k]=v});return h("td",{},i)};
-        tb.append(h("tr",{},cell("name"),cell("role"),cell("phone"),cell("email"),cell("notes"),h("td",{},h("button",{class:"btn small danger",title:"Remove",onclick:()=>{S.people=S.people.filter(x=>x.id!==p.id);commit();renderSetTab();toast("Removed - Undo to restore")}},"✕"))));
+        const up=h("button",{class:"btn small",title:"Move up","aria-label":"Move "+(p.name||"person")+" up",disabled:idx===0,onclick:()=>movePerson(group,p.id,idx-1)},"↑");
+        const dn=h("button",{class:"btn small",title:"Move down","aria-label":"Move "+(p.name||"person")+" down",disabled:idx===list.length-1,onclick:()=>movePerson(group,p.id,idx+1)},"↓");
+        const handle=h("span",{class:"handle",title:"Drag to reorder","aria-hidden":"true"},"⠿");
+        const tr=h("tr",{"data-id":p.id},h("td",{class:"grab"},handle),cell("name"),cell("role"),cell("phone"),cell("email"),cell("notes"),
+          h("td",{class:"mv"},up,dn," ",h("button",{class:"btn small danger",title:"Remove",onclick:()=>{S.people=S.people.filter(x=>x.id!==p.id);commit();renderSetTab();toast("Removed - Undo to restore")}},"✕")));
+        handle.addEventListener("pointerdown",e=>dragPerson(e,tr,tb,group));
+        tb.append(tr);
       });
       t.append(tb); b.append(t);
       b.append(h("button",{class:"btn small",style:"margin-top:.5rem",onclick:()=>{S.people.push({id:uid("p"),group,name:"",role:"",phone:"",email:"",notes:""});commit();renderSetTab();const ins=$$("#setBody table.plain")[group==="Cast"?0:1];const last=ins&&$$("tbody tr",ins).pop();if(last)$("input",last).focus()}},"+ Add "+group.toLowerCase()));
@@ -2185,6 +2193,30 @@ function exportCSV(){
       br?"":r.action,br?"":r.performers,br?"":r.perfCount,br?"":r.genre,br?"":(isOn(r.body)?"Y":""),br?"":(isOn(r.face)?"Y":""),br?"":(isOn(r.glove)?"Y":""),br?"":r.hero,br?"":r.safety,br?"":r.priority,
       br?"":r.location,r.description||"",br?"":r.script,br?"":r.shotType,br?"":r.camera,br?"":(r.lighting||""),br?"":r.vfx,br?"":r.director,br?"":r.props,br?"":(r.done?"Yes":""),br?"":(r.cut?"Yes":""),br?"":(r.heroUrl||""),br?"":(r.safetyUrl||""),...customs.map(cc=>br?"":(cc.type==="flag"?(isOn(r[cc.key])?"Y":""):(r[cc.key]??"")))].map(csvEsc).join(","))})}
   download(fileBase()+".csv","﻿"+lines.join("\r\n"),"text/csv");
+}
+/* Cast & crew order: ↑ ↓ buttons, or drag the ⠿ handle (mouse or touch). Order is shared with the team. */
+function setGroupOrder(group,ids){
+  const by=new Map(S.people.map(p=>[p.id,p])); const moved=ids.map(id=>by.get(id)).filter(Boolean);
+  const out=[]; let placed=false;
+  for(const p of S.people){ if((p.group||"Crew")===group){ if(!placed){out.push(...moved);placed=true} } else out.push(p) }
+  if(!placed) out.push(...moved);
+  S.people=out; commit(); renderSetTab();
+}
+function movePerson(group,id,to){
+  const ids=S.people.filter(p=>(p.group||"Crew")===group).map(p=>p.id); const from=ids.indexOf(id);
+  if(from<0||to<0||to>=ids.length) return; ids.splice(to,0,ids.splice(from,1)[0]); setGroupOrder(group,ids);
+  setTimeout(()=>{const b=$(`#setBody table.people[data-group="${group}"] tr[data-id="${id}"] td.mv button:${to<from?"first-child":"nth-child(2)"}`);if(b&&!b.disabled)b.focus();else{const o=$(`#setBody tr[data-id="${id}"] td.mv button`);o&&o.focus()}},0);
+}
+function dragPerson(e,tr,tb,group){
+  e.preventDefault(); const handle=document;
+  const start=[...tb.children].map(r=>r.dataset.id); tr.classList.add("dragging");
+  const move=ev=>{ if(ev.pointerId!==e.pointerId) return; const rows=[...tb.children].filter(r=>r!==tr);
+    const after=rows.find(r=>{const b=r.getBoundingClientRect();return ev.clientY<b.top+b.height/2});
+    if(after){ if(tr.nextSibling!==after) tb.insertBefore(tr,after) } else if(tb.lastChild!==tr) tb.append(tr);
+    const box=$("#setModal .box"); if(box){const b=box.getBoundingClientRect(); if(ev.clientY<b.top+40) box.scrollTop-=12; else if(ev.clientY>b.bottom-40) box.scrollTop+=12} };
+  const end=()=>{ handle.removeEventListener("pointermove",move); handle.removeEventListener("pointerup",end); handle.removeEventListener("pointercancel",end); tr.classList.remove("dragging");
+    const ids=[...tb.children].map(r=>r.dataset.id); if(ids.join()!==start.join()) setGroupOrder(group,ids); };
+  handle.addEventListener("pointermove",move); handle.addEventListener("pointerup",end); handle.addEventListener("pointercancel",end);
 }
 function exportPeople(){const lines=[["Group","Name","Role","Phone","Email","Notes"].join(",")];for(const p of S.people)lines.push([p.group,p.name,p.role,p.phone,p.email,p.notes].map(csvEsc).join(","));download(fileBase()+"_cast_crew.csv","﻿"+lines.join("\r\n"),"text/csv")}
 const ROW_BLANK={type:"shot",shot:"",label:"",duration:"",setup:0,shoot:0,origStart:"",origSetup:0,origShoot:0,location:"",description:"",script:"",shotType:"",camera:"",lighting:"",vfx:"",director:"",props:"",ref1:"",ref2:"",ref3:"",scribble:"",done:false,priority:"",perfCount:"",performers:"",genre:"",action:"",body:false,face:false,glove:false,hero:"",safety:"",takes:0,takeLog:null};
