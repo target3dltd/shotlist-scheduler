@@ -1,7 +1,10 @@
 "use strict";
-const VERSION = "2.26.0";
+const VERSION = "2.27.1";
 const CHANGELOG = [
-  ["2.26.0","2026-11-20","Note View panels can be moved and resized: drag ⠿ (top right of a panel) to move it, or use the arrow keys on it; drag the corner at the bottom right to make it wider (in whole columns) and taller. Double-click the corner to reset that panel; Reset layout in the header puts them all back. Kept on each device. A playing video carries on while you rearrange."],
+  ["2.27.1","2026-11-20","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
+  ["2.27.0","","Columns menu: Hide all not in use hides every column that's empty on all days of this kind (Live Action or Mocap), and Show all brings them all back."],
+  ["2.26.1","","The Google account Drive videos open with is now your own setting (per project, on your device), so the team no longer overwrite each other's email. Note View says which account a Drive video is playing as, with a link to change it."],
+  ["2.26.0","","Note View panels can be moved and resized: drag ⠿ (top right of a panel) to move it, or use the arrow keys on it; drag the corner at the bottom right to make it wider (in whole columns) and taller. Double-click the corner to reset that panel; Reset layout in the header puts them all back. Kept on each device. A playing video carries on while you rearrange."],
   ["2.25.3","","A reload keeps you where you were: Slate View or Note View reopens on the same shot (in that browser tab). Note View puts a shot's reference video in the top row beside the storyboard, so it's visible on laptop screens without scrolling; shots without one get a small Add video box at the end."],
   ["2.25.2","","Slate and Note View shortcuts no longer fire when Ctrl, Cmd or Alt is held, so Ctrl+Shift+R (reload) doesn't roll a take."],
   ["2.25.1","","Slate View: tap the shot number to open that shot in Note View."],
@@ -320,7 +323,7 @@ async function syncNow(){
     commit();
     const now=Date.now();
     for(const [k,t] of seenKeys) if(now-t>120000) seenKeys.delete(k);
-    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",dayId:(D()||{}).id||"",dev:deviceKind(),view:currentView(),idle:isIdle(),since:cursor,seen:[...seenKeys.keys()],row:focusRow||""});
+    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",dayId:(D()||{}).id||"",dev:deviceKind(),view:currentView(),idle:isIdle(),since:cursor,seen:[...seenKeys.keys()],row:(currentView()==="notes"?NV.id:currentView()==="slate"?SLV.id:focusRow)||""});
     if(r.snapshot){
       base=base?mergeModels(base,r.snapshot.model):cloneModel(r.snapshot.model);
       if(r.snapshot.upto>cursor) cursor=r.snapshot.upto;
@@ -399,32 +402,53 @@ function renderPresence(){
   w.append(me,...others.slice(0,5).map(p=>h("span",{style:`background:${colorFor(p.name||p.cid)};${p.idle?"opacity:.55":""}`},initials(p.name))));
   w.append(h("span",{class:"wn"},others.length?`${others.length+1} online`:"Just you"));
   w.title=others.length?"Who's online: "+[P.name||"You",...others.map(p=>p.name||"Someone")].join(", "):"Only you have this project open right now";
-  if($("#whoPop").classList.contains("open")) renderWhoPop();
+  // the list is kept still while you're pointing at it or typing in it, so a button doesn't change under your click
+  const wp=$("#whoPop"); if(wp.classList.contains("open")&&!wp.matches(":hover")&&!wp.contains(document.activeElement)) renderWhoPop(true);
 }
 function presenceRow(p){if(!p.row||!S) return ""; for(const d of S.days){const r=d.rows.find(x=>x.id===p.row); if(r) return isBlock(r)?blockName(r):"Shot "+(r.shot||"?")+(r.action?" · "+String(r.action).slice(0,40):"")} return ""}
-function renderWhoPop(){
-  const pop=$("#whoPop"); pop.innerHTML="";
+// jump to the day and shot a teammate is on, showing the row even if your filters would hide it
+function goToPerson(p){
+  const pop=$("#whoPop"); pop.classList.remove("open"); $("#who").setAttribute("aria-expanded","false");
+  const day=S.days.find(d=>d.id===p.dayId); if(!day) return;
+  P.activeByProject[pid()]=day.id; savePrefs(); renderAll();
+  const label=presenceRow(p);
+  let tr=p.row&&$(`#grid tbody tr[data-id="${p.row}"]`);
+  if(p.row&&!tr&&day.rows.some(r=>r.id===p.row)){ P.view="all"; P.prioFilter=""; P.filters={}; savePrefs(); renderAll(); tr=$(`#grid tbody tr[data-id="${p.row}"]`); if(tr) toast("Filters cleared so you can see "+(p.name||"their")+"'s row"); }
+  if(tr){ tr.scrollIntoView({block:"center"}); tr.style.setProperty("--peer",colorFor(p.name||p.cid)); tr.classList.remove("peerjump"); void tr.offsetWidth; tr.classList.add("peerjump"); setTimeout(()=>tr.classList.remove("peerjump"),3200);
+    if(!/Filters cleared/.test(($("#toast")||{}).textContent||"")) toast(`${p.name||"They"}: ${day.name}${label?" · "+label:""}`); }
+  else toast(`${p.name||"They"} ${p.name?"is":"are"} on ${day.name}${p.row?"":" (no shot picked yet)"}`);
+}
+function renderWhoPop(quiet){
+  const real=$("#whoPop"); const pop=quiet?h("div",{}):real; if(!quiet) real.innerHTML="";
   const devName={phone:"phone",tablet:"tablet",computer:"computer"}, viewName={slate:"in Slate View",notes:"in Note View"};
   const dur=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just joined":m<60?`on for ${m} min`:`on for ${Math.floor(m/60)}h ${m%60}m`};
   const line=(p,me)=>{
     const where=[p.day,presenceRow(p)].filter(Boolean).join(" · ");
     const bits=[(p.devs&&p.devs.length?p.devs:[p.dev]).filter(Boolean).map(d=>devName[d]||d).join(" + "),viewName[p.view]||"",p.n>1?p.n+" tabs":""].filter(Boolean).join(", ");
-    const go=!me&&p.dayId&&S&&S.days.some(d=>d.id===p.dayId&&!d.archived)?h("button",{class:"go",onclick:()=>{P.activeByProject[pid()]=p.dayId;savePrefs();renderAll();pop.classList.remove("open");$("#who").setAttribute("aria-expanded","false");
-      setTimeout(()=>{const tr=p.row&&$(`#grid tbody tr[data-id="${p.row}"]`);if(tr){tr.scrollIntoView({block:"center",behavior:"smooth"});tr.classList.remove("flash");void tr.offsetWidth;tr.style.setProperty("--flash",colorFor(p.name||p.cid));tr.classList.add("flash")}},80)}},"Go there"):null;
+    const go=!me&&p.dayId&&S&&S.days.some(d=>d.id===p.dayId&&!d.archived)?h("button",{class:"go",onclick:e=>{e.stopPropagation();goToPerson(p)}},"Go there"):null;
     return h("div",{class:"wp"},h("span",{class:"av",style:`background:${colorFor(p.name||p.cid)}`},initials(p.name||"You"),h("i",{class:p.idle?"idle":""})),
       h("div",{class:"wb"},h("b",{},me?(P.name||"You")+" (you)":p.name||"Someone"),
         h("small",{},(p.idle?"Away (no activity for a few minutes)":me?"Online":dur(p.since||p.at))+(bits?" · "+bits:"")),
         where?h("small",{},where," ",go):null));
   };
   const others=peopleOnline();
-  pop.append(h("h4",{},`Online now (${others.length+1})`),line({name:P.name,day:(D()||{}).name,row:focusRow,dev:deviceKind(),view:currentView()},true),...others.map(p=>line(p)));
+  const meLine=line({name:P.name,day:(D()||{}).name,row:focusRow,dev:deviceKind(),view:currentView()},true);
+  // change your name right here (it's also in Settings > Team & sync)
+  const ren=h("button",{class:"go",onclick:e=>{e.stopPropagation();const wb=$(".wb",meLine);const inp=h("input",{type:"text",value:P.name||"",maxlength:"40","aria-label":"Your name",style:"width:100%;font:inherit;padding:.25rem .4rem;border:1px solid var(--line);border-radius:5px;background:var(--field,var(--bg));color:var(--ink)"});
+    const save=()=>{const v=inp.value.trim();if(v&&v!==P.name){P.name=v;savePrefs();toast("You're now "+v+" to the team");if(MODE==="team")scheduleSync(50)}renderPresence();renderWhoPop()};
+    inp.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();save()}if(ev.key==="Escape"){ev.stopPropagation();renderWhoPop()}});inp.addEventListener("blur",save);
+    wb.innerHTML="";wb.append(inp,h("small",{},"Enter to save. This is the name the team sees."));inp.focus();inp.select()}},"Change name");
+  $(".wb",meLine).append(h("small",{},ren));
+  pop.append(h("h4",{},`Online now (${others.length+1})`),meLine,...others.map(p=>line(p)));
   if(!others.length) pop.append(h("p",{class:"note",style:"margin:.3rem .4rem .5rem"},"Nobody else has this project open. When they do, you'll see their name, which day and shot they're on, and the device they're using."));
   if(recentPeople.length){
     pop.append(h("h4",{style:"margin-top:.8rem"},"Earlier today"));
     for(const p of recentPeople) pop.append(h("div",{class:"wp off"},h("span",{class:"av",style:`background:${colorFor(p.name||"?")}`},initials(p.name),h("i",{class:"off"})),
       h("div",{class:"wb"},h("b",{},p.name||"Someone"),h("small",{},"Last seen "+ago(p.at)+(p.day?" · "+p.day:"")+(p.dev?" · "+p.dev:"")))));
   }
+  if(quiet&&pop.innerHTML!==real.innerHTML){ real.innerHTML=""; real.append(...pop.childNodes); }
 }
+
 $("#who").onclick=e=>{e.stopPropagation();const pop=$("#whoPop");const o=!pop.classList.contains("open");pop.classList.toggle("open",o);$("#who").setAttribute("aria-expanded",o);
   if(o){renderWhoPop();const r=$("#who").getBoundingClientRect();pop.style.top=(r.bottom+6)+"px";pop.style.left=Math.max(8,Math.min(r.left,innerWidth-pop.offsetWidth-8))+"px"}};
 document.addEventListener("click",e=>{if(e.target.isConnected&&!e.target.closest("#whoPop,#who")&&$("#whoPop").classList.contains("open")){$("#whoPop").classList.remove("open");$("#who").setAttribute("aria-expanded","false")}});
@@ -1377,6 +1401,14 @@ function renderTimeline(C){
   { const n=dayClock(d);if(n!=null&&n>=start&&n<=end)tl.append(h("div",{class:"nowline",style:"left:"+pct(n),title:"Now "+fmt(n)}))}
 }
 function jump(id){const tr=$(`#grid tbody tr[data-id="${id}"]`);if(!tr)return;tr.scrollIntoView({behavior:"smooth",block:"center"});tr.style.outline="2px solid var(--accent)";setTimeout(()=>tr.style.outline="",1200)}
+// columns with nothing in them on any day of this kind (Live Action or Mocap); worked-out columns always count as in use
+function unusedCols(){
+  const k=kind(), rows=live().filter(d=>(d.kind==="capture"?"capture":"schedule")===k).flatMap(d=>d.rows.filter(r=>!isBlock(r)));
+  const ALWAYS=["shotId","setup","start","shoot","end"];
+  const has=(r,key)=>{ if(key==="refs") return !!(r.ref1||r.ref2||r.ref3); if(key==="orig") return !!r.origStart; if(key==="takes") return Number(r.takes)>0||takeList(r).length>0;
+    const v=r[key]; if(v==null) return false; if(typeof v==="boolean") return v; if(typeof v==="number") return v!==0; const t=String(v).trim(); return !!t&&!/^(false|0|-)$/i.test(t); };
+  return cols().filter(c=>!c.fixed&&!ALWAYS.includes(c.key)).map(c=>c.key).filter(key=>!rows.some(r=>has(r,key)));
+}
 function renderCols(){
   const p=$("#colPop"); p.innerHTML="";
   p.append(h("div",{class:"note"},`Showing columns for ${kind()==="capture"?"Mocap":"Live Action"} days, on this device. Add or rename columns in Settings > Columns.`));
@@ -1387,6 +1419,10 @@ function renderCols(){
     p.append(h("label",{},cb,c.label));
   }
   p.append(h("div",{class:"note",style:"margin-top:.4rem"},"Drag a column heading to move it. Your order is used on every day."));
+  const unused=unusedCols();
+  p.append(h("div",{class:"toolbar",style:"margin-top:.3rem"},
+    h("button",{class:"btn small",disabled:!unused.filter(k=>!hid.includes(k)).length,title:`Hide every column that's empty on all ${kind()==="capture"?"Mocap":"Live Action"} days`,onclick:()=>{const H=hidden();const add=unusedCols().filter(k=>!H.includes(k));H.push(...add);savePrefs();renderCols();renderHead();renderBody();toast(`Hid ${add.length} empty column${add.length===1?"":"s"}`)}},`Hide all not in use${unused.filter(k=>!hid.includes(k)).length?" ("+unused.filter(k=>!hid.includes(k)).length+")":""}`),
+    h("button",{class:"btn small",disabled:!hid.length,onclick:()=>{P.hiddenBy[kind()]=[];savePrefs();renderCols();renderHead();renderBody()}},"Show all")));
   p.append(h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{P.hiddenBy[kind()]=clone(HIDDEN_DEFAULT[kind()]||[]);savePrefs();renderCols();renderHead();renderBody()}},"Reset shown columns"),
     h("button",{class:"btn small",onclick:()=>{P.colOrder=[];savePrefs();invalidateCols();renderCols();renderHead();renderBody();toast("Columns back in their usual order")}},"Reset column order")));
 }
@@ -2495,7 +2531,7 @@ $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
-document.addEventListener("click",e=>{if(!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
 $("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");

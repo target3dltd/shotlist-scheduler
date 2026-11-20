@@ -471,6 +471,7 @@ body.viewopen{overflow:hidden}
 #grid tr.dragging{opacity:.4}
 #grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
 #grid tr.flash td{animation:flash 1.6s ease-out}
+#grid tr.peerjump td{box-shadow:inset 0 3px 0 var(--peer,var(--accent)),inset 0 -3px 0 var(--peer,var(--accent));background-color:color-mix(in srgb,var(--peer,#2f6fb0) 14%,transparent)!important;transition:background-color .4s}
 @keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--flash,var(--warn))}100%{box-shadow:inset 0 0 0 2px transparent}}
 /* a teammate is working in this row: outline and their initials, in their badge colour */
 #grid tr.peer{outline:2px solid var(--peer);outline-offset:-2px}

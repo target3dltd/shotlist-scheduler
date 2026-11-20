@@ -471,6 +471,7 @@ body.viewopen{overflow:hidden}
 #grid tr.dragging{opacity:.4}
 #grid tr.dropbefore td{box-shadow:inset 0 3px 0 var(--accent)}
 #grid tr.flash td{animation:flash 1.6s ease-out}
+#grid tr.peerjump td{box-shadow:inset 0 3px 0 var(--peer,var(--accent)),inset 0 -3px 0 var(--peer,var(--accent));background-color:color-mix(in srgb,var(--peer,#2f6fb0) 14%,transparent)!important;transition:background-color .4s}
 @keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--flash,var(--warn))}100%{box-shadow:inset 0 0 0 2px transparent}}
 /* a teammate is working in this row: outline and their initials, in their badge colour */
 #grid tr.peer{outline:2px solid var(--peer);outline-offset:-2px}
@@ -1065,7 +1066,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Rename built-in columns</b> for the whole team, e.g. Hero to Hero code. Clear the box to go back to the original name.</li>
     <li><b>Priority</b> is on every day, colour-coded in its dropdown and down the row's left edge. Sorting by Priority puts the highest first. In Settings → Columns you can change the options and pick a colour for each one (shared with the team). The default is the highlight colour for the first option, then amber and grey. Text on the colour turns dark or light automatically so it stays readable.</li>
     <li>The <b>Priority</b> dropdown next to <b>Show</b> filters the open day to one priority, a priority and higher (e.g. MID and higher), or rows with no priority set. It's just for you. Breaks are hidden while it's on, and times still follow the full running order. The blue bar shows the filter and clears it.</li>
-    <li>The <b>Columns</b> menu in the toolbar shows or hides columns just for you, separately for Mocap and Live Action days.</li>
+    <li>The <b>Columns</b> menu in the toolbar shows or hides columns just for you, separately for Mocap and Live Action days. <b>Hide all not in use</b> hides every column that is empty on all days of that kind (the number shows how many); <b>Show all</b> brings every column back.</li>
   </ul>
 
   <h3>Shot names and DIT</h3>
@@ -1144,7 +1145,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li>Dropbox, Vimeo, YouTube and direct .mp4 / .mov / .webm links work too. Direct files (including Dropbox) get extra controls: quarter, half or full speed, one frame back or forward, loop and mirror (handy for blocking). Other links open in a new tab.</li>
     <li>The videos stay where they are (your Drive); the app only keeps the links, so file size doesn't matter. Playing needs an internet connection on set.</li>
     <li>The <b>▶</b> in the Reference video column opens that shot in Note View.</li>
-    <li><b>Per project</b> (Settings → Project → Reference video): choose where this project's videos live. For <b>Google Drive</b>, enter the Google account the project's files belong to; Drive then opens them with that account even if someone is signed into several (they still need to be signed into it, or the files shared with them). Add the <b>project video folder</b> link for a quick way to browse. For <b>your own server or NAS</b>, give the folder's web address (https://…) and the team can type just a file name, such as SH030_rehearsal.mp4. <b>OneDrive / SharePoint</b>: use the video's <b>Embed</b> option and paste the embed code. <b>Box</b> shared links play in Box's player.</li>
+    <li><b>Per project</b> (Settings → Project → Reference video): choose where this project's videos live. For <b>Google Drive</b>, each person can enter <b>their own</b> Google account for the project (the one that can see its files): Drive then opens the videos with it even if they're signed into several. It's kept on their device, so nobody overwrites anyone else's, and Note View shows which account a video is playing as. Add the <b>project video folder</b> link for a quick way to browse. For <b>your own server or NAS</b>, give the folder's web address (https://…) and the team can type just a file name, such as SH030_rehearsal.mp4. <b>OneDrive / SharePoint</b>: use the video's <b>Embed</b> option and paste the embed code. <b>Box</b> shared links play in Box's player.</li>
     <li>Browsers can't play from <b>FTP</b>. Most NAS and FTP hosts can also share files over HTTPS, which is what's needed.</li>
   </ul>
 
@@ -1161,9 +1162,9 @@ body.nosteps .mins.timing input{width:4.5em}
   <h3>Who's online</h3>
   <ul>
     <li>The coloured letters next to <b>Live</b> are the people with this project open, with a count beside them. A faded letter means that person has been away for a few minutes.</li>
-    <li>Click them for the full list: each person's name, the day and shot they're working in, whether they're on a phone, tablet or computer, whether they're in Slate View or Note View, and how long they've been on. <b>Go there</b> jumps to their day and highlights their row.</li>
+    <li>Click them for the full list: each person's name, the day and shot they're working in, whether they're on a phone, tablet or computer, whether they're in Slate View or Note View, and how long they've been on. <b>Go there</b> jumps to their day, scrolls to their row and outlines it in their colour (clearing your filters if they hid it). Someone in Slate View or Note View is shown on the shot they have open.</li>
     <li><b>Earlier today</b> lists people who had the project open in the last 12 hours, with when they were last seen.</li>
-    <li>Only shown on the team site; names come from <b>Settings → Team &amp; sync</b>.</li>
+    <li><b>Change your name</b>: click the letters, then <b>Change name</b> under your own entry (or Settings → Team &amp; sync). Only shown on the team site.</li>
   </ul>
 
   <h3>Feedback: bugs, ideas and questions</h3>
@@ -1253,9 +1254,12 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.26.0";
+const VERSION = "2.27.1";
 const CHANGELOG = [
-  ["2.26.0","2026-11-20","Note View panels can be moved and resized: drag ⠿ (top right of a panel) to move it, or use the arrow keys on it; drag the corner at the bottom right to make it wider (in whole columns) and taller. Double-click the corner to reset that panel; Reset layout in the header puts them all back. Kept on each device. A playing video carries on while you rearrange."],
+  ["2.27.1","2026-11-20","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
+  ["2.27.0","","Columns menu: Hide all not in use hides every column that's empty on all days of this kind (Live Action or Mocap), and Show all brings them all back."],
+  ["2.26.1","","The Google account Drive videos open with is now your own setting (per project, on your device), so the team no longer overwrite each other's email. Note View says which account a Drive video is playing as, with a link to change it."],
+  ["2.26.0","","Note View panels can be moved and resized: drag ⠿ (top right of a panel) to move it, or use the arrow keys on it; drag the corner at the bottom right to make it wider (in whole columns) and taller. Double-click the corner to reset that panel; Reset layout in the header puts them all back. Kept on each device. A playing video carries on while you rearrange."],
   ["2.25.3","","A reload keeps you where you were: Slate View or Note View reopens on the same shot (in that browser tab). Note View puts a shot's reference video in the top row beside the storyboard, so it's visible on laptop screens without scrolling; shots without one get a small Add video box at the end."],
   ["2.25.2","","Slate and Note View shortcuts no longer fire when Ctrl, Cmd or Alt is held, so Ctrl+Shift+R (reload) doesn't roll a take."],
   ["2.25.1","","Slate View: tap the shot number to open that shot in Note View."],
@@ -1844,7 +1848,7 @@ async function syncNow(){
     commit();
     const now=Date.now();
     for(const [k,t] of seenKeys) if(now-t>120000) seenKeys.delete(k);
-    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",dayId:(D()||{}).id||"",dev:deviceKind(),view:currentView(),idle:isIdle(),since:cursor,seen:[...seenKeys.keys()],row:focusRow||""});
+    const r=await api("/api/sync",{cid:P.cid,name:P.name,day:(D()||{}).name||"",dayId:(D()||{}).id||"",dev:deviceKind(),view:currentView(),idle:isIdle(),since:cursor,seen:[...seenKeys.keys()],row:(currentView()==="notes"?NV.id:currentView()==="slate"?SLV.id:focusRow)||""});
     if(r.snapshot){
       base=base?mergeModels(base,r.snapshot.model):cloneModel(r.snapshot.model);
       if(r.snapshot.upto>cursor) cursor=r.snapshot.upto;
@@ -1923,32 +1927,53 @@ function renderPresence(){
   w.append(me,...others.slice(0,5).map(p=>h("span",{style:`background:${colorFor(p.name||p.cid)};${p.idle?"opacity:.55":""}`},initials(p.name))));
   w.append(h("span",{class:"wn"},others.length?`${others.length+1} online`:"Just you"));
   w.title=others.length?"Who's online: "+[P.name||"You",...others.map(p=>p.name||"Someone")].join(", "):"Only you have this project open right now";
-  if($("#whoPop").classList.contains("open")) renderWhoPop();
+  // the list is kept still while you're pointing at it or typing in it, so a button doesn't change under your click
+  const wp=$("#whoPop"); if(wp.classList.contains("open")&&!wp.matches(":hover")&&!wp.contains(document.activeElement)) renderWhoPop(true);
 }
 function presenceRow(p){if(!p.row||!S) return ""; for(const d of S.days){const r=d.rows.find(x=>x.id===p.row); if(r) return isBlock(r)?blockName(r):"Shot "+(r.shot||"?")+(r.action?" · "+String(r.action).slice(0,40):"")} return ""}
-function renderWhoPop(){
-  const pop=$("#whoPop"); pop.innerHTML="";
+// jump to the day and shot a teammate is on, showing the row even if your filters would hide it
+function goToPerson(p){
+  const pop=$("#whoPop"); pop.classList.remove("open"); $("#who").setAttribute("aria-expanded","false");
+  const day=S.days.find(d=>d.id===p.dayId); if(!day) return;
+  P.activeByProject[pid()]=day.id; savePrefs(); renderAll();
+  const label=presenceRow(p);
+  let tr=p.row&&$(`#grid tbody tr[data-id="${p.row}"]`);
+  if(p.row&&!tr&&day.rows.some(r=>r.id===p.row)){ P.view="all"; P.prioFilter=""; P.filters={}; savePrefs(); renderAll(); tr=$(`#grid tbody tr[data-id="${p.row}"]`); if(tr) toast("Filters cleared so you can see "+(p.name||"their")+"'s row"); }
+  if(tr){ tr.scrollIntoView({block:"center"}); tr.style.setProperty("--peer",colorFor(p.name||p.cid)); tr.classList.remove("peerjump"); void tr.offsetWidth; tr.classList.add("peerjump"); setTimeout(()=>tr.classList.remove("peerjump"),3200);
+    if(!/Filters cleared/.test(($("#toast")||{}).textContent||"")) toast(`${p.name||"They"}: ${day.name}${label?" · "+label:""}`); }
+  else toast(`${p.name||"They"} ${p.name?"is":"are"} on ${day.name}${p.row?"":" (no shot picked yet)"}`);
+}
+function renderWhoPop(quiet){
+  const real=$("#whoPop"); const pop=quiet?h("div",{}):real; if(!quiet) real.innerHTML="";
   const devName={phone:"phone",tablet:"tablet",computer:"computer"}, viewName={slate:"in Slate View",notes:"in Note View"};
   const dur=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just joined":m<60?`on for ${m} min`:`on for ${Math.floor(m/60)}h ${m%60}m`};
   const line=(p,me)=>{
     const where=[p.day,presenceRow(p)].filter(Boolean).join(" · ");
     const bits=[(p.devs&&p.devs.length?p.devs:[p.dev]).filter(Boolean).map(d=>devName[d]||d).join(" + "),viewName[p.view]||"",p.n>1?p.n+" tabs":""].filter(Boolean).join(", ");
-    const go=!me&&p.dayId&&S&&S.days.some(d=>d.id===p.dayId&&!d.archived)?h("button",{class:"go",onclick:()=>{P.activeByProject[pid()]=p.dayId;savePrefs();renderAll();pop.classList.remove("open");$("#who").setAttribute("aria-expanded","false");
-      setTimeout(()=>{const tr=p.row&&$(`#grid tbody tr[data-id="${p.row}"]`);if(tr){tr.scrollIntoView({block:"center",behavior:"smooth"});tr.classList.remove("flash");void tr.offsetWidth;tr.style.setProperty("--flash",colorFor(p.name||p.cid));tr.classList.add("flash")}},80)}},"Go there"):null;
+    const go=!me&&p.dayId&&S&&S.days.some(d=>d.id===p.dayId&&!d.archived)?h("button",{class:"go",onclick:e=>{e.stopPropagation();goToPerson(p)}},"Go there"):null;
     return h("div",{class:"wp"},h("span",{class:"av",style:`background:${colorFor(p.name||p.cid)}`},initials(p.name||"You"),h("i",{class:p.idle?"idle":""})),
       h("div",{class:"wb"},h("b",{},me?(P.name||"You")+" (you)":p.name||"Someone"),
         h("small",{},(p.idle?"Away (no activity for a few minutes)":me?"Online":dur(p.since||p.at))+(bits?" · "+bits:"")),
         where?h("small",{},where," ",go):null));
   };
   const others=peopleOnline();
-  pop.append(h("h4",{},`Online now (${others.length+1})`),line({name:P.name,day:(D()||{}).name,row:focusRow,dev:deviceKind(),view:currentView()},true),...others.map(p=>line(p)));
+  const meLine=line({name:P.name,day:(D()||{}).name,row:focusRow,dev:deviceKind(),view:currentView()},true);
+  // change your name right here (it's also in Settings > Team & sync)
+  const ren=h("button",{class:"go",onclick:e=>{e.stopPropagation();const wb=$(".wb",meLine);const inp=h("input",{type:"text",value:P.name||"",maxlength:"40","aria-label":"Your name",style:"width:100%;font:inherit;padding:.25rem .4rem;border:1px solid var(--line);border-radius:5px;background:var(--field,var(--bg));color:var(--ink)"});
+    const save=()=>{const v=inp.value.trim();if(v&&v!==P.name){P.name=v;savePrefs();toast("You're now "+v+" to the team");if(MODE==="team")scheduleSync(50)}renderPresence();renderWhoPop()};
+    inp.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();save()}if(ev.key==="Escape"){ev.stopPropagation();renderWhoPop()}});inp.addEventListener("blur",save);
+    wb.innerHTML="";wb.append(inp,h("small",{},"Enter to save. This is the name the team sees."));inp.focus();inp.select()}},"Change name");
+  $(".wb",meLine).append(h("small",{},ren));
+  pop.append(h("h4",{},`Online now (${others.length+1})`),meLine,...others.map(p=>line(p)));
   if(!others.length) pop.append(h("p",{class:"note",style:"margin:.3rem .4rem .5rem"},"Nobody else has this project open. When they do, you'll see their name, which day and shot they're on, and the device they're using."));
   if(recentPeople.length){
     pop.append(h("h4",{style:"margin-top:.8rem"},"Earlier today"));
     for(const p of recentPeople) pop.append(h("div",{class:"wp off"},h("span",{class:"av",style:`background:${colorFor(p.name||"?")}`},initials(p.name),h("i",{class:"off"})),
       h("div",{class:"wb"},h("b",{},p.name||"Someone"),h("small",{},"Last seen "+ago(p.at)+(p.day?" · "+p.day:"")+(p.dev?" · "+p.dev:"")))));
   }
+  if(quiet&&pop.innerHTML!==real.innerHTML){ real.innerHTML=""; real.append(...pop.childNodes); }
 }
+
 $("#who").onclick=e=>{e.stopPropagation();const pop=$("#whoPop");const o=!pop.classList.contains("open");pop.classList.toggle("open",o);$("#who").setAttribute("aria-expanded",o);
   if(o){renderWhoPop();const r=$("#who").getBoundingClientRect();pop.style.top=(r.bottom+6)+"px";pop.style.left=Math.max(8,Math.min(r.left,innerWidth-pop.offsetWidth-8))+"px"}};
 document.addEventListener("click",e=>{if(e.target.isConnected&&!e.target.closest("#whoPop,#who")&&$("#whoPop").classList.contains("open")){$("#whoPop").classList.remove("open");$("#who").setAttribute("aria-expanded","false")}});
@@ -2901,6 +2926,14 @@ function renderTimeline(C){
   { const n=dayClock(d);if(n!=null&&n>=start&&n<=end)tl.append(h("div",{class:"nowline",style:"left:"+pct(n),title:"Now "+fmt(n)}))}
 }
 function jump(id){const tr=$(`#grid tbody tr[data-id="${id}"]`);if(!tr)return;tr.scrollIntoView({behavior:"smooth",block:"center"});tr.style.outline="2px solid var(--accent)";setTimeout(()=>tr.style.outline="",1200)}
+// columns with nothing in them on any day of this kind (Live Action or Mocap); worked-out columns always count as in use
+function unusedCols(){
+  const k=kind(), rows=live().filter(d=>(d.kind==="capture"?"capture":"schedule")===k).flatMap(d=>d.rows.filter(r=>!isBlock(r)));
+  const ALWAYS=["shotId","setup","start","shoot","end"];
+  const has=(r,key)=>{ if(key==="refs") return !!(r.ref1||r.ref2||r.ref3); if(key==="orig") return !!r.origStart; if(key==="takes") return Number(r.takes)>0||takeList(r).length>0;
+    const v=r[key]; if(v==null) return false; if(typeof v==="boolean") return v; if(typeof v==="number") return v!==0; const t=String(v).trim(); return !!t&&!/^(false|0|-)$/i.test(t); };
+  return cols().filter(c=>!c.fixed&&!ALWAYS.includes(c.key)).map(c=>c.key).filter(key=>!rows.some(r=>has(r,key)));
+}
 function renderCols(){
   const p=$("#colPop"); p.innerHTML="";
   p.append(h("div",{class:"note"},`Showing columns for ${kind()==="capture"?"Mocap":"Live Action"} days, on this device. Add or rename columns in Settings > Columns.`));
@@ -2911,6 +2944,10 @@ function renderCols(){
     p.append(h("label",{},cb,c.label));
   }
   p.append(h("div",{class:"note",style:"margin-top:.4rem"},"Drag a column heading to move it. Your order is used on every day."));
+  const unused=unusedCols();
+  p.append(h("div",{class:"toolbar",style:"margin-top:.3rem"},
+    h("button",{class:"btn small",disabled:!unused.filter(k=>!hid.includes(k)).length,title:`Hide every column that's empty on all ${kind()==="capture"?"Mocap":"Live Action"} days`,onclick:()=>{const H=hidden();const add=unusedCols().filter(k=>!H.includes(k));H.push(...add);savePrefs();renderCols();renderHead();renderBody();toast(`Hid ${add.length} empty column${add.length===1?"":"s"}`)}},`Hide all not in use${unused.filter(k=>!hid.includes(k)).length?" ("+unused.filter(k=>!hid.includes(k)).length+")":""}`),
+    h("button",{class:"btn small",disabled:!hid.length,onclick:()=>{P.hiddenBy[kind()]=[];savePrefs();renderCols();renderHead();renderBody()}},"Show all")));
   p.append(h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{P.hiddenBy[kind()]=clone(HIDDEN_DEFAULT[kind()]||[]);savePrefs();renderCols();renderHead();renderBody()}},"Reset shown columns"),
     h("button",{class:"btn small",onclick:()=>{P.colOrder=[];savePrefs();invalidateCols();renderCols();renderHead();renderBody();toast("Columns back in their usual order")}},"Reset column order")));
 }
@@ -4979,7 +5016,7 @@ $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
-document.addEventListener("click",e=>{if(!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
 $("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
@@ -5299,7 +5336,9 @@ function buildReady(b){
 // links are kept one per line; with a project base address a plain file name (SH030_rehearsal.mp4) is enough
 function videoLinks(r){return String((r&&r.video)||"").split(/\s*[\n,]\s*|\s+(?=https?:|ftp:|<iframe)/i).map(s=>s.trim()).filter(Boolean).filter(s=>/^(https?:|ftp:)\/\//i.test(s)||/<iframe/i.test(s)||(vidBase()&&/\.\w{2,5}$/.test(s)))}
 function vidBase(){const b=String((S&&S.project&&S.project.vidBase)||"").trim();return /^https?:\/\//i.test(b)?b.replace(/\/*$/,"/"):""}
-function vidAccount(){return String((S&&S.project&&S.project.vidAccount)||"").trim()}
+// the Google account to open Drive files with is each person's own, kept on their device per project (never shared)
+function vidAccount(){return String(((P.vidAccounts||{})[pid()])||"").trim()}
+function setVidAccount(v){P.vidAccounts=P.vidAccounts||{};v=String(v||"").trim();if(v)P.vidAccounts[pid()]=v;else delete P.vidAccounts[pid()];savePrefs()}
 function withAccount(u){const a=vidAccount();if(!a)return u;try{const x=new URL(u);x.searchParams.set("authuser",a);return x.toString()}catch(e){return u}}
 function videoUrl(s){ if(/^(https?:|ftp:)/i.test(s)) return s; const m=s.match(/<iframe[^>]+src=["']([^"']+)["']/i); if(m) return m[1].replace(/&amp;/g,"&"); return vidBase()?vidBase()+s.split("/").map(encodeURIComponent).join("/"):s; }
 function videoEmbed(raw){
@@ -5324,13 +5363,15 @@ function renderVideoSettings(b){
   sel.addEventListener("change",()=>{S.project.vidSource=sel.value;commit();renderSetTab()});
   const field=(k,label,ph,type)=>{const i=h("input",{type:type||"text",value:pr[k]||"",placeholder:ph,spellcheck:"false"});bindDoc(i,null,v=>{S.project[k]=v.trim()});return h("label",{},label,i)};
   const f=h("div",{class:"form"},h("label",{},"Videos and files are shared through",sel));
-  const tips={drive:"Paste Drive file links into each shot (Note View or the Reference video column). If people use several Google accounts, put the account this project's files belong to here: Drive then opens them with that account instead of whichever is signed in first. Each person still needs to be signed into that account, or the files need to be shared with them.",
+  const tips={drive:"Paste Drive file links into each shot (Note View or the Reference video column). If you're signed into several Google accounts, enter the one that can see this project's files: Drive then opens them with it instead of whichever account is first. That's your own setting; each person enters theirs, and nobody else sees it.",
     dropbox:"Paste Dropbox file links; they play with speed, frame steps, loop and mirror.",
     onedrive:"In OneDrive or SharePoint choose the video, then Embed, and paste the whole embed code into the shot. Plain share links open in a new tab.",
     box:"Paste Box shared links; they play in Box's own player.",
     server:"Give the web address of the project's folder (https://…). The team can then type just a file name for each shot, such as SH030_rehearsal.mp4. Browsers can't play from FTP: most NAS and FTP hosts can also share over HTTPS, which is what's needed here.",
     other:"Paste any link. Video files (.mp4, .mov, .webm) play in place; embed codes (<iframe…>) play in their own player; anything else opens in a new tab."};
-  if(src==="drive") f.append(field("vidAccount","Google account for this project","name@company.com","email"));
+  if(src==="drive"){ const i=h("input",{type:"email",value:vidAccount(),placeholder:"you@company.com",spellcheck:"false"});
+    i.addEventListener("change",()=>{setVidAccount(i.value);const vh=$("#nvVideoHost");if(vh)vh.dataset.key="";toast(i.value.trim()?"Drive videos will open with "+i.value.trim()+" on this device":"Drive videos open with your default Google account")});
+    f.append(h("label",{},"Your Google account for this project",i,h("small",{class:"note"},"Just for you, on this device. Everyone sets their own."))); }
   if(src==="server") f.append(field("vidBase","Web address of the video folder","https://files.example.com/project/videos/","url"));
   if(src) f.append(field("vidFolder","Project video folder (link, for the team to browse)","https://…","url"));
   b.append(h("h3",{style:"margin-top:1.2rem"},"Reference video"),h("p",{class:"note"},"Rehearsal and reference videos stay where they're stored; each shot only keeps the link. "+(tips[src]||"Pick where this project keeps its videos. Each project can use a different place or Google account.")),f);
@@ -5363,7 +5404,7 @@ function videoSection(r){
       stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},"This link can't play inside the app (",e.name,"). ",h("a",{href:links[VID.i],target:"_blank",rel:"noopener noreferrer",style:"color:#fff"},"Open it in a new tab"),".")));
     }else{
       stage.append(h("iframe",{src:e.src,allow:"autoplay; fullscreen; picture-in-picture",allowfullscreen:"",referrerpolicy:"no-referrer-when-downgrade",title:"Reference video for shot "+(r.shot||"")}));
-      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive. Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file."));
+      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive"+(vidAccount()?" as "+vidAccount():"")+". Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file. ",h("a",{href:"#",onclick:ev=>{ev.preventDefault();closeNotes();openSettings&&openSettings("project")}},vidAccount()?"Change account":"Pick which Google account")));
       if(e.kind==="folder") ctl.append(h("span",{class:"note"},"A Drive folder: pick a video and it opens in a new tab. Link each shot to its own file to play it here."));
     }
   }
@@ -5383,7 +5424,7 @@ function videoSection(r){
   return sec;
 }
 function updateVideoHost(r){
-  const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,pr.vidAccount,pr.vidFolder,pr.vidBase].join("|");
+  const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,vidAccount(),pr.vidFolder,pr.vidBase].join("|");
   host.classList.toggle("has-video",videoLinks(r).length>0);
   if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r).childNodes); cardControls(host); applyNvLayout();
 }

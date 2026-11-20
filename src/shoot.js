@@ -286,7 +286,9 @@ function buildReady(b){
 // links are kept one per line; with a project base address a plain file name (SH030_rehearsal.mp4) is enough
 function videoLinks(r){return String((r&&r.video)||"").split(/\s*[\n,]\s*|\s+(?=https?:|ftp:|<iframe)/i).map(s=>s.trim()).filter(Boolean).filter(s=>/^(https?:|ftp:)\/\//i.test(s)||/<iframe/i.test(s)||(vidBase()&&/\.\w{2,5}$/.test(s)))}
 function vidBase(){const b=String((S&&S.project&&S.project.vidBase)||"").trim();return /^https?:\/\//i.test(b)?b.replace(/\/*$/,"/"):""}
-function vidAccount(){return String((S&&S.project&&S.project.vidAccount)||"").trim()}
+// the Google account to open Drive files with is each person's own, kept on their device per project (never shared)
+function vidAccount(){return String(((P.vidAccounts||{})[pid()])||"").trim()}
+function setVidAccount(v){P.vidAccounts=P.vidAccounts||{};v=String(v||"").trim();if(v)P.vidAccounts[pid()]=v;else delete P.vidAccounts[pid()];savePrefs()}
 function withAccount(u){const a=vidAccount();if(!a)return u;try{const x=new URL(u);x.searchParams.set("authuser",a);return x.toString()}catch(e){return u}}
 function videoUrl(s){ if(/^(https?:|ftp:)/i.test(s)) return s; const m=s.match(/<iframe[^>]+src=["']([^"']+)["']/i); if(m) return m[1].replace(/&amp;/g,"&"); return vidBase()?vidBase()+s.split("/").map(encodeURIComponent).join("/"):s; }
 function videoEmbed(raw){
@@ -311,13 +313,15 @@ function renderVideoSettings(b){
   sel.addEventListener("change",()=>{S.project.vidSource=sel.value;commit();renderSetTab()});
   const field=(k,label,ph,type)=>{const i=h("input",{type:type||"text",value:pr[k]||"",placeholder:ph,spellcheck:"false"});bindDoc(i,null,v=>{S.project[k]=v.trim()});return h("label",{},label,i)};
   const f=h("div",{class:"form"},h("label",{},"Videos and files are shared through",sel));
-  const tips={drive:"Paste Drive file links into each shot (Note View or the Reference video column). If people use several Google accounts, put the account this project's files belong to here: Drive then opens them with that account instead of whichever is signed in first. Each person still needs to be signed into that account, or the files need to be shared with them.",
+  const tips={drive:"Paste Drive file links into each shot (Note View or the Reference video column). If you're signed into several Google accounts, enter the one that can see this project's files: Drive then opens them with it instead of whichever account is first. That's your own setting; each person enters theirs, and nobody else sees it.",
     dropbox:"Paste Dropbox file links; they play with speed, frame steps, loop and mirror.",
     onedrive:"In OneDrive or SharePoint choose the video, then Embed, and paste the whole embed code into the shot. Plain share links open in a new tab.",
     box:"Paste Box shared links; they play in Box's own player.",
     server:"Give the web address of the project's folder (https://…). The team can then type just a file name for each shot, such as SH030_rehearsal.mp4. Browsers can't play from FTP: most NAS and FTP hosts can also share over HTTPS, which is what's needed here.",
     other:"Paste any link. Video files (.mp4, .mov, .webm) play in place; embed codes (<iframe…>) play in their own player; anything else opens in a new tab."};
-  if(src==="drive") f.append(field("vidAccount","Google account for this project","name@company.com","email"));
+  if(src==="drive"){ const i=h("input",{type:"email",value:vidAccount(),placeholder:"you@company.com",spellcheck:"false"});
+    i.addEventListener("change",()=>{setVidAccount(i.value);const vh=$("#nvVideoHost");if(vh)vh.dataset.key="";toast(i.value.trim()?"Drive videos will open with "+i.value.trim()+" on this device":"Drive videos open with your default Google account")});
+    f.append(h("label",{},"Your Google account for this project",i,h("small",{class:"note"},"Just for you, on this device. Everyone sets their own."))); }
   if(src==="server") f.append(field("vidBase","Web address of the video folder","https://files.example.com/project/videos/","url"));
   if(src) f.append(field("vidFolder","Project video folder (link, for the team to browse)","https://…","url"));
   b.append(h("h3",{style:"margin-top:1.2rem"},"Reference video"),h("p",{class:"note"},"Rehearsal and reference videos stay where they're stored; each shot only keeps the link. "+(tips[src]||"Pick where this project keeps its videos. Each project can use a different place or Google account.")),f);
@@ -350,7 +354,7 @@ function videoSection(r){
       stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},"This link can't play inside the app (",e.name,"). ",h("a",{href:links[VID.i],target:"_blank",rel:"noopener noreferrer",style:"color:#fff"},"Open it in a new tab"),".")));
     }else{
       stage.append(h("iframe",{src:e.src,allow:"autoplay; fullscreen; picture-in-picture",allowfullscreen:"",referrerpolicy:"no-referrer-when-downgrade",title:"Reference video for shot "+(r.shot||"")}));
-      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive. Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file."));
+      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive"+(vidAccount()?" as "+vidAccount():"")+". Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file. ",h("a",{href:"#",onclick:ev=>{ev.preventDefault();closeNotes();openSettings&&openSettings("project")}},vidAccount()?"Change account":"Pick which Google account")));
       if(e.kind==="folder") ctl.append(h("span",{class:"note"},"A Drive folder: pick a video and it opens in a new tab. Link each shot to its own file to play it here."));
     }
   }
@@ -370,7 +374,7 @@ function videoSection(r){
   return sec;
 }
 function updateVideoHost(r){
-  const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,pr.vidAccount,pr.vidFolder,pr.vidBase].join("|");
+  const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,vidAccount(),pr.vidFolder,pr.vidBase].join("|");
   host.classList.toggle("has-video",videoLinks(r).length>0);
   if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r).childNodes); cardControls(host); applyNvLayout();
 }
