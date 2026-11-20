@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.24.0";
+const VERSION = "2.25.0";
 const CHANGELOG = [
-  ["2.24.0","2026-11-20","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
+  ["2.25.0","2026-11-20","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
+  ["2.24.0","","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
   ["2.23.0","","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
   ["2.22.1","","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
   ["2.22.0","","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
@@ -95,7 +96,7 @@ function savePrefs(){lsSet(PREF_KEY,P)}
 const COL_GROUPS=[["id","Shot","#5b6b7a"],["time","Timing","#2f6fb0"],["capture","Capture","#7a5ea8"],["place","Location","#b08a3e"],["story","Story","#2e7d4f"],["look","Camera & look","#1f7a7a"],["notes","Notes","#d0700f"],["refs","Storyboard","#b3264e"]];
 const GROUP_OF={shot:"id",priority:"id",shotId:"id",duration:"time",setup:"time",start:"time",shoot:"time",end:"time",orig:"time",
   takes:"capture",action:"capture",performers:"capture",perfCount:"capture",genre:"capture",body:"capture",face:"capture",glove:"capture",hero:"capture",safety:"capture",heroUrl:"capture",safetyUrl:"capture",
-  location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs"};
+  location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs",video:"refs"};
 function groupOf(c){return c.custom?(c.group||""):(GROUP_OF[c.key]||"")}
 const BASE_COLS=[
   {key:"handle",label:"",fixed:true},
@@ -130,6 +131,7 @@ const BASE_COLS=[
   {key:"director",label:"Director notes",type:"note"},
   {key:"props",label:"Prop / set notes",type:"note"},
   {key:"refs",label:"Storyboard / refs"},
+  {key:"video",label:"Reference video",type:"url"},
   {key:"actions",label:"",fixed:true},
 ];
 const CUSTOM_TYPES=[["text","Text"],["note","Long text"],["number","Number"],["flag","Tick box"],["list","Dropdown"]];
@@ -1002,7 +1004,7 @@ function renderBody(){
         if(t==="flag") td.append(flagCell(r,k));
         else if(t==="list") td.append(listCell(r,k));
         else if(t==="number"){ td.className+=" num"; td.append(textCell(r,k,false,{type:"number",small:true})); }
-        else if(t==="url") td.append(urlCell(r,k));
+        else if(t==="url") td.append(k==="video"?videoCell(r):urlCell(r,k));
         else if(t==="text") td.append(textCell(r,k,false));
         else if(t==="note") td.append(textCell(r,k,true));
       }
@@ -1815,11 +1817,14 @@ function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textC
 
 /* ===================== Note View ===================== */
 const NV={id:null,roll:null,timer:0};
-function openNotes(){const d=D();if(!d)return;const r=upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
-function closeNotes(){$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
+function openNotes(id){const d=D();if(!d)return;const r=(typeof id==="string"&&R(id))||upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
+function closeNotes(){const vh=$("#nvVideoHost");if(vh){vh.innerHTML="";vh.dataset.key=""}$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
 function notesStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
 function renderNotes(){
-  const v=$("#noteView"); v.innerHTML=""; const d=D(), r=NV.id&&R(NV.id);
+  // the video player sits outside the part that's redrawn, so marking a take doesn't restart it
+  const v=$("#noteView"); const host=$("#nvVideoHost")||h("div",{id:"nvVideoHost",class:"nvvhost"});
+  [...v.children].forEach(c=>{if(c!==host)c.remove()}); if(host.parentNode!==v) v.append(host);
+  const d=D(), r=NV.id&&R(NV.id);
   const L=d&&liveStatus(d,compute());
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
@@ -1827,7 +1832,7 @@ function renderNotes(){
       h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{title:"Close",onclick:closeNotes},"✕"));
-  v.append(head); if(!r) return;
+  v.insertBefore(head,host); if(!r){host.innerHTML="";host.dataset.key="";return}
   const body=h("div",{class:"nvbody"});
   // what the shot is
   const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}
@@ -1865,7 +1870,8 @@ function renderNotes(){
     notes.append(h("label",{},l,t)); requestAnimationFrame(()=>autosize(t));
   }
   body.append(h("section",{class:"nvwhat"},pics,info),h("section",{},h("h3",{},"Takes"),takes),h("section",{},h("h3",{},"Notes"),notes),h("section",{},h("h3",{},"Scribble"),scribblePad(r)));
-  v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
+  v.insertBefore(body,host); updateVideoHost(r);
+  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
 }
 function fmtDur(ms){const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 // a drawing pad for finger or pencil; saved as a picture on the shot
@@ -1924,6 +1930,7 @@ function renderSetTab(){
     for(const [k,l] of fields){const i=h("input",{value:S.project[k]||""});bindDoc(i,null,v=>{S.project[k]=v;if(k==="name")$("#projTitle").textContent=v||"Untitled project"});if(k==="name")i.addEventListener("change",()=>syncProjectName(true));f.append(h("label",{},l,i))}
     const ta=h("textarea",{}); ta.value=S.project.notes||""; bindDoc(ta,null,v=>{S.project.notes=v}); f.append(h("label",{class:"wide"},"Project notes",ta));
     b.append(h("p",{class:"note"},"Shared with everyone on this project. The production ID can go into shot names (see Shot names)."),f);
+    renderVideoSettings(b);
   }
   else if(setTab==="people"){
     for(const group of ["Cast","Crew"]){

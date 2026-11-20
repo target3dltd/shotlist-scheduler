@@ -130,6 +130,27 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .fbi p{margin:.35rem 0;white-space:pre-wrap} .fbi small{color:var(--muted)}
 .fbi .acts{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
 @media print{.fbbtn,.fbpanel,.whopop{display:none!important}}
+/* reference video in Note View */
+.nvvhost{padding:0 1rem 1rem;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
+.nvvhost .nvvideo{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem 1rem}
+.nvvideo h3{margin:0 0 .6rem}
+.nvvideo .vwrap{display:grid;grid-template-columns:minmax(0,1fr) 17rem;gap:1rem;align-items:start}
+@media(max-width:900px){.nvvideo .vwrap{grid-template-columns:1fr}}
+.vstage{position:relative;width:100%;aspect-ratio:16/9;max-height:62vh;background:#000;border-radius:8px;overflow:hidden;margin:0 auto}
+.vstage iframe,.vstage video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+.vstage video.mirror{transform:scaleX(-1)}
+.vtabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:0 0 .5rem}
+.vtabs button{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:999px;padding:.25rem .7rem;font:inherit;font-size:.85em;cursor:pointer}
+.vtabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vctl{display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;margin-top:.5rem}
+.vctl .btn[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vside{display:flex;flex-direction:column;gap:.5rem;font-size:.9em}
+.vside input{border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg));width:100%;box-sizing:border-box}
+.vlist{display:flex;flex-direction:column;gap:.3rem} .vlist div{display:flex;gap:.4rem;align-items:center} .vlist a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent,#2f6fb0)}
+.vlist button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem} .vlist button:hover{color:var(--bad)}
+.vempty{display:flex;align-items:center;justify-content:center;text-align:center;color:#bbb;padding:1rem;font-size:.95em;line-height:1.5}
+.videocell{display:flex;gap:.3rem;align-items:center} .videocell input{flex:1;min-width:0} .videocell .play{border:1px solid var(--line);background:var(--panel2);border-radius:5px;cursor:pointer;padding:.1rem .4rem;color:var(--ink)}
+@media print{.videocell .play{display:none}}
 /* frozen day */
 .frozenflag{margin:.4rem 0;padding:.4rem .7rem;border-radius:8px;background:var(--panel2);border:1px dashed var(--line2);font-size:.9em;line-height:1.9} .frozenflag .btn{margin-left:.4rem}
 .frozenflag[hidden]{display:none}
@@ -705,6 +726,7 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
             <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
             <hr>
+            <button class="mi" id="dedupeBtn" role="menuitem">Remove duplicate pictures <small>the same storyboard frame twice on a shot</small></button>
             <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
             <hr>
             <button class="mi" id="actBtn" role="menuitem" title="Who changed what">Activity <small>who changed what</small></button>

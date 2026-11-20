@@ -130,6 +130,27 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .fbi p{margin:.35rem 0;white-space:pre-wrap} .fbi small{color:var(--muted)}
 .fbi .acts{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
 @media print{.fbbtn,.fbpanel,.whopop{display:none!important}}
+/* reference video in Note View */
+.nvvhost{padding:0 1rem 1rem;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
+.nvvhost .nvvideo{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem 1rem}
+.nvvideo h3{margin:0 0 .6rem}
+.nvvideo .vwrap{display:grid;grid-template-columns:minmax(0,1fr) 17rem;gap:1rem;align-items:start}
+@media(max-width:900px){.nvvideo .vwrap{grid-template-columns:1fr}}
+.vstage{position:relative;width:100%;aspect-ratio:16/9;max-height:62vh;background:#000;border-radius:8px;overflow:hidden;margin:0 auto}
+.vstage iframe,.vstage video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+.vstage video.mirror{transform:scaleX(-1)}
+.vtabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:0 0 .5rem}
+.vtabs button{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:999px;padding:.25rem .7rem;font:inherit;font-size:.85em;cursor:pointer}
+.vtabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vctl{display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;margin-top:.5rem}
+.vctl .btn[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vside{display:flex;flex-direction:column;gap:.5rem;font-size:.9em}
+.vside input{border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font:inherit;color:var(--ink);background:var(--field,var(--bg));width:100%;box-sizing:border-box}
+.vlist{display:flex;flex-direction:column;gap:.3rem} .vlist div{display:flex;gap:.4rem;align-items:center} .vlist a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent,#2f6fb0)}
+.vlist button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem} .vlist button:hover{color:var(--bad)}
+.vempty{display:flex;align-items:center;justify-content:center;text-align:center;color:#bbb;padding:1rem;font-size:.95em;line-height:1.5}
+.videocell{display:flex;gap:.3rem;align-items:center} .videocell input{flex:1;min-width:0} .videocell .play{border:1px solid var(--line);background:var(--panel2);border-radius:5px;cursor:pointer;padding:.1rem .4rem;color:var(--ink)}
+@media print{.videocell .play{display:none}}
 /* frozen day */
 .frozenflag{margin:.4rem 0;padding:.4rem .7rem;border-radius:8px;background:var(--panel2);border:1px dashed var(--line2);font-size:.9em;line-height:1.9} .frozenflag .btn{margin-left:.4rem}
 .frozenflag[hidden]{display:none}
@@ -705,6 +726,7 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
             <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
             <hr>
+            <button class="mi" id="dedupeBtn" role="menuitem">Remove duplicate pictures <small>the same storyboard frame twice on a shot</small></button>
             <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
             <hr>
             <button class="mi" id="actBtn" role="menuitem" title="Who changed what">Activity <small>who changed what</small></button>
@@ -1041,6 +1063,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <h3>Spreadsheets</h3>
   <ul>
     <li><b>File ▾ &gt; Import</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>Storyboard pictures from a PDF</b> (File ▾ &gt; Import, pick the PDF): in <b>Keep them</b> mode, a picture the shot already has (the same frame from a spreadsheet, at any size) isn't added again. <b>File ▾ &gt; Remove duplicate pictures</b> tidies shots that got the same frame twice, and one Undo puts them back.</li>
     <li><b>A revised shot list from the client</b>: import it the same way. When most of its shot numbers are already in the project, the import picks <b>the shots already in this project (update them, matched by Shot #)</b>. Check the column mapping, then <b>Import</b> shows every change before anything happens: which shot, which column, what it was and what it will be, how many shots are newly cut and any new shots. <b>Apply</b> makes them in one go; one <b>Undo</b> takes the lot back.
       <ul>
         <li>Shot numbers match however they're written: 005, 5, 100.0 and sh030 find 05, 100 and 030.</li>
@@ -1089,6 +1112,17 @@ body.nosteps .mins.timing input{width:4.5em}
     <li>You see every shot with its pictures before anything changes. Choose whether to match shots on every day or just this one, whether to keep pictures a shot already has (filling empty boxes) or replace them, and whether to add shots that aren't in the project yet. Shot numbers match ignoring leading zeros (005 = 5). One Undo takes the whole import back.</li>
     <li><b>Keeping pictures when you export:</b> the .xlsx export puts each shot's pictures in Storyboard 1-3 columns on its first take row, and the project file (Settings &gt; Projects &gt; Export project file) packs them in too. Importing either one, into this project, another project or another site, brings the pictures with it. Pictures placed on the rows of a sheet from elsewhere (Excel, Google Sheets) come in the same way.</li>
     <li>Pictures belong to their project: with project keys on, only people holding that project's key can see them.</li>
+  </ul>
+
+  <h3>Reference and rehearsal video</h3>
+  <ul>
+    <li>Each shot can have one or more video links. In <b>Note View</b> paste a link into the box beside the player (or type links into the <b>Reference video</b> column in the table, separated by spaces). The video plays in a panel under the notes and keeps playing while you mark takes.</li>
+    <li><b>Google Drive</b>: right-click the video, <b>Share</b>, then <b>Copy link</b>. It plays in Drive's own player (with its speed, quality and full screen controls) for anyone who can open the file: share it with the team, or set it to <b>Anyone with the link</b>. A Drive folder link shows the folder; link each shot to its own file to play it in place.</li>
+    <li>Dropbox, Vimeo, YouTube and direct .mp4 / .mov / .webm links work too. Direct files (including Dropbox) get extra controls: quarter, half or full speed, one frame back or forward, loop and mirror (handy for blocking). Other links open in a new tab.</li>
+    <li>The videos stay where they are (your Drive); the app only keeps the links, so file size doesn't matter. Playing needs an internet connection on set.</li>
+    <li>The <b>▶</b> in the Reference video column opens that shot in Note View.</li>
+    <li><b>Per project</b> (Settings → Project → Reference video): choose where this project's videos live. For <b>Google Drive</b>, enter the Google account the project's files belong to; Drive then opens them with that account even if someone is signed into several (they still need to be signed into it, or the files shared with them). Add the <b>project video folder</b> link for a quick way to browse. For <b>your own server or NAS</b>, give the folder's web address (https://…) and the team can type just a file name, such as SH030_rehearsal.mp4. <b>OneDrive / SharePoint</b>: use the video's <b>Embed</b> option and paste the embed code. <b>Box</b> shared links play in Box's player.</li>
+    <li>Browsers can't play from <b>FTP</b>. Most NAS and FTP hosts can also share files over HTTPS, which is what's needed.</li>
   </ul>
 
   <h3>Shoot-day tools</h3>
@@ -1196,9 +1230,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.24.0";
+const VERSION = "2.25.0";
 const CHANGELOG = [
-  ["2.24.0","2026-11-20","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
+  ["2.25.0","2026-11-20","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
+  ["2.24.0","","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
   ["2.23.0","","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
   ["2.22.1","","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
   ["2.22.0","","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
@@ -1260,11 +1295,11 @@ const SEED = null;
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
-const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes"];
+const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes","vidSource","vidAccount","vidFolder","vidBase"];
 const ID_PARTS_DEFAULT = [
   { key:"shot", on:true,  prefix:"" }, { key:"take", on:true, prefix:"T" }, { key:"prod", on:true, prefix:"" },
   { key:"day", on:true, prefix:"d" }, { key:"perfCount", on:true, prefix:"a" }, { key:"props", on:true, prefix:"p" },
@@ -1562,7 +1597,7 @@ function savePrefs(){lsSet(PREF_KEY,P)}
 const COL_GROUPS=[["id","Shot","#5b6b7a"],["time","Timing","#2f6fb0"],["capture","Capture","#7a5ea8"],["place","Location","#b08a3e"],["story","Story","#2e7d4f"],["look","Camera & look","#1f7a7a"],["notes","Notes","#d0700f"],["refs","Storyboard","#b3264e"]];
 const GROUP_OF={shot:"id",priority:"id",shotId:"id",duration:"time",setup:"time",start:"time",shoot:"time",end:"time",orig:"time",
   takes:"capture",action:"capture",performers:"capture",perfCount:"capture",genre:"capture",body:"capture",face:"capture",glove:"capture",hero:"capture",safety:"capture",heroUrl:"capture",safetyUrl:"capture",
-  location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs"};
+  location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs",video:"refs"};
 function groupOf(c){return c.custom?(c.group||""):(GROUP_OF[c.key]||"")}
 const BASE_COLS=[
   {key:"handle",label:"",fixed:true},
@@ -1597,6 +1632,7 @@ const BASE_COLS=[
   {key:"director",label:"Director notes",type:"note"},
   {key:"props",label:"Prop / set notes",type:"note"},
   {key:"refs",label:"Storyboard / refs"},
+  {key:"video",label:"Reference video",type:"url"},
   {key:"actions",label:"",fixed:true},
 ];
 const CUSTOM_TYPES=[["text","Text"],["note","Long text"],["number","Number"],["flag","Tick box"],["list","Dropdown"]];
@@ -2469,7 +2505,7 @@ function renderBody(){
         if(t==="flag") td.append(flagCell(r,k));
         else if(t==="list") td.append(listCell(r,k));
         else if(t==="number"){ td.className+=" num"; td.append(textCell(r,k,false,{type:"number",small:true})); }
-        else if(t==="url") td.append(urlCell(r,k));
+        else if(t==="url") td.append(k==="video"?videoCell(r):urlCell(r,k));
         else if(t==="text") td.append(textCell(r,k,false));
         else if(t==="note") td.append(textCell(r,k,true));
       }
@@ -3282,11 +3318,14 @@ function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textC
 
 /* ===================== Note View ===================== */
 const NV={id:null,roll:null,timer:0};
-function openNotes(){const d=D();if(!d)return;const r=upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
-function closeNotes(){$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
+function openNotes(id){const d=D();if(!d)return;const r=(typeof id==="string"&&R(id))||upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
+function closeNotes(){const vh=$("#nvVideoHost");if(vh){vh.innerHTML="";vh.dataset.key=""}$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
 function notesStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
 function renderNotes(){
-  const v=$("#noteView"); v.innerHTML=""; const d=D(), r=NV.id&&R(NV.id);
+  // the video player sits outside the part that's redrawn, so marking a take doesn't restart it
+  const v=$("#noteView"); const host=$("#nvVideoHost")||h("div",{id:"nvVideoHost",class:"nvvhost"});
+  [...v.children].forEach(c=>{if(c!==host)c.remove()}); if(host.parentNode!==v) v.append(host);
+  const d=D(), r=NV.id&&R(NV.id);
   const L=d&&liveStatus(d,compute());
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
@@ -3294,7 +3333,7 @@ function renderNotes(){
       h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{title:"Close",onclick:closeNotes},"✕"));
-  v.append(head); if(!r) return;
+  v.insertBefore(head,host); if(!r){host.innerHTML="";host.dataset.key="";return}
   const body=h("div",{class:"nvbody"});
   // what the shot is
   const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}
@@ -3332,7 +3371,8 @@ function renderNotes(){
     notes.append(h("label",{},l,t)); requestAnimationFrame(()=>autosize(t));
   }
   body.append(h("section",{class:"nvwhat"},pics,info),h("section",{},h("h3",{},"Takes"),takes),h("section",{},h("h3",{},"Notes"),notes),h("section",{},h("h3",{},"Scribble"),scribblePad(r)));
-  v.append(body,h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
+  v.insertBefore(body,host); updateVideoHost(r);
+  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
 }
 function fmtDur(ms){const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 // a drawing pad for finger or pencil; saved as a picture on the shot
@@ -3391,6 +3431,7 @@ function renderSetTab(){
     for(const [k,l] of fields){const i=h("input",{value:S.project[k]||""});bindDoc(i,null,v=>{S.project[k]=v;if(k==="name")$("#projTitle").textContent=v||"Untitled project"});if(k==="name")i.addEventListener("change",()=>syncProjectName(true));f.append(h("label",{},l,i))}
     const ta=h("textarea",{}); ta.value=S.project.notes||""; bindDoc(ta,null,v=>{S.project.notes=v}); f.append(h("label",{class:"wide"},"Project notes",ta));
     b.append(h("p",{class:"note"},"Shared with everyone on this project. The production ID can go into shot names (see Shot names)."),f);
+    renderVideoSettings(b);
   }
   else if(setTab==="people"){
     for(const group of ["Cast","Crew"]){
@@ -3951,7 +3992,7 @@ const BASE_IMPORT_TARGETS=[
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
   ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
   ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["director","Director notes"],
-  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"]
+  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"],["video","Reference video link"]
 ];
 function importTargets(){
   const extra=IMP&&IMP.app?[["rid","App row link (keeps days exact)"]]:[];
@@ -3977,6 +4018,7 @@ const IMPORT_SYN={
   shotType:["shot type","shot size","framing","shot size / framing","shot size/framing"],camera:["camera & lighting notes","camera & lighting","camera","camera notes","technical notes"],lighting:["lighting","lighting notes","lights","lx"],
   vfx:["vfx notes","vfx","gs process?","capture notes","mocap notes"],director:["director notes","notes","other notes","comments","comment"],
   rowType:["type","row type"],
+  video:["reference video","ref video","rehearsal video","video","video link","rehearsal","reference"],
   status:["status","hero shot","shot status","cut?","in / out","in/out","omit","omitted"]
 };
 const IMPORT_SKIP=["shot id","totals","seconds (tc)","frame range","seconds (frames)","shoot/production id","frame rate","tc in","tc out","frame start","frame end","storyboard / ref image","alternate reference","shot name (app)","shot name (last take)","video export","mocap export","m&t process?","post filter?","m&t export","gs export","order","end","setup from","calculated end","kind","date","takes"];
@@ -4664,6 +4706,26 @@ async function readStoryboardPdf(file,progress){
 }
 /* ---------- the PDF import window ---------- */
 let PDFIMP=null;
+/* ---------- telling pictures apart: a 16 x 16 brightness fingerprint, so the same frame at another size or quality matches ---------- */
+const HASHES=new Map();
+function imgHash(src){ return new Promise(res=>{ if(!src) return res(null); const im=new Image(); im.onload=()=>{ try{ const c=document.createElement("canvas"); c.width=c.height=16; const x=c.getContext("2d"); x.drawImage(im,0,0,16,16);
+  const d=x.getImageData(0,0,16,16).data, g=[]; for(let i=0;i<d.length;i+=4) g.push(.3*d[i]+.59*d[i+1]+.11*d[i+2]); const avg=g.reduce((a,b)=>a+b,0)/g.length; res(g.map(v=>v>avg?1:0)); }catch(e){res(null)} };
+  im.onerror=()=>res(null); im.src=src; }); }
+async function refHash(ref){ if(HASHES.has(ref)) return HASHES.get(ref); const src=await imgSrc(ref); const hsh=src?await imgHash(src):null; HASHES.set(ref,hsh); return hsh; }
+function looksSame(a,b){ let n=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) n++; return n<=28; }
+// File menu: take out pictures that appear twice on the same shot, and close the gaps
+async function dedupePictures(){
+  commit(); const rows=live().flatMap(d=>d.rows.filter(r=>!isBlock(r)&&["ref1","ref2","ref3"].filter(k=>r[k]).length>1));
+  if(!rows.length){toast("No shot has more than one storyboard picture");return}
+  let removed=0, shots=0, n=0; const plan=[];
+  for(const r of rows){ toast(`Comparing pictures: shot ${++n} of ${rows.length}…`);
+    const refs=["ref1","ref2","ref3"].map(k=>r[k]).filter(Boolean); const hs=await Promise.all(refs.map(refHash)); const keep=[];
+    refs.forEach((ref,i)=>{ if(keep.some(j=>refs[j]===ref||(hs[j]&&hs[i]&&looksSame(hs[j],hs[i])))) return; keep.push(i); });
+    if(keep.length<refs.length){ plan.push({id:r.id,refs:keep.map(i=>refs[i])}); removed+=refs.length-keep.length; shots++; } }
+  if(!removed){toast("No duplicate pictures found");return}
+  for(const p of plan){ const x=R(p.id); if(!x) continue; ["ref1","ref2","ref3"].forEach((k,i)=>{x[k]=p.refs[i]||""}); }
+  commit(); renderAll(); toast(`Removed ${removed} duplicate picture${removed===1?"":"s"} from ${shots} shot${shots===1?"":"s"} - Undo to put them back`);
+}
 async function openPdfImport(file){
   const m=$("#pdfModal"), b=$("#pdfBody"); b.innerHTML=""; m.classList.add("open");
   const prog=h("p",{class:"note"},"Reading "+file.name+"…"); b.append(prog);
@@ -4676,7 +4738,7 @@ function pdfMatches(shot,scope){const k=normShot(shot);const days=scope==="day"?
 function renderPdfImport(){
   const b=$("#pdfBody"); b.innerHTML=""; const {res}=PDFIMP; const n=res.shots.reduce((a,g)=>a+g.pics.length,0);
   const scope=h("select",{},h("option",{value:"all"},"Every day in this project"),h("option",{value:"day"},"This day only ("+(D()||{}).name+")"));
-  const mode=h("select",{},h("option",{value:"fill"},"Keep them, add into empty slots"),h("option",{value:"replace"},"Replace them with the PDF's"));
+  const mode=h("select",{},h("option",{value:"fill"},"Keep them, add ones that aren't already there"),h("option",{value:"replace"},"Replace them with the PDF's"));
   const addNew=h("input",{type:"checkbox"});
   scope.value=PDFIMP.scope||"all"; mode.value=PDFIMP.mode||"fill"; addNew.checked=!!PDFIMP.addNew;
   const redo=()=>{PDFIMP.scope=scope.value;PDFIMP.mode=mode.value;PDFIMP.addNew=addNew.checked;renderPdfImport()};
@@ -4702,28 +4764,44 @@ function renderPdfImport(){
 async function runPdfImport(){
   const {res,scope="all",mode="fill",addNew=false}=PDFIMP; const pr=$("#pdfProg"); const btn=$("#pdfBody .btn.primary"); btn.disabled=true;
   const groups=res.shots.filter(g=>pdfMatches(g.shot,scope).length||(addNew&&D()));
-  // 1) upload every picture first...
-  const total=groups.reduce((a,g)=>a+Math.min(3,g.pics.length),0); let up=0, failed=0; const refsFor=new Map();
-  for(const g of groups){ const refs=[];
-    for(const p of g.pics.slice(0,3)){ pr.textContent=`Uploading picture ${++up} of ${total}…`;
-      try{ refs.push(MODE==="team"?(await api("/api/image",{data:p.data})).ref:p.data); }catch(e){ failed++; } }
+  // 0) decide, shot by shot, which of the PDF's pictures go where. In "keep" mode a picture the shot already has
+  //    (the same storyboard frame from a spreadsheet, or the same shot listed twice in the PDF) is left out
+  const plan=new Map(), seenRow=new Map(); let skipped=0;   // plan: group -> [{r, idx:[picture numbers]}]
+  for(const g of groups){ const pics=g.pics.slice(0,3); pr.textContent="Comparing pictures…";
+    const hs=await Promise.all(pics.map(p=>imgHash(p.data))); const per=[];
+    for(const {r} of pdfMatches(g.shot,scope)){
+      let st=seenRow.get(r.id);
+      if(!st){ const have=mode==="replace"?[]:(await Promise.all(["ref1","ref2","ref3"].filter(k=>r[k]).map(k=>refHash(r[k])))).filter(Boolean);
+        st={have,room:mode==="replace"?3:["ref1","ref2","ref3"].filter(k=>!r[k]).length,first:true}; seenRow.set(r.id,st); }
+      const idx=[];
+      pics.forEach((p,i)=>{ if(st.room<=0) return; if(hs[i]&&st.have.some(x=>looksSame(x,hs[i]))){skipped++;return}
+        idx.push(i); st.room--; if(hs[i]) st.have.push(hs[i]); });
+      per.push({r,idx,clear:mode==="replace"&&st.first&&idx.length>0}); st.first=false;
+    }
+    plan.set(g,per); }
+  // 1) upload the pictures that are wanted first...
+  const need=new Map(); for(const [g,per] of plan){ const u=new Set(); per.forEach(x=>x.idx.forEach(i=>u.add(i))); if(!per.length&&addNew) g.pics.slice(0,3).forEach((p,i)=>u.add(i)); need.set(g,[...u].sort()); }
+  const total=[...need.values()].reduce((a,x)=>a+x.length,0); let up=0, failed=0; const refsFor=new Map();
+  for(const g of groups){ const refs={};
+    for(const i of need.get(g)||[]){ const p=g.pics[i]; pr.textContent=`Uploading picture ${++up} of ${total}…`;
+      try{ refs[i]=MODE==="team"?(await api("/api/image",{data:p.data})).ref:p.data; }catch(e){ failed++; } }
     refsFor.set(g,refs); }
   // 2) ...then change the schedule in one go, so a single Undo takes the whole import back
-  let added=0, placed=0, shotsDone=0; const d0=D();
+  let added=0, placed=0; const doneShots=new Set(); const d0=D();
   for(const g of groups){
-    let ms=pdfMatches(g.shot,scope);
-    if(!ms.length&&addNew&&d0){ const r=Object.assign({},ROW_BLANK,{id:uid("r"),shot:g.shot}); d0.rows.push(r); ms=[{d:d0,r}]; added++; }
-    const refs=refsFor.get(g)||[]; if(refs.length) shotsDone++;
-    for(const {r} of ms){ const slots=["ref1","ref2","ref3"];
-      if(mode==="replace"&&refs.length) slots.forEach(k=>r[k]="");
-      for(const ref of refs){ const k=slots.find(k=>!r[k]); if(!k) break; r[k]=ref; placed++; } }
+    const refs=refsFor.get(g)||{}; let per=plan.get(g)||[];
+    if(!per.length&&addNew&&d0){ const r=Object.assign({},ROW_BLANK,{id:uid("r"),shot:g.shot}); d0.rows.push(r); per=[{r,idx:Object.keys(refs).map(Number)}]; added++; }
+    for(const {r,idx,clear} of per){ const slots=["ref1","ref2","ref3"];
+      if(clear) slots.forEach(k=>r[k]="");
+      for(const i of idx){ const ref=refs[i]; if(!ref) continue; const k=slots.find(k=>!r[k]); if(!k) break; r[k]=ref; placed++; doneShots.add(r.id); } }
   }
+  const shotsDone=doneShots.size;
   commit(); renderAll(); $("#pdfModal").classList.remove("open");
   let check="";
-  const first=[...refsFor.values()].flat().find(x=>String(x).startsWith("img:"));
+  const first=[...refsFor.values()].flatMap(o=>Object.values(o)).find(x=>String(x).startsWith("img:"));
   if(first){ imgCache.delete(first); const ok=await imgSrc(first); if(!ok) check=` - but they won't load back from the site (${imgErrors.get(first)||"unknown"}). Please send this message to whoever set up the site.`; }
   const where=[...new Set(groups.flatMap(g=>pdfMatches(g.shot,scope).map(x=>x.d.name)))];
-  toast(placed?`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}${where.length?" on "+where.join(", "):""}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload`:""}${check||" - Undo to take them back"}`
+  toast(placed||skipped?`${placed?`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}`:"No new pictures"}${skipped?` (${skipped} already there, left out)`:""}${where.length?" on "+where.join(", "):""}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload`:""}${check||" - Undo to take them back"}`
     :`No pictures were added: ${failed?failed+" couldn't upload":"no shot numbers matched this project"}.`);
 }
 
@@ -5178,12 +5256,114 @@ function buildReady(b){
   b.append(h("div",{class:"rdyhead"},h("b",{},`${n} of ${items.length} ready`),h("div",{class:"rdybar"},h("i",{style:`width:${Math.round(n/items.length*100)}%`}))),...items);
 }
 
+/* ---------- reference / rehearsal video, by link (Google Drive first) ---------- */
+// a shot's links are kept one per line in r.video; videos stay in Drive (or wherever) and play from there
+// links are kept one per line; with a project base address a plain file name (SH030_rehearsal.mp4) is enough
+function videoLinks(r){return String((r&&r.video)||"").split(/\s*[\n,]\s*|\s+(?=https?:|ftp:|<iframe)/i).map(s=>s.trim()).filter(Boolean).filter(s=>/^(https?:|ftp:)\/\//i.test(s)||/<iframe/i.test(s)||(vidBase()&&/\.\w{2,5}$/.test(s)))}
+function vidBase(){const b=String((S&&S.project&&S.project.vidBase)||"").trim();return /^https?:\/\//i.test(b)?b.replace(/\/*$/,"/"):""}
+function vidAccount(){return String((S&&S.project&&S.project.vidAccount)||"").trim()}
+function withAccount(u){const a=vidAccount();if(!a)return u;try{const x=new URL(u);x.searchParams.set("authuser",a);return x.toString()}catch(e){return u}}
+function videoUrl(s){ if(/^(https?:|ftp:)/i.test(s)) return s; const m=s.match(/<iframe[^>]+src=["']([^"']+)["']/i); if(m) return m[1].replace(/&amp;/g,"&"); return vidBase()?vidBase()+s.split("/").map(encodeURIComponent).join("/"):s; }
+function videoEmbed(raw){
+  const url=videoUrl(raw); let m;
+  if(/<iframe/i.test(raw)&&!/^https:\/\//i.test(url)) return {kind:"link",src:"",open:"#",name:"Embed code without an https address"};
+  if(/<iframe/i.test(raw)) return {kind:"embed",src:url,open:url,name:(()=>{try{return new URL(url).hostname.replace(/^www\./,"")}catch(e){return "Embedded player"}})()};
+  if(/^ftp:/i.test(url)) return {kind:"ftp",src:url,open:url,name:"FTP"};
+  if((m=url.match(/drive\.google\.com\/(?:file\/d\/|open\?(?:.*&)?id=|uc\?(?:.*&)?id=)([\w-]{10,})/))) return {kind:"drive",src:withAccount(`https://drive.google.com/file/d/${m[1]}/preview`),open:withAccount(`https://drive.google.com/file/d/${m[1]}/view`),name:"Drive video"};
+  if((m=url.match(/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]{10,})/))) return {kind:"folder",src:withAccount(`https://drive.google.com/embeddedfolderview?id=${m[1]}#grid`),open:withAccount(url),name:"Drive folder"};
+  if((m=url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/))) return {kind:"youtube",src:`https://www.youtube-nocookie.com/embed/${m[1]}?rel=0`,open:url,name:"YouTube"};
+  if((m=url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/([0-9a-f]+))?/))) return {kind:"vimeo",src:`https://player.vimeo.com/video/${m[1]}${m[2]?"?h="+m[2]:""}`,open:url,name:"Vimeo"};
+  if((m=url.match(/app\.box\.com\/s\/(\w+)/))) return {kind:"embed",src:`https://app.box.com/embed/s/${m[1]}`,open:url,name:"Box"};
+  if(/dropbox\.com\//i.test(url)){ try{const u=new URL(url); u.searchParams.delete("dl"); u.searchParams.set("raw","1"); return {kind:"file",src:u.toString(),open:url,name:"Dropbox video"};}catch(e){} }
+  if(/\.(mp4|m4v|mov|webm|ogv)(\?|#|$)/i.test(url)) return {kind:"file",src:url,open:url,name:decodeURIComponent(url.split(/[?#]/)[0].split("/").pop())};
+  return {kind:"link",src:url,open:url,name:(()=>{try{return new URL(url).hostname.replace(/^www\./,"")}catch(e){return "Link"}})()};
+}
+/* Settings > Project: where this project's videos live, shared with the team */
+const VID_SOURCES=[["","Choose…"],["drive","Google Drive"],["dropbox","Dropbox"],["onedrive","OneDrive or SharePoint"],["box","Box"],["server","Our own server or NAS (web address)"],["other","Something else"]];
+function renderVideoSettings(b){
+  const pr=S.project, src=pr.vidSource||"";
+  const sel=h("select",{}); VID_SOURCES.forEach(([v,l])=>sel.append(h("option",{value:v},l))); sel.value=src;
+  sel.addEventListener("change",()=>{S.project.vidSource=sel.value;commit();renderSetTab()});
+  const field=(k,label,ph,type)=>{const i=h("input",{type:type||"text",value:pr[k]||"",placeholder:ph,spellcheck:"false"});bindDoc(i,null,v=>{S.project[k]=v.trim()});return h("label",{},label,i)};
+  const f=h("div",{class:"form"},h("label",{},"Videos and files are shared through",sel));
+  const tips={drive:"Paste Drive file links into each shot (Note View or the Reference video column). If people use several Google accounts, put the account this project's files belong to here: Drive then opens them with that account instead of whichever is signed in first. Each person still needs to be signed into that account, or the files need to be shared with them.",
+    dropbox:"Paste Dropbox file links; they play with speed, frame steps, loop and mirror.",
+    onedrive:"In OneDrive or SharePoint choose the video, then Embed, and paste the whole embed code into the shot. Plain share links open in a new tab.",
+    box:"Paste Box shared links; they play in Box's own player.",
+    server:"Give the web address of the project's folder (https://…). The team can then type just a file name for each shot, such as SH030_rehearsal.mp4. Browsers can't play from FTP: most NAS and FTP hosts can also share over HTTPS, which is what's needed here.",
+    other:"Paste any link. Video files (.mp4, .mov, .webm) play in place; embed codes (<iframe…>) play in their own player; anything else opens in a new tab."};
+  if(src==="drive") f.append(field("vidAccount","Google account for this project","name@company.com","email"));
+  if(src==="server") f.append(field("vidBase","Web address of the video folder","https://files.example.com/project/videos/","url"));
+  if(src) f.append(field("vidFolder","Project video folder (link, for the team to browse)","https://…","url"));
+  b.append(h("h3",{style:"margin-top:1.2rem"},"Reference video"),h("p",{class:"note"},"Rehearsal and reference videos stay where they're stored; each shot only keeps the link. "+(tips[src]||"Pick where this project keeps its videos. Each project can use a different place or Google account.")),f);
+}
+const VID={i:0,rowId:null};
+function setVideoLinks(id,links){const x=R(id);if(!x)return;x.video=links.join("\n");commit()}
+function videoSection(r){
+  const links=videoLinks(r); if(VID.rowId!==r.id){VID.rowId=r.id;VID.i=0} if(VID.i>=links.length) VID.i=Math.max(0,links.length-1);
+  const sec=h("section",{class:"nvvideo"},h("h3",{},"Reference video"));
+  const stage=h("div",{class:"vstage"}), ctl=h("div",{class:"vctl"});
+  const main=h("div",{});
+  if(links.length>1) main.append(h("div",{class:"vtabs",role:"tablist"},...links.map((u,i)=>h("button",{role:"tab","aria-selected":String(i===VID.i),onclick:()=>{VID.i=i;updateVideoHost(R(r.id))}},"Video "+(i+1)))));
+  main.append(stage,ctl);
+  if(!links.length) stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},h("b",{style:"color:#fff"},"No video for this shot yet"),h("br"),"Paste a Google Drive link on the right to play rehearsal or reference footage here.")));
+  else{
+    const e=videoEmbed(links[VID.i]);
+    if(e.kind==="file"){
+      const v=h("video",{src:e.src,controls:"",playsinline:"",preload:"metadata"}); stage.append(v);
+      v.playbackRate=Number(P.vidRate)||1; v.loop=P.vidLoop!==false; if(P.vidMirror) v.classList.add("mirror");
+      const rate=x=>h("button",{class:"btn small","aria-pressed":String((Number(P.vidRate)||1)===x),onclick:()=>{P.vidRate=x;savePrefs();v.playbackRate=x;$$(".rate",ctl).forEach(b=>b.setAttribute("aria-pressed",String(Number(b.dataset.r)===x)))},"data-r":String(x)},x===1?"1x":x+"x");
+      const rates=[0.25,0.5,1].map(x=>{const b=rate(x);b.classList.add("rate");return b});
+      const step=dir=>{v.pause();v.currentTime=Math.max(0,v.currentTime+dir/(slateFps()||25))};
+      const loop=h("button",{class:"btn small","aria-pressed":String(v.loop),onclick:()=>{v.loop=!v.loop;P.vidLoop=v.loop;savePrefs();loop.setAttribute("aria-pressed",String(v.loop))}},"Loop");
+      const mir=h("button",{class:"btn small","aria-pressed":String(!!P.vidMirror),onclick:()=>{P.vidMirror=!P.vidMirror;savePrefs();v.classList.toggle("mirror",P.vidMirror);mir.setAttribute("aria-pressed",String(P.vidMirror))}},"Mirror");
+      ctl.append(h("span",{class:"note"},"Speed"),...rates,h("button",{class:"btn small",title:"Back one frame",onclick:()=>step(-1)},"‹ frame"),h("button",{class:"btn small",title:"Forward one frame",onclick:()=>step(1)},"frame ›"),loop,mir);
+      v.addEventListener("error",()=>{stage.innerHTML="";stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},"This video wouldn't play here. Check the link opens for you, or open it in a new tab."))});
+    }else if(e.kind==="ftp"){
+      stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},"Browsers can't play from FTP. Ask for an HTTPS link to the file, or ",h("a",{href:e.open,target:"_blank",rel:"noopener noreferrer",style:"color:#fff"},"open the FTP link"),".")));
+    }else if(e.kind==="link"){
+      stage.append(h("div",{class:"vempty",style:"position:absolute;inset:0"},h("div",{},"This link can't play inside the app (",e.name,"). ",h("a",{href:links[VID.i],target:"_blank",rel:"noopener noreferrer",style:"color:#fff"},"Open it in a new tab"),".")));
+    }else{
+      stage.append(h("iframe",{src:e.src,allow:"autoplay; fullscreen; picture-in-picture",allowfullscreen:"",referrerpolicy:"no-referrer-when-downgrade",title:"Reference video for shot "+(r.shot||"")}));
+      if(e.kind==="drive") ctl.append(h("span",{class:"note"},"Playing from Google Drive. Speed, quality and full screen are in Drive's own player; it only plays for people who can open the file."));
+      if(e.kind==="folder") ctl.append(h("span",{class:"note"},"A Drive folder: pick a video and it opens in a new tab. Link each shot to its own file to play it here."));
+    }
+  }
+  // the links: add, open, remove
+  const list=h("div",{class:"vlist"});
+  links.forEach((u,i)=>list.append(h("div",{},h("a",{href:videoEmbed(u).open,target:"_blank",rel:"noopener noreferrer",title:videoUrl(u)},"Video "+(i+1)+": "+(/^https?:|<iframe/i.test(u)?videoEmbed(u).name:u)),
+    h("button",{title:"Remove this link","aria-label":"Remove video "+(i+1),onclick:()=>{setVideoLinks(r.id,links.filter((x,j)=>j!==i));renderNotes()}},"✕"))));
+  const ph={drive:"Paste a Google Drive link",dropbox:"Paste a Dropbox link",onedrive:"Paste the OneDrive embed code",box:"Paste a Box link",server:"Type a file name or paste a link"}[S.project.vidSource]||"Paste a Google Drive or other video link";
+  const inp=h("input",{type:"text",placeholder:ph,spellcheck:"false"});
+  const add=()=>{const v=inp.value.trim(); if(!v) return; if(!videoLinks({video:v}).length){toast(vidBase()?"Type a file name with its extension, or paste a link":"That doesn't look like a link. To type file names, set a web address in Settings, Project");return}
+    setVideoLinks(r.id,[...links,v]); VID.i=links.length; renderNotes(); toast(videoEmbed(v).kind==="link"?"Link saved: it opens in a new tab":"Video added to shot "+(r.shot||""))};
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
+  inp.addEventListener("paste",()=>setTimeout(add,30));
+  sec.append(h("div",{class:"vwrap"},main,h("div",{class:"vside"},list,inp,h("button",{class:"btn small",onclick:add},links.length?"+ Add another video":"Add video"),
+    S.project.vidFolder?h("a",{class:"btn small",href:withAccount(S.project.vidFolder),target:"_blank",rel:"noopener noreferrer"},"Open the project's video folder"):null,
+    h("p",{class:"note",style:"margin:0"},(S.project.vidSource==="server"?"Type the file's name as it is in the project folder.":S.project.vidSource==="onedrive"?"In OneDrive: the video, Embed, then copy the code.":"In Drive: right-click the video, Share, then Copy link. Share it with the team (or set it to Anyone with the link) so it plays for everyone.")+" Each shot can have several videos. Where they're kept is set per project in Settings, Project.")) ));
+  return sec;
+}
+function updateVideoHost(r){
+  const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,pr.vidAccount,pr.vidFolder,pr.vidBase].join("|");
+  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(videoSection(r));
+}
+// in the table: the links, plus ▶ to open the shot in Note View
+function videoCell(r){
+  const w=h("div",{class:"videocell"});
+  const i=h("input",{class:"cell",type:"text",placeholder:vidBase()?"File name or link":"Video link",value:videoLinks(r).join(", "),"data-k":"video",spellcheck:"false",title:"Video links (or file names, with a web address set in Settings, Project), separated by commas"});
+  i.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.video=videoLinks({video:i.value}).join("\n");commit();renderBody()});
+  w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Note View",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
+  return w;
+}
+
 /* ---------- wiring ---------- */
 $("#freezeBtn").onclick=toggleFreeze;
 $("#callSheetBtn").onclick=openCallSheet;
 $("#wrapRepBtn").onclick=openWrapReport;
 $("#takesBtn").onclick=()=>exportTakes();
 $("#readyBtn").onclick=openReady;
+$("#dedupeBtn").onclick=()=>dedupePictures();
 $("#docPrint").onclick=printDoc;
 $("#docCopy").onclick=async()=>{if(await copyText(docText()))toast("Copied as text, ready to paste into an email or message")};
 

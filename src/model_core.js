@@ -17,11 +17,11 @@
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
-const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes"];
+const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes","vidSource","vidAccount","vidFolder","vidBase"];
 const ID_PARTS_DEFAULT = [
   { key:"shot", on:true,  prefix:"" }, { key:"take", on:true, prefix:"T" }, { key:"prod", on:true, prefix:"" },
   { key:"day", on:true, prefix:"d" }, { key:"perfCount", on:true, prefix:"a" }, { key:"props", on:true, prefix:"p" },

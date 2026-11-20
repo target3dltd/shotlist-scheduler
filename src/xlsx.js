@@ -146,7 +146,7 @@ const BASE_IMPORT_TARGETS=[
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
   ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
   ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["director","Director notes"],
-  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"]
+  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"],["video","Reference video link"]
 ];
 function importTargets(){
   const extra=IMP&&IMP.app?[["rid","App row link (keeps days exact)"]]:[];
@@ -172,6 +172,7 @@ const IMPORT_SYN={
   shotType:["shot type","shot size","framing","shot size / framing","shot size/framing"],camera:["camera & lighting notes","camera & lighting","camera","camera notes","technical notes"],lighting:["lighting","lighting notes","lights","lx"],
   vfx:["vfx notes","vfx","gs process?","capture notes","mocap notes"],director:["director notes","notes","other notes","comments","comment"],
   rowType:["type","row type"],
+  video:["reference video","ref video","rehearsal video","video","video link","rehearsal","reference"],
   status:["status","hero shot","shot status","cut?","in / out","in/out","omit","omitted"]
 };
 const IMPORT_SKIP=["shot id","totals","seconds (tc)","frame range","seconds (frames)","shoot/production id","frame rate","tc in","tc out","frame start","frame end","storyboard / ref image","alternate reference","shot name (app)","shot name (last take)","video export","mocap export","m&t process?","post filter?","m&t export","gs export","order","end","setup from","calculated end","kind","date","takes"];
@@ -859,6 +860,26 @@ async function readStoryboardPdf(file,progress){
 }
 /* ---------- the PDF import window ---------- */
 let PDFIMP=null;
+/* ---------- telling pictures apart: a 16 x 16 brightness fingerprint, so the same frame at another size or quality matches ---------- */
+const HASHES=new Map();
+function imgHash(src){ return new Promise(res=>{ if(!src) return res(null); const im=new Image(); im.onload=()=>{ try{ const c=document.createElement("canvas"); c.width=c.height=16; const x=c.getContext("2d"); x.drawImage(im,0,0,16,16);
+  const d=x.getImageData(0,0,16,16).data, g=[]; for(let i=0;i<d.length;i+=4) g.push(.3*d[i]+.59*d[i+1]+.11*d[i+2]); const avg=g.reduce((a,b)=>a+b,0)/g.length; res(g.map(v=>v>avg?1:0)); }catch(e){res(null)} };
+  im.onerror=()=>res(null); im.src=src; }); }
+async function refHash(ref){ if(HASHES.has(ref)) return HASHES.get(ref); const src=await imgSrc(ref); const hsh=src?await imgHash(src):null; HASHES.set(ref,hsh); return hsh; }
+function looksSame(a,b){ let n=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) n++; return n<=28; }
+// File menu: take out pictures that appear twice on the same shot, and close the gaps
+async function dedupePictures(){
+  commit(); const rows=live().flatMap(d=>d.rows.filter(r=>!isBlock(r)&&["ref1","ref2","ref3"].filter(k=>r[k]).length>1));
+  if(!rows.length){toast("No shot has more than one storyboard picture");return}
+  let removed=0, shots=0, n=0; const plan=[];
+  for(const r of rows){ toast(`Comparing pictures: shot ${++n} of ${rows.length}…`);
+    const refs=["ref1","ref2","ref3"].map(k=>r[k]).filter(Boolean); const hs=await Promise.all(refs.map(refHash)); const keep=[];
+    refs.forEach((ref,i)=>{ if(keep.some(j=>refs[j]===ref||(hs[j]&&hs[i]&&looksSame(hs[j],hs[i])))) return; keep.push(i); });
+    if(keep.length<refs.length){ plan.push({id:r.id,refs:keep.map(i=>refs[i])}); removed+=refs.length-keep.length; shots++; } }
+  if(!removed){toast("No duplicate pictures found");return}
+  for(const p of plan){ const x=R(p.id); if(!x) continue; ["ref1","ref2","ref3"].forEach((k,i)=>{x[k]=p.refs[i]||""}); }
+  commit(); renderAll(); toast(`Removed ${removed} duplicate picture${removed===1?"":"s"} from ${shots} shot${shots===1?"":"s"} - Undo to put them back`);
+}
 async function openPdfImport(file){
   const m=$("#pdfModal"), b=$("#pdfBody"); b.innerHTML=""; m.classList.add("open");
   const prog=h("p",{class:"note"},"Reading "+file.name+"…"); b.append(prog);
@@ -871,7 +892,7 @@ function pdfMatches(shot,scope){const k=normShot(shot);const days=scope==="day"?
 function renderPdfImport(){
   const b=$("#pdfBody"); b.innerHTML=""; const {res}=PDFIMP; const n=res.shots.reduce((a,g)=>a+g.pics.length,0);
   const scope=h("select",{},h("option",{value:"all"},"Every day in this project"),h("option",{value:"day"},"This day only ("+(D()||{}).name+")"));
-  const mode=h("select",{},h("option",{value:"fill"},"Keep them, add into empty slots"),h("option",{value:"replace"},"Replace them with the PDF's"));
+  const mode=h("select",{},h("option",{value:"fill"},"Keep them, add ones that aren't already there"),h("option",{value:"replace"},"Replace them with the PDF's"));
   const addNew=h("input",{type:"checkbox"});
   scope.value=PDFIMP.scope||"all"; mode.value=PDFIMP.mode||"fill"; addNew.checked=!!PDFIMP.addNew;
   const redo=()=>{PDFIMP.scope=scope.value;PDFIMP.mode=mode.value;PDFIMP.addNew=addNew.checked;renderPdfImport()};
@@ -897,27 +918,43 @@ function renderPdfImport(){
 async function runPdfImport(){
   const {res,scope="all",mode="fill",addNew=false}=PDFIMP; const pr=$("#pdfProg"); const btn=$("#pdfBody .btn.primary"); btn.disabled=true;
   const groups=res.shots.filter(g=>pdfMatches(g.shot,scope).length||(addNew&&D()));
-  // 1) upload every picture first...
-  const total=groups.reduce((a,g)=>a+Math.min(3,g.pics.length),0); let up=0, failed=0; const refsFor=new Map();
-  for(const g of groups){ const refs=[];
-    for(const p of g.pics.slice(0,3)){ pr.textContent=`Uploading picture ${++up} of ${total}…`;
-      try{ refs.push(MODE==="team"?(await api("/api/image",{data:p.data})).ref:p.data); }catch(e){ failed++; } }
+  // 0) decide, shot by shot, which of the PDF's pictures go where. In "keep" mode a picture the shot already has
+  //    (the same storyboard frame from a spreadsheet, or the same shot listed twice in the PDF) is left out
+  const plan=new Map(), seenRow=new Map(); let skipped=0;   // plan: group -> [{r, idx:[picture numbers]}]
+  for(const g of groups){ const pics=g.pics.slice(0,3); pr.textContent="Comparing pictures…";
+    const hs=await Promise.all(pics.map(p=>imgHash(p.data))); const per=[];
+    for(const {r} of pdfMatches(g.shot,scope)){
+      let st=seenRow.get(r.id);
+      if(!st){ const have=mode==="replace"?[]:(await Promise.all(["ref1","ref2","ref3"].filter(k=>r[k]).map(k=>refHash(r[k])))).filter(Boolean);
+        st={have,room:mode==="replace"?3:["ref1","ref2","ref3"].filter(k=>!r[k]).length,first:true}; seenRow.set(r.id,st); }
+      const idx=[];
+      pics.forEach((p,i)=>{ if(st.room<=0) return; if(hs[i]&&st.have.some(x=>looksSame(x,hs[i]))){skipped++;return}
+        idx.push(i); st.room--; if(hs[i]) st.have.push(hs[i]); });
+      per.push({r,idx,clear:mode==="replace"&&st.first&&idx.length>0}); st.first=false;
+    }
+    plan.set(g,per); }
+  // 1) upload the pictures that are wanted first...
+  const need=new Map(); for(const [g,per] of plan){ const u=new Set(); per.forEach(x=>x.idx.forEach(i=>u.add(i))); if(!per.length&&addNew) g.pics.slice(0,3).forEach((p,i)=>u.add(i)); need.set(g,[...u].sort()); }
+  const total=[...need.values()].reduce((a,x)=>a+x.length,0); let up=0, failed=0; const refsFor=new Map();
+  for(const g of groups){ const refs={};
+    for(const i of need.get(g)||[]){ const p=g.pics[i]; pr.textContent=`Uploading picture ${++up} of ${total}…`;
+      try{ refs[i]=MODE==="team"?(await api("/api/image",{data:p.data})).ref:p.data; }catch(e){ failed++; } }
     refsFor.set(g,refs); }
   // 2) ...then change the schedule in one go, so a single Undo takes the whole import back
-  let added=0, placed=0, shotsDone=0; const d0=D();
+  let added=0, placed=0; const doneShots=new Set(); const d0=D();
   for(const g of groups){
-    let ms=pdfMatches(g.shot,scope);
-    if(!ms.length&&addNew&&d0){ const r=Object.assign({},ROW_BLANK,{id:uid("r"),shot:g.shot}); d0.rows.push(r); ms=[{d:d0,r}]; added++; }
-    const refs=refsFor.get(g)||[]; if(refs.length) shotsDone++;
-    for(const {r} of ms){ const slots=["ref1","ref2","ref3"];
-      if(mode==="replace"&&refs.length) slots.forEach(k=>r[k]="");
-      for(const ref of refs){ const k=slots.find(k=>!r[k]); if(!k) break; r[k]=ref; placed++; } }
+    const refs=refsFor.get(g)||{}; let per=plan.get(g)||[];
+    if(!per.length&&addNew&&d0){ const r=Object.assign({},ROW_BLANK,{id:uid("r"),shot:g.shot}); d0.rows.push(r); per=[{r,idx:Object.keys(refs).map(Number)}]; added++; }
+    for(const {r,idx,clear} of per){ const slots=["ref1","ref2","ref3"];
+      if(clear) slots.forEach(k=>r[k]="");
+      for(const i of idx){ const ref=refs[i]; if(!ref) continue; const k=slots.find(k=>!r[k]); if(!k) break; r[k]=ref; placed++; doneShots.add(r.id); } }
   }
+  const shotsDone=doneShots.size;
   commit(); renderAll(); $("#pdfModal").classList.remove("open");
   let check="";
-  const first=[...refsFor.values()].flat().find(x=>String(x).startsWith("img:"));
+  const first=[...refsFor.values()].flatMap(o=>Object.values(o)).find(x=>String(x).startsWith("img:"));
   if(first){ imgCache.delete(first); const ok=await imgSrc(first); if(!ok) check=` - but they won't load back from the site (${imgErrors.get(first)||"unknown"}). Please send this message to whoever set up the site.`; }
   const where=[...new Set(groups.flatMap(g=>pdfMatches(g.shot,scope).map(x=>x.d.name)))];
-  toast(placed?`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}${where.length?" on "+where.join(", "):""}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload`:""}${check||" - Undo to take them back"}`
+  toast(placed||skipped?`${placed?`Added ${placed} picture${placed===1?"":"s"} to ${shotsDone} shot${shotsDone===1?"":"s"}`:"No new pictures"}${skipped?` (${skipped} already there, left out)`:""}${where.length?" on "+where.join(", "):""}${added?` (${added} new)`:""}${failed?` - ${failed} couldn't upload`:""}${check||" - Undo to take them back"}`
     :`No pictures were added: ${failed?failed+" couldn't upload":"no shot numbers matched this project"}.`);
 }

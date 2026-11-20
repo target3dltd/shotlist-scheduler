@@ -115,6 +115,7 @@
   <h3>Spreadsheets</h3>
   <ul>
     <li><b>File ▾ &gt; Import</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>Storyboard pictures from a PDF</b> (File ▾ &gt; Import, pick the PDF): in <b>Keep them</b> mode, a picture the shot already has (the same frame from a spreadsheet, at any size) isn't added again. <b>File ▾ &gt; Remove duplicate pictures</b> tidies shots that got the same frame twice, and one Undo puts them back.</li>
     <li><b>A revised shot list from the client</b>: import it the same way. When most of its shot numbers are already in the project, the import picks <b>the shots already in this project (update them, matched by Shot #)</b>. Check the column mapping, then <b>Import</b> shows every change before anything happens: which shot, which column, what it was and what it will be, how many shots are newly cut and any new shots. <b>Apply</b> makes them in one go; one <b>Undo</b> takes the lot back.
       <ul>
         <li>Shot numbers match however they're written: 005, 5, 100.0 and sh030 find 05, 100 and 030.</li>
@@ -163,6 +164,17 @@
     <li>You see every shot with its pictures before anything changes. Choose whether to match shots on every day or just this one, whether to keep pictures a shot already has (filling empty boxes) or replace them, and whether to add shots that aren't in the project yet. Shot numbers match ignoring leading zeros (005 = 5). One Undo takes the whole import back.</li>
     <li><b>Keeping pictures when you export:</b> the .xlsx export puts each shot's pictures in Storyboard 1-3 columns on its first take row, and the project file (Settings &gt; Projects &gt; Export project file) packs them in too. Importing either one, into this project, another project or another site, brings the pictures with it. Pictures placed on the rows of a sheet from elsewhere (Excel, Google Sheets) come in the same way.</li>
     <li>Pictures belong to their project: with project keys on, only people holding that project's key can see them.</li>
+  </ul>
+
+  <h3>Reference and rehearsal video</h3>
+  <ul>
+    <li>Each shot can have one or more video links. In <b>Note View</b> paste a link into the box beside the player (or type links into the <b>Reference video</b> column in the table, separated by spaces). The video plays in a panel under the notes and keeps playing while you mark takes.</li>
+    <li><b>Google Drive</b>: right-click the video, <b>Share</b>, then <b>Copy link</b>. It plays in Drive's own player (with its speed, quality and full screen controls) for anyone who can open the file: share it with the team, or set it to <b>Anyone with the link</b>. A Drive folder link shows the folder; link each shot to its own file to play it in place.</li>
+    <li>Dropbox, Vimeo, YouTube and direct .mp4 / .mov / .webm links work too. Direct files (including Dropbox) get extra controls: quarter, half or full speed, one frame back or forward, loop and mirror (handy for blocking). Other links open in a new tab.</li>
+    <li>The videos stay where they are (your Drive); the app only keeps the links, so file size doesn't matter. Playing needs an internet connection on set.</li>
+    <li>The <b>▶</b> in the Reference video column opens that shot in Note View.</li>
+    <li><b>Per project</b> (Settings → Project → Reference video): choose where this project's videos live. For <b>Google Drive</b>, enter the Google account the project's files belong to; Drive then opens them with that account even if someone is signed into several (they still need to be signed into it, or the files shared with them). Add the <b>project video folder</b> link for a quick way to browse. For <b>your own server or NAS</b>, give the folder's web address (https://…) and the team can type just a file name, such as SH030_rehearsal.mp4. <b>OneDrive / SharePoint</b>: use the video's <b>Embed</b> option and paste the embed code. <b>Box</b> shared links play in Box's player.</li>
+    <li>Browsers can't play from <b>FTP</b>. Most NAS and FTP hosts can also share files over HTTPS, which is what's needed.</li>
   </ul>
 
   <h3>Shoot-day tools</h3>
