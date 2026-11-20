@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.25.0";
+const VERSION = "2.25.1";
 const CHANGELOG = [
-  ["2.25.0","2026-11-20","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
+  ["2.25.1","2026-11-20","Slate View: tap the shot number to open that shot in Note View."],
+  ["2.25.0","","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
   ["2.24.0","","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
   ["2.23.0","","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
   ["2.22.1","","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
@@ -1742,7 +1743,11 @@ function renderSlate(){
   if(sh.dir) top.append(cell("Director",c.dir||S.project.lead));
   if(sh.dop) top.append(cell("Camera / DOP",c.dop));
   const mid=h("div",{class:"slrow big"});
-  if(sh.shot) mid.append(cell("Shot",r?(r.shot||r.action||"-"):"-","huge"));
+  if(sh.shot){ const c=cell("Shot",r?(r.shot||r.action||"-"):"-","huge");
+    // tap the shot number to open the same shot in Note View (looks the same, just clickable)
+    if(r){ const go=()=>{closeSlate();openNotes(r.id)}; c.classList.add("slgo"); c.setAttribute("role","button"); c.tabIndex=0; c.title="Open this shot in Note View";
+      c.addEventListener("click",go); c.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.stopPropagation();go()}}); }
+    mid.append(c); }
   if(sh.take) mid.append(cell("Take",String(take),"huge"));
   if(sh.roll) mid.append(h("div",{class:"slc huge"},h("div",{class:"sll"},"Roll"),h("div",{class:"slv"},c.roll||"-"),h("div",{class:"slsmall"},h("button",{onclick:e=>{e.stopPropagation();setSlate({roll:bumpRoll(c.roll)});renderSlate()}},"Next roll"))));
   const low=h("div",{class:"slrow"});

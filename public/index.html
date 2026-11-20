@@ -130,6 +130,7 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .fbi p{margin:.35rem 0;white-space:pre-wrap} .fbi small{color:var(--muted)}
 .fbi .acts{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
 @media print{.fbbtn,.fbpanel,.whopop{display:none!important}}
+.slc.slgo{cursor:pointer} .slc.slgo:focus{outline:none} .slc.slgo:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:6px}
 /* reference video in Note View */
 .nvvhost{padding:0 1rem 1rem;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
 .nvvhost .nvvideo{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem 1rem}
@@ -996,6 +997,7 @@ body.nosteps .mins.timing input{width:4.5em}
 
   <h3>Slate View and Note View</h3>
   <ul>
+    <li>In Slate View, tap the <b>shot number</b> to open that shot in Note View.</li>
     <li><b>Slate</b> (the red button at the end of the header) opens a full-screen slate for the next shot in the running order: the first shot on the open day not yet ticked as shot. ‹ › (or the arrow keys) step through the shots. It keeps the screen awake while open, and ⛶ makes it truly full screen where the browser allows.</li>
     <li><b>Tap the striped bar</b> (or <b>Clap · log take</b>, or the space bar) to clap: the slate flashes and the take is logged on the shot with its <b>timecode in</b>, so the take number moves on. While it rolls the slate shows the take, its timecode in and how long it's been going. <b>■ Cut</b> (or X) adds the <b>timecode out</b> and the length. Each take's in and out show in Note View, and the .xlsx export fills its TC IN / TC OUT columns from them (tick the timing columns when exporting). Turn logging off in ⚙ if you only want the flash. It also plays a sound: a clap by default, or in ⚙ &gt; Sound choose clapper sticks, a 1 kHz sync beep (handy for lining up sound), <b>your own sound file</b> (MP3, WAV or M4A, kept on this device), or none, and set the volume. On an iPhone the ring / silent switch has to be on ring to hear it. <b>Shot done ✓</b> ticks the shot and moves to the next one.</li>
     <li><b>⚙ Settings:</b> choose what shows (production, director, camera / DOP, shot, take, roll, date, day, FPS, shot name, description, a custom line such as INT. TAVERN - NIGHT, timecode), the look (black, white, high contrast, classic), the roll / card (<b>Next roll</b> counts it on: A001, A002…) and the frame rate. Slate settings are kept on this device.</li>
@@ -1230,9 +1232,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.25.0";
+const VERSION = "2.25.1";
 const CHANGELOG = [
-  ["2.25.0","2026-11-20","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
+  ["2.25.1","2026-11-20","Slate View: tap the shot number to open that shot in Note View."],
+  ["2.25.0","","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
   ["2.24.0","","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
   ["2.23.0","","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
   ["2.22.1","","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
@@ -3243,7 +3246,11 @@ function renderSlate(){
   if(sh.dir) top.append(cell("Director",c.dir||S.project.lead));
   if(sh.dop) top.append(cell("Camera / DOP",c.dop));
   const mid=h("div",{class:"slrow big"});
-  if(sh.shot) mid.append(cell("Shot",r?(r.shot||r.action||"-"):"-","huge"));
+  if(sh.shot){ const c=cell("Shot",r?(r.shot||r.action||"-"):"-","huge");
+    // tap the shot number to open the same shot in Note View (looks the same, just clickable)
+    if(r){ const go=()=>{closeSlate();openNotes(r.id)}; c.classList.add("slgo"); c.setAttribute("role","button"); c.tabIndex=0; c.title="Open this shot in Note View";
+      c.addEventListener("click",go); c.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.stopPropagation();go()}}); }
+    mid.append(c); }
   if(sh.take) mid.append(cell("Take",String(take),"huge"));
   if(sh.roll) mid.append(h("div",{class:"slc huge"},h("div",{class:"sll"},"Roll"),h("div",{class:"slv"},c.roll||"-"),h("div",{class:"slsmall"},h("button",{onclick:e=>{e.stopPropagation();setSlate({roll:bumpRoll(c.roll)});renderSlate()}},"Next roll"))));
   const low=h("div",{class:"slrow"});
