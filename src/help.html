@@ -115,6 +115,14 @@
   <h3>Spreadsheets</h3>
   <ul>
     <li><b>File ▾ &gt; Import</b> (or drop a file on the page) reads <code>.xlsx</code> or <code>.csv</code>: exports from Google Sheets, Excel or Numbers, the Shotlist Builder, or your Shotlist tracker. Pick the sheet and header row, then choose where each column goes. Columns with familiar names (Action, Performer(s), Prop, Take #, Shoot Day, Notes and so on) are matched for you.</li>
+    <li><b>A revised shot list from the client</b>: import it the same way. When most of its shot numbers are already in the project, the import picks <b>the shots already in this project (update them, matched by Shot #)</b>. Check the column mapping, then <b>Import</b> shows every change before anything happens: which shot, which column, what it was and what it will be, how many shots are newly cut and any new shots. <b>Apply</b> makes them in one go; one <b>Undo</b> takes the lot back.
+      <ul>
+        <li>Shot numbers match however they're written: 005, 5, 100.0 and sh030 find 05, 100 and 030.</li>
+        <li>Only days that look like the same shot list are updated, so another sequence that also has a shot 5 isn't touched.</li>
+        <li>Kept as they are: setup and shoot times, the running order, takes, ticks, columns the sheet doesn't have, and storyboard pictures already in place (pictures only fill shots that have none).</li>
+        <li>A <b>Status</b> column (or one headed <b>Hero shot</b>) cuts shots marked CUT and puts back ones that no longer are; any other word in it, such as HERO SHOT, becomes the shot's priority and is added to the priority list.</li>
+        <li>New shots go after the shot before them in the sheet. Shots in the project that the sheet doesn't have are listed and left alone.</li>
+      </ul></li>
     <li><b>Group retakes</b> merges consecutive rows with the same Shot # and Action into one shot with a take count. Hero / Safety / NG marks per take are noted in Director notes, e.g. <code>Hero: T7</code>.</li>
     <li>Tick <b>Rows are takes already recorded</b> when importing a log of what was shot. Leave it off for a plan, so the first take you log is T1.</li>
     <li>Headings that don't match anything are set to <b>+ New column</b>, which creates a project column named after the heading. Its type is worked out from the values: tick box, number, dropdown or text. Change any of them to Ignore if you don't want them.</li>

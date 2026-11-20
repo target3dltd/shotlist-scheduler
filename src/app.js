@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.23.0";
+const VERSION = "2.24.0";
 const CHANGELOG = [
-  ["2.23.0","2026-11-20","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
+  ["2.24.0","2026-11-20","Revised shot lists from a client: Import now offers to update the shots already in the project, matched by Shot #. You see every change first (column, was, now), then apply it in one go, and one Undo takes it back. Timings, takes, ticks, notes and pictures already in place are kept. A Status column cuts shots marked CUT, and other words in it (such as HERO SHOT) set the priority. The import also finds the newest shot list tab, the heading row under a key row, and a renamed column (e.g. without [TBC])."],
+  ["2.23.0","","Shoot-day tools. Freeze timings: locks a day's timings and running order once you're rolling, while ticks, takes, notes and cuts still work. Call sheet and Wrap report for each day, to print, save as PDF or copy as text. Export takes for the edit or DIT (one row per take with timecode in and out, marks and notes). Weather, sunrise, sunset and golden hour on the day banner once a day has a location. Shoot-ready check (File menu): a checklist for the night before, with a project backup, sound test and a practice dropout."],
   ["2.22.1","","Cast & crew can be reordered: drag the handle at the start of a row, or use the up and down arrows. The order is shared with the team. More space between the initials and the online count at the top."],
   ["2.22.0","","Who's online: click the letters at the top for everyone on now, the day and shot they're on, their device, Slate or Note View, how long they've been on, Go there, and who was on earlier today. Feedback button (?) in the bottom left for bug reports, feature ideas and questions, with an inbox for the admin, a badge for new ones, and optional phone, chat or email alerts."],
   ["2.21.0","","Version history shows a date on the latest update only. Hero selects card on Mocap days: the seconds in takes marked Hero, next to Captured. Tidier header: buttons grouped, with Import, Export, Print and Activity in a File menu. Display settings regrouped into Presets, Colours, Text, Layout, Table and on-set tools, and Timeline colours, with switches and compact colour swatches. Settings tabs scroll in one row on phones."],
@@ -240,7 +241,7 @@ function commit(){
   if(!ops.length) return;
   // positions given to new or moved items are written back, so the next save sees them as settled
   for(const o of ops){ if(!("pos" in o.set)) continue;
-    const obj=o.e==="day"?S.days.find(d=>d.id===o.id):o.e==="row"?(findRow(o.id)||{}).r:o.e==="person"?S.people.find(p=>p.id===o.id):null;
+    const obj=o.e==="day"?S.days.find(d=>d.id===o.id):o.e==="row"?(findRow(o.id)||{}).r:o.e==="person"?S.people.find(p=>p.id===o.id):o.e==="col"?(S.cols||[]).find(c=>c.id===o.id):null;
     if(obj) obj.pos=o.set.pos; }
   undoStack.push(ops); if(undoStack.length>200) undoStack.shift();
   redoStack=[];

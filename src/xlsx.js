@@ -146,7 +146,7 @@ const BASE_IMPORT_TARGETS=[
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
   ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
   ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["director","Director notes"],
-  ["label","Break name"],["rowType","Row type (Shot / Break)"]
+  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"]
 ];
 function importTargets(){
   const extra=IMP&&IMP.app?[["rid","App row link (keeps days exact)"]]:[];
@@ -169,20 +169,26 @@ const IMPORT_SYN={
   setup:["time to setup","setup","setup (min)","setup mins"],shoot:["time to shoot","shoot","shoot (min)","shoot mins"],
   origStart:["start shooting","start","start time","planned start","original start"],duration:["duration","screen dur.","screen duration"],
   location:["location and setup","location / setup","location","capture"],script:["script / dialogue","script","dialogue"],
-  shotType:["shot type"],camera:["camera & lighting notes","camera & lighting","camera","camera notes","technical notes"],lighting:["lighting","lighting notes","lights","lx"],
+  shotType:["shot type","shot size","framing","shot size / framing","shot size/framing"],camera:["camera & lighting notes","camera & lighting","camera","camera notes","technical notes"],lighting:["lighting","lighting notes","lights","lx"],
   vfx:["vfx notes","vfx","gs process?","capture notes","mocap notes"],director:["director notes","notes","other notes","comments","comment"],
-  rowType:["type","row type"]
+  rowType:["type","row type"],
+  status:["status","hero shot","shot status","cut?","in / out","in/out","omit","omitted"]
 };
 const IMPORT_SKIP=["shot id","totals","seconds (tc)","frame range","seconds (frames)","shoot/production id","frame rate","tc in","tc out","frame start","frame end","storyboard / ref image","alternate reference","shot name (app)","shot name (last take)","video export","mocap export","m&t process?","post filter?","m&t export","gs export","order","end","setup from","calculated end","kind","date","takes"];
 const normH=s=>String(s==null?"":s).toLowerCase().replace(/\s+/g," ").trim();
 function guessTarget(h,used){
   const n=normH(h); if(!n) return "ignore";
   for(const c of cols()){ if(!c.label||c.fixed&&c.key!=="shot") continue; if(normH(c.label)===n&&(c.custom||c.label!==c.base)&&!used.has(c.key)) return c.key; }
+  // a renamed heading still finds its column: "Shot size / framing [TBC]" and "Shot size / framing" are the same
+  const loose=s=>normH(s).replace(/\[[^\]]*\]|\([^)]*\)/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  for(const c of cols()){ if(!c.custom||used.has(c.key)) continue; if(loose(c.label)&&loose(c.label)===loose(h)) return c.key; }
   if(IMPORT_SKIP.includes(n)) return "ignore";
   for(const [k,list] of Object.entries(IMPORT_SYN)) if(list.includes(n)&&(!used.has(k)||APPEND_TARGETS.includes(k))) return k;
   return "new";
 }
 function detectHeader(rows){
+  // the row that names the shot number column wins (sheets often have a key or title row above the headings)
+  for(let i=0;i<Math.min(rows.length,15);i++) if(rows[i].some(c=>IMPORT_SYN.shot.includes(normH(c)))) return i;
   for(let i=0;i<Math.min(rows.length,15);i++){const strs=rows[i].filter(c=>typeof c==="string"&&c.trim()&&isNaN(c)).length;if(strs>=2)return i}
   return 0;
 }
@@ -199,7 +205,10 @@ async function openImport(file){
   try{
     const sheets=await readSheets(file);
     if(!sheets.length) throw new Error("That file has no data.");
-    const pick=sheets.find(s=>/shot|list|schedule|table/i.test(s.name)&&s.rows.length>1)||sheets.slice().sort((a,b)=>b.rows.length-a.rows.length)[0];
+    // prefer a shot list tab, and its newest version (v002 over the unversioned original)
+    const ver=s=>{const m=s.name.match(/v\s*0*(\d+)/i);return m?Number(m[1]):0};
+    const shotTabs=sheets.filter(s=>/shot/i.test(s.name)&&s.rows.length>1).sort((a,b)=>ver(b)-ver(a));
+    const pick=shotTabs[0]||sheets.find(s=>/list|schedule|table/i.test(s.name)&&s.rows.length>1)||sheets.slice().sort((a,b)=>b.rows.length-a.rows.length)[0];
     IMP={file:file.name,sheets,proj:sheets.find(s=>s.name==="Project"),app:null};
     const ad=sheets.find(s=>s.name==="App data");
     if(ad){try{const j=JSON.parse(ad.rows.slice(1).map(r=>String(r[0]??"")).join(""));if(j&&j.app==="shotlist-scheduler"&&Array.isArray(j.days))IMP.app=j}catch(e){}}
@@ -234,7 +243,10 @@ function buildImpMap(){
   });
   const has=k=>IMP.map.some(m=>m.t===k);
   $("#impTakes").checked=has("take")||has("hero")||has("safety");
-  $("#impDest").value=IMP.app&&has("rid")?"restore":has("shootDay")?"bydays":(S&&D()&&D().rows.length?"newday":"append");
+  // most of the sheet's shot numbers are already in this project: it's a revised list, so update rather than add
+  let matchShare=0; { const ci=IMP.map.findIndex(m=>m.t==="shot"); if(ci>=0&&S){ const have=new Set(); live().forEach(d=>d.rows.forEach(r=>{if(!isBlock(r)&&normShot(r.shot))have.add(normShot(r.shot))}));
+    const nums=impDataRows().map(r=>normShot(r[ci])).filter(Boolean); if(nums.length&&have.size) matchShare=nums.filter(n=>have.has(n)).length/nums.length; } }
+  $("#impDest").value=IMP.app&&has("rid")?"restore":has("shootDay")?"bydays":matchShare>=0.5?"update":(S&&D()&&D().rows.length?"newday":"append");
   updImpInfo();
 }
 function updImpInfo(){
@@ -259,6 +271,7 @@ function impRecords(){
       if(m.t==="rid"){rec.rid=String(v);return}
       if(m.t==="take"){const n=parseInt(v,10);if(!isNaN(n))rec.take=n;return}
       if(m.t==="shootDay"){rec.day=String(v);return}
+      if(m.t==="status"){rec.f.__status=String(v).trim();any=true;return}
       if(m.t==="rowType"){const t=String(v);rec.tech=/tech|turn\s*-?around|reset|re-?rig/i.test(t);rec.brk=rec.tech||/break|move|lunch/i.test(t);return}
       // a row only counts if it carries real content: pre-built blank tracker rows have just a number and 0/FALSE ticks
       if(!["shot","perfCount","body","face","glove","done","setup","shoot"].includes(m.t)) any=true;
@@ -312,6 +325,8 @@ function groupToRow(g,recorded,kindCapture){
   for(const k of Object.keys(row)) if(k.startsWith("new:")) delete row[k];
   if(g.recs[0].brk||(row.label&&!row.action&&!row.shot&&!row.description)){row.type=g.recs[0].tech||/\b(tech|turn\s*-?around|reset)\b/i.test(row.label||row.shot||"")?"tech":"break";row.label=row.label||row.shot||"Break";row.shot="";row.takes=0;row.done=false;}
   if(!kindCapture&&!row.description&&row.action) row.description=row.action;
+  if("__status" in row){ const st=String(row.__status||"").trim(); delete row.__status;
+    if(isCutWord(st)) row.cut=true; else if(st&&!g.recs[0].f.priority) row.priority=st; }
   return row;
 }
 // rebuild the exported days: each shot starts from its saved copy, then takes whatever was edited in the Shotlist tab
@@ -353,6 +368,100 @@ function restoreDays(recs,recorded,colRemap){
   }
   return days;
 }
+function isCutWord(v){return /^(cut|omit|omitted|drop|dropped|removed|out)$/i.test(String(v||"").trim())}
+// shot numbers from different sheets: 005, 5, "100.0", sh030 and 030 are the same shot
+function normShot(v){return String(v??"").trim().replace(/\.0+$/,"").replace(/^sh(?=\d)/i,"").replace(/^0+(?=\d)/,"").toLowerCase().replace(/\s+/g,"")}
+const UPD={plan:null};
+// update mode: match the sheet's shots to the ones already in the project (every day), and list what would change
+function planUpdate(groups){
+  const capture=D()&&D().kind==="capture";
+  // only days that look like this shot list: most of their numbered shots are in the sheet (another sequence that also has a shot 5 is left alone)
+  const sheetSet=new Set(groups.map(g=>normShot(g.recs[0].f.shot)).filter(Boolean));
+  const share=d=>{const n=d.rows.filter(r=>!isBlock(r)&&normShot(r.shot));return n.length?n.filter(r=>sheetSet.has(normShot(r.shot))).length/n.length:0};
+  let days=live().filter(d=>share(d)>=0.5); if(!days.length&&D()) days=[D()];
+  const all=[]; for(const d of days) for(const r of d.rows) if(!isBlock(r)) all.push({d,r});
+  const idx=new Map(); for(const x of all){const k=normShot(x.r.shot);if(!k)continue;if(!idx.has(k))idx.set(k,[]);idx.get(k).push(x)}
+  const mapped=new Set(IMP.map.map(m=>m.t).filter(t=>!["ignore","take","shootDay","rowType","rid","new","shot","label"].includes(t)));
+  const statusMapped=mapped.has("status"); mapped.delete("status");
+  const same=(a,b,f)=>{const c=colMap()[f]||{};if(c.type==="flag"||["body","face","glove"].includes(f))return isOn(a)===isOn(b);if(typeof a==="number"||typeof b==="number")return Number(a||0)===Number(b||0);return String(a??"").replace(/\r/g,"").trim()===String(b??"").replace(/\r/g,"").trim()};
+  const changes=[], adds=[], seen=new Set(); let last=null;
+  for(const g of groups){
+    if(g.recs[0].brk) continue;
+    const nr=groupToRow(g,false,capture), k=normShot(nr.shot);
+    if(!k||nr.type!=="shot") continue;
+    const hits=idx.get(k);
+    if(!hits){adds.push({row:nr,after:last,imgs:[...new Set(g.recs.flatMap(r=>r.imgs||[]).filter(Boolean))]});continue}
+    seen.add(k); last=hits[hits.length-1];
+    for(const hit of hits){
+      const diffs=[];
+      for(const f of mapped){ if(["takes","done","origStart","heroUrl","safetyUrl"].includes(f)&&!(f in nr)) continue;
+        if(f==="setup"||f==="shoot"){ if(!(nr[f]>0)||Number(nr[f])===Number(hit.r[f])) continue; }
+        if(!same(nr[f],hit.r[f],f)) diffs.push({f,old:hit.r[f]??"",val:nr[f]??""}); }
+      if(statusMapped){ const nc=!!nr.cut; if(nc!==!!hit.r.cut) diffs.push({f:"cut",old:!!hit.r.cut,val:nc});
+        if(!mapped.has("priority")&&nr.priority&&nr.priority!==hit.r.priority) diffs.push({f:"priority",old:hit.r.priority||"",val:nr.priority}); }
+      // pictures only fill gaps: a shot that already has its storyboard keeps it
+      const im=[...new Set(g.recs.flatMap(r=>r.imgs||[]).filter(Boolean))];
+      if(im.length&&!hit.r.ref1) diffs.push({f:"pictures",old:"",val:im.length+" picture"+(im.length>1?"s":""),imgs:im});
+      if(diffs.length) changes.push({hit,diffs});
+    }
+  }
+  const missing=all.filter(x=>normShot(x.r.shot)&&!seen.has(normShot(x.r.shot))&&!x.r.cut);
+  return {changes,adds,missing,count:groups.filter(g=>normShot(g.recs[0].f.shot)).length,days:days.map(d=>d.name)};
+}
+function fieldLabel(f){return f==="cut"?"Cut":f==="pictures"?"Storyboard":(colMap()[f]||{}).label||f}
+function showVal(v,f){if(f==="cut")return v?"cut":"in";if(typeof v==="boolean")return v?"yes":"";const s=String(v??"");return s.length>220?s.slice(0,220)+"…":s}
+// long text: start both sides just before the first difference, so the edit is what you see
+function diffCells(x){
+  let a=showValFull(x.old,x.f), b=showValFull(x.val,x.f);
+  if(typeof x.old==="string"&&typeof x.val==="string"&&a.length>160&&b.length>160){let i=0;while(i<a.length&&i<b.length&&a[i]===b[i])i++;if(i>80){a="…"+a.slice(i-50);b="…"+b.slice(i-50)}}
+  const cut=s=>s.length>260?s.slice(0,260)+"…":s;
+  return [h("td",{style:"color:var(--muted)"},cut(a)),h("td",{},cut(b))];
+}
+function showValFull(v,f){if(f==="cut")return v?"cut":"in";if(typeof v==="boolean")return v?"yes":"";return String(v??"")}
+function showUpdatePlan(plan){
+  UPD.plan=plan; $("#impModal").classList.remove("open");
+  openDoc("Shot list update",b=>{
+    const nF=plan.changes.reduce((a,c)=>a+c.diffs.length,0), nCut=plan.changes.filter(c=>c.diffs.some(x=>x.f==="cut"&&x.val)).length, nUncut=plan.changes.filter(c=>c.diffs.some(x=>x.f==="cut"&&!x.val)).length;
+    b.append(h("p",{},`From ${IMP.file} (${IMP.sheet}): ${plan.count} shots checked against ${plan.days.join(", ")}. Timings, takes, ticks, notes in other columns and pictures already in place are kept.`));
+    b.append(h("div",{class:"kvs"},
+      h("div",{class:"kv"},h("small",{},"Shots changed"),h("b",{},String(new Set(plan.changes.map(c=>c.hit.r.id)).size))),
+      h("div",{class:"kv"},h("small",{},"Changes"),h("b",{},String(nF))),
+      h("div",{class:"kv"},h("small",{},"Newly cut"),h("b",{},String(nCut))),
+      ...(nUncut?[h("div",{class:"kv"},h("small",{},"Back in"),h("b",{},String(nUncut)))]:[]),
+      h("div",{class:"kv"},h("small",{},"New shots"),h("b",{},String(plan.adds.length)))));
+    const go=h("button",{class:"btn primary",onclick:()=>applyUpdatePlan()},nF+plan.adds.length?`Apply ${nF+plan.adds.length} change${nF+plan.adds.length===1?"":"s"}`:"Nothing to change");
+    if(!(nF+plan.adds.length)) go.disabled=true;
+    b.append(h("div",{class:"toolbar noprint",style:"margin:.4rem 0 .8rem"},go,h("button",{class:"btn",onclick:()=>{$("#docModal").classList.remove("open");$("#impModal").classList.add("open")}},"Back to the column mapping")));
+    if(plan.changes.length){
+      const t=h("table",{class:"doctable"},h("thead",{},h("tr",{},...["Shot","Day","Column","Was","Now"].map(x=>h("th",{},x)))));const tb=h("tbody",{});
+      for(const c of plan.changes) c.diffs.forEach((x,i)=>tb.append(h("tr",{},h("td",{class:"nowrap"},i?"":h("b",{},c.hit.r.shot||"")),h("td",{class:"nowrap"},i?"":c.hit.d.name),h("td",{class:"nowrap"},fieldLabel(x.f)),
+        ...diffCells(x))));
+      t.append(tb); b.append(h("section",{class:"docsec"},h("h3",{},"Changes"),t));
+    }
+    if(plan.adds.length) b.append(h("section",{class:"docsec"},h("h3",{},"New shots"),h("p",{},plan.adds.map(a=>"Shot "+a.row.shot+(a.after?" (after "+a.after.r.shot+", "+a.after.d.name+")":" (end of "+(D()||{}).name+")")).join("; "))));
+    if(plan.missing.length) b.append(h("section",{class:"docsec"},h("h3",{},"In the project but not in the sheet"),h("p",{class:"note"},"Left as they are. Cut them yourself if the client dropped them."),h("p",{},plan.missing.map(x=>x.r.shot+" ("+x.d.name+")").join(", "))));
+  });
+}
+async function applyUpdatePlan(){
+  const plan=UPD.plan; if(!plan) return;
+  const btn=$("#docBody .btn.primary"); if(btn){btn.disabled=true;btn.textContent="Applying…"}
+  // pictures first, so the whole update lands as one change (one Undo)
+  const jobs=[...plan.changes.flatMap(c=>c.diffs.filter(x=>x.imgs)),...plan.adds.filter(a=>a.imgs.length)];
+  let n=0; for(const j of jobs){ const list=j.imgs; for(let i=0;i<list.length&&i<3;i++){ btn&&(btn.textContent=`Adding pictures ${++n}…`); try{list[i]=await storePicture(list[i])}catch(e){list[i]=""} } }
+  commit();
+  let shots=0;
+  for(const c of plan.changes){ const r=findRow(c.hit.r.id); if(!r) continue; const row=r.r; shots++;
+    for(const x of c.diffs){ if(x.f==="pictures"){["ref1","ref2","ref3"].forEach((k,i)=>{if(x.imgs[i])row[k]=x.imgs[i]});continue}
+      if(x.f==="priority"&&x.val&&!priorityOptions().includes(x.val)){S.cfg=S.cfg||{};S.cfg.priorityOptions=[x.val,...priorityOptions()].join(",");}
+      row[x.f]=x.val; } }
+  for(const a of plan.adds){ const row=a.row; ["ref1","ref2","ref3"].forEach((k,i)=>{row[k]=a.imgs[i]||""});
+    if(row.priority&&!priorityOptions().includes(row.priority)){S.cfg=S.cfg||{};S.cfg.priorityOptions=[row.priority,...priorityOptions()].join(",");}
+    if(a.after){const f=findRow(a.after.r.id); if(f){const rows=f.d.rows; rows.splice(rows.indexOf(f.r)+1,0,row); a.after={r:row,d:f.d}; continue}}
+    D().rows.push(row); }
+  commit(); renderAll(); $("#docModal").classList.remove("open");
+  toast(`Updated ${shots} shot${shots===1?"":"s"}${plan.adds.length?`, added ${plan.adds.length}`:""} - Undo to take it back`);
+  UPD.plan=null;
+}
 function guessColType(c){
   const vals=impDataRows().map(r=>r[c]).filter(v=>v!==""&&v!=null);
   if(!vals.length) return "text";
@@ -381,6 +490,7 @@ async function runImport(){
     S.cols.push({id,label:m.h,type,options}); m.t="c_"+id; made++; });
   if(made){ invalidateCols(); }
   const recs=impRecords(); if(!recs.length) return;
+  if(dest==="update"){ showUpdatePlan(planUpdate(groupImport(recs))); return; }
   // pictures from the sheet: into this project now, or into the new project once it exists
   if(dest!=="newproject"){
     const all=recs.flatMap(r=>r.imgs.map((d,i)=>[r,i])); let n=0, failed=0;
@@ -670,7 +780,6 @@ async function loadPdfJs(){
   return pdfLib;
 }
 const SHOT_LABEL=/^\d{1,4}[A-Za-z]{0,2}$/;
-function normShot(s){return String(s??"").trim().toLowerCase().replace(/\s+/g,"").replace(/^0+(?=\d)/,"")}
 async function pdfObj(page,id){const store=String(id).startsWith("g_")?page.commonObjs:page.objs;return await new Promise((res,rej)=>{try{store.get(id,res)}catch(e){rej(e)}})}
 function objToCanvas(o){
   const c=document.createElement("canvas"); c.width=o.width; c.height=o.height; const x=c.getContext("2d");
