@@ -393,7 +393,7 @@ function videoCell(r){
    Its DIT name uses the shot range. On Live Action days each take records which shots it caught. */
 function seqMembers(r,d){ if(!r||!r.seq) return []; const f=findRow(r.id); d=d||(f&&f.d); if(!d) return []; return d.rows.filter(x=>x.seq===r.seq&&!isBlock(x)); }
 function seqAnchor(r){ if(!r||!r.seq) return r; const f=findRow(r.seq); return f&&f.r.seq===r.seq?f.r:r; }
-function seqRange(a,d){ const f=findRow(a.id); d=d||(f&&f.d); if(!d) return ""; const m=seqMembers(a,d); if(m.length<2) return "";
+function seqRange(a,d){ const f=findRow(a.id); d=d||(f&&f.d); if(!d) return ""; const m=seqMembers(a,d); if(!m.length) return ""; if(m.length<2) return shotNumber0(m[0],d);
   const nums=m.map(x=>shotNumber0(x,d)).sort(COLLATE.compare); const all=d.rows.filter(x=>!isBlock(x)); const idx=m.map(x=>all.indexOf(x));
   // next to each other in the shot list: lowest to highest number; spread out: each one
   const together=idx.every((v,i)=>!i||v===idx[i-1]+1); return together?nums[0]+"-"+nums[nums.length-1]:nums.join("+"); }

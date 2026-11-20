@@ -1169,6 +1169,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Sequence View</b> (click the chip, the banner in Note View, or tap the shot number in Slate View): the shots side by side with their storyboards, the DIT name to copy, ● Roll / ■ Cut, + Take, Good / NG / Hero / Safety and a note per take, sequence notes, and <b>Sequence done</b> (ticks every shot). ‹ › moves between the day's sequences; the same keys work as in Note View.</li>
     <li><b>Live Action</b>: every storyboard shot still needs catching, so each take has a tick per shot (or <b>All</b>). The shots show which takes caught them and <b>Still to get</b> lists what's missing. NG takes don't count. <b>Mocap</b>: a take records the whole action, so there are no ticks; framing is dealt with in post.</li>
     <li><b>Slate View</b> shows the sequence (and its range) for any of its shots, and Clap logs the sequence's take.</li>
+    <li><b>From the sheet</b>: a column headed <b>Seq</b> or <b>Sequence</b> groups shots with the same letter or name (/, -, n/a and none mean not in a sequence). When you update from a revised sheet, the preview lists each sequence's shots and offers to <b>put the running order in sequence order</b> (A, B, C... with shot numbers in order inside each, then the shots not in a sequence; breaks and tech rows stay where they are). One Undo takes it back.</li>
     <li><b>VCS</b>: tick the VCS column (in Camera &amp; look) for shots where the virtual camera is recorded into the take. It shows on the slate, in Note View and in Sequence View. Shown by default on Mocap days; on Live Action days turn it on from the Columns menu.</li>
   </ul>
 
@@ -1288,9 +1289,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.28.0";
+const VERSION = "2.28.1";
 const CHANGELOG = [
-  ["2.28.0","2026-11-20","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
+  ["2.28.1","2026-11-20","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
+  ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
   ["2.27.1","","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
   ["2.27.0","","Columns menu: Hide all not in use hides every column that's empty on all days of this kind (Live Action or Mocap), and Show all brings them all back."],
   ["2.26.1","","The Google account Drive videos open with is now your own setting (per project, on your device), so the team no longer overwrite each other's email. Note View says which account a Drive video is playing as, with a link to change it."],
@@ -4110,7 +4112,7 @@ const BASE_IMPORT_TARGETS=[
   ["genre","Genre"],["body","Body"],["face","Face"],["glove","Glove"],["hero","Hero"],["safety","Safety"],["priority","Priority"],
   ["done","Shot? / done"],["setup","Setup (min)"],["shoot","Shoot (min)"],["origStart","Planned start time"],["duration","Screen duration"],
   ["heroUrl","Hero link"],["safetyUrl","Safety link"],["location","Location / Setup"],["script","Script / Dialogue"],["shotType","Shot type"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["director","Director notes"],
-  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"],["video","Reference video link"],["vcs","VCS (virtual camera)"]
+  ["label","Break name"],["rowType","Row type (Shot / Break)"],["status","Status (CUT cuts the shot; other words set the priority)"],["video","Reference video link"],["vcs","VCS (virtual camera)"],["sequence","Sequence (shots with the same name are shot together)"]
 ];
 function importTargets(){
   const extra=IMP&&IMP.app?[["rid","App row link (keeps days exact)"]]:[];
@@ -4136,6 +4138,7 @@ const IMPORT_SYN={
   shotType:["shot type","shot size","framing","shot size / framing","shot size/framing"],camera:["camera & lighting notes","camera & lighting","camera","camera notes","technical notes"],lighting:["lighting","lighting notes","lights","lx"],
   vfx:["vfx notes","vfx","gs process?","capture notes","mocap notes"],director:["director notes","notes","other notes","comments","comment"],
   rowType:["type","row type"],
+  sequence:["seq","sequence","sequence name","seq name","seq.","sequence #","seq #"],
   vcs:["vcs","virtual camera","vcam","v-cam","virtual cam"],
   video:["reference video","ref video","rehearsal video","video","video link","rehearsal","reference"],
   status:["status","hero shot","shot status","cut?","in / out","in/out","omit","omitted"]
@@ -4238,6 +4241,7 @@ function impRecords(){
       if(m.t==="take"){const n=parseInt(v,10);if(!isNaN(n))rec.take=n;return}
       if(m.t==="shootDay"){rec.day=String(v);return}
       if(m.t==="status"){rec.f.__status=String(v).trim();any=true;return}
+      if(m.t==="sequence"){rec.f.__seq=String(v).trim();return}
       if(m.t==="rowType"){const t=String(v);rec.tech=/tech|turn\s*-?around|reset|re-?rig/i.test(t);rec.brk=rec.tech||/break|move|lunch/i.test(t);return}
       // a row only counts if it carries real content: pre-built blank tracker rows have just a number and 0/FALSE ticks
       if(!["shot","perfCount","body","face","glove","done","setup","shoot"].includes(m.t)) any=true;
@@ -4291,6 +4295,7 @@ function groupToRow(g,recorded,kindCapture){
   for(const k of Object.keys(row)) if(k.startsWith("new:")) delete row[k];
   if(g.recs[0].brk||(row.label&&!row.action&&!row.shot&&!row.description)){row.type=g.recs[0].tech||/\b(tech|turn\s*-?around|reset)\b/i.test(row.label||row.shot||"")?"tech":"break";row.label=row.label||row.shot||"Break";row.shot="";row.takes=0;row.done=false;}
   if(!kindCapture&&!row.description&&row.action) row.description=row.action;
+  if("__seq" in row){ const n=seqNameOf(row.__seq); delete row.__seq; if(n) row.__seqName=n; }
   if("__status" in row){ const st=String(row.__status||"").trim(); delete row.__status;
     if(isCutWord(st)) row.cut=true; else if(st&&!g.recs[0].f.priority) row.priority=st; }
   return row;
@@ -4349,6 +4354,7 @@ function planUpdate(groups){
   const idx=new Map(); for(const x of all){const k=normShot(x.r.shot);if(!k)continue;if(!idx.has(k))idx.set(k,[]);idx.get(k).push(x)}
   const mapped=new Set(IMP.map.map(m=>m.t).filter(t=>!["ignore","take","shootDay","rowType","rid","new","shot","label"].includes(t)));
   const statusMapped=mapped.has("status"); mapped.delete("status");
+  const seqMapped=mapped.has("sequence"); mapped.delete("sequence"); const seqAssign=[];
   const same=(a,b,f)=>{const c=colMap()[f]||{};if(c.type==="flag"||["body","face","glove"].includes(f))return isOn(a)===isOn(b);if(typeof a==="number"||typeof b==="number")return Number(a||0)===Number(b||0);return String(a??"").replace(/\r/g,"").trim()===String(b??"").replace(/\r/g,"").trim()};
   const changes=[], adds=[], seen=new Set(); let last=null;
   for(const g of groups){
@@ -4368,13 +4374,50 @@ function planUpdate(groups){
       // pictures only fill gaps: a shot that already has its storyboard keeps it
       const im=[...new Set(g.recs.flatMap(r=>r.imgs||[]).filter(Boolean))];
       if(im.length&&!hit.r.ref1) diffs.push({f:"pictures",old:"",val:im.length+" picture"+(im.length>1?"s":""),imgs:im});
+      if(seqMapped){ const want=nr.__seqName||""; seqAssign.push({hit,name:want}); const have=hit.r.seq?seqTitle(seqAnchor(hit.r)):"";
+        if(want!==have) diffs.push({f:"sequence",old:have,val:want}); }
       if(diffs.length) changes.push({hit,diffs});
     }
   }
+  let seq=null;
+  if(seqMapped){ const names=[...new Set(seqAssign.map(x=>x.name).filter(Boolean))].sort(COLLATE.compare);
+    // the running order the sequences give: A's shots, then B's... (by shot number inside each), then the rest as they are
+    seq={assign:seqAssign,names,reorder:names.length>1}; }
   const missing=all.filter(x=>normShot(x.r.shot)&&!seen.has(normShot(x.r.shot))&&!x.r.cut);
-  return {changes,adds,missing,count:groups.filter(g=>normShot(g.recs[0].f.shot)).length,days:days.map(d=>d.name)};
+  return {changes,adds,missing,seq,count:groups.filter(g=>normShot(g.recs[0].f.shot)).length,days:days.map(d=>d.name)};
 }
-function fieldLabel(f){return f==="cut"?"Cut":f==="pictures"?"Storyboard":(colMap()[f]||{}).label||f}
+// sequence names from a sheet: "A", "Seq B"... ; "/", "-", "n/a", "none" mean not in one
+function seqNameOf(v){ const s=String(v??"").trim(); return /^(|\/|-+|n\/?a|none|x|0)$/i.test(s)?"":s; }
+// rows that came in with a sequence name are grouped, per day, in the order they sit
+function groupImportedSeqs(days){
+  for(const d of days){ const by=new Map();
+    for(const r of d.rows){ if(r.__seqName&&!isBlock(r)){ if(!by.has(r.__seqName)) by.set(r.__seqName,[]); by.get(r.__seqName).push(r); } delete r.__seqName; }
+    for(const [name,rows] of by){ const a=rows[0]; for(const r of rows) r.seq=a.id; a.seqName=name; } }
+}
+// update mode: regroup the matched shots by the sheet's sequences, and optionally put the running order in sequence order
+function applySeqPlan(sp){
+  const touched=new Set(sp.assign.map(x=>x.hit.r.id));
+  for(const d of live()){
+    const rows=d.rows.filter(r=>!isBlock(r)&&touched.has(r.id)); if(!rows.length) continue;
+    const old=new Map(); for(const r of rows) if(r.seq&&r.seq===r.id) old.set(r.id,{log:r.takeLog,takes:r.takes,notes:r.seqNotes});
+    const want=new Map(sp.assign.filter(x=>findRow(x.hit.r.id)&&findRow(x.hit.r.id).d===d).map(x=>[x.hit.r.id,x.name]));
+    for(const r of rows) r.seq="";
+    for(const name of sp.names){
+      const g=rows.filter(r=>want.get(r.id)===name).sort((x,y)=>COLLATE.compare(String(x.shot),String(y.shot))); if(!g.length) continue;
+      const a=g[0]; for(const r of g) r.seq=a.id; a.seqName=name;
+      // a sequence that already had takes keeps them on its new first shot
+      const prev=g.map(r=>old.get(r.id)).find(o=>o&&o.log); if(prev&&!old.has(a.id)){ a.takeLog=prev.log; a.takes=prev.takes; a.seqNotes=prev.notes||a.seqNotes; const from=g.find(r=>old.get(r.id)===prev); if(from&&from!==a){from.takeLog="";from.takes=0;from.seqNotes="";from.seqName=""} }
+    }
+    for(const r of rows) if(!r.seq&&old.has(r.id)) r.seqName="";
+    if(sp.reorder&&!isFrozen(d)){
+      const shots=d.rows.filter(r=>!isBlock(r));
+      const rank=r=>{const n=r.seq?sp.names.indexOf(seqTitle(seqAnchor(r))):-1;return n<0?sp.names.length:n};
+      const sorted=shots.map((r,i)=>({r,i})).sort((x,y)=>rank(x.r)-rank(y.r)||(rank(x.r)<sp.names.length?COLLATE.compare(String(x.r.shot),String(y.r.shot)):x.i-y.i)).map(x=>x.r);
+      let k=0; d.rows=d.rows.map(r=>isBlock(r)?r:sorted[k++]);
+    }
+  }
+}
+function fieldLabel(f){return f==="sequence"?"Sequence":f==="cut"?"Cut":f==="pictures"?"Storyboard":(colMap()[f]||{}).label||f}
 function showVal(v,f){if(f==="cut")return v?"cut":"in";if(typeof v==="boolean")return v?"yes":"";const s=String(v??"");return s.length>220?s.slice(0,220)+"…":s}
 // long text: start both sides just before the first difference, so the edit is what you see
 function diffCells(x){
@@ -4404,6 +4447,11 @@ function showUpdatePlan(plan){
         ...diffCells(x))));
       t.append(tb); b.append(h("section",{class:"docsec"},h("h3",{},"Changes"),t));
     }
+    if(plan.seq&&plan.seq.names.length){ const cb=h("input",{type:"checkbox"}); cb.checked=plan.seq.reorder; cb.addEventListener("change",()=>{plan.seq.reorder=cb.checked;go.disabled=!(nF+plan.adds.length||cb.checked)});
+      const by=plan.seq.names.map(n=>n+": "+plan.seq.assign.filter(x=>x.name===n).map(x=>x.hit.r.shot).sort(COLLATE.compare).join(", "));
+      b.append(h("section",{class:"docsec"},h("h3",{},`Sequences (${plan.seq.names.length})`),h("p",{},by.join(" · ")),
+        h("label",{class:"sw noprint",style:"color:var(--ink)"},cb,h("span",{},`Put the running order in sequence order: ${plan.seq.names.join(", ")}, then the shots not in a sequence`,h("small",{},"Shots inside each sequence go in shot number order. Breaks and tech rows stay where they are. Leave this off to keep your current order.")))));
+      if(plan.seq.reorder&&go.disabled){go.disabled=false;go.textContent="Apply"} }
     if(plan.adds.length) b.append(h("section",{class:"docsec"},h("h3",{},"New shots"),h("p",{},plan.adds.map(a=>"Shot "+a.row.shot+(a.after?" (after "+a.after.r.shot+", "+a.after.d.name+")":" (end of "+(D()||{}).name+")")).join("; "))));
     if(plan.missing.length) b.append(h("section",{class:"docsec"},h("h3",{},"In the project but not in the sheet"),h("p",{class:"note"},"Left as they are. Cut them yourself if the client dropped them."),h("p",{},plan.missing.map(x=>x.r.shot+" ("+x.d.name+")").join(", "))));
   });
@@ -4417,15 +4465,16 @@ async function applyUpdatePlan(){
   commit();
   let shots=0;
   for(const c of plan.changes){ const r=findRow(c.hit.r.id); if(!r) continue; const row=r.r; shots++;
-    for(const x of c.diffs){ if(x.f==="pictures"){["ref1","ref2","ref3"].forEach((k,i)=>{if(x.imgs[i])row[k]=x.imgs[i]});continue}
+    for(const x of c.diffs){ if(x.f==="sequence") continue; if(x.f==="pictures"){["ref1","ref2","ref3"].forEach((k,i)=>{if(x.imgs[i])row[k]=x.imgs[i]});continue}
       if(x.f==="priority"&&x.val&&!priorityOptions().includes(x.val)){S.cfg=S.cfg||{};S.cfg.priorityOptions=[x.val,...priorityOptions()].join(",");}
       row[x.f]=x.val; } }
   for(const a of plan.adds){ const row=a.row; ["ref1","ref2","ref3"].forEach((k,i)=>{row[k]=a.imgs[i]||""});
     if(row.priority&&!priorityOptions().includes(row.priority)){S.cfg=S.cfg||{};S.cfg.priorityOptions=[row.priority,...priorityOptions()].join(",");}
     if(a.after){const f=findRow(a.after.r.id); if(f){const rows=f.d.rows; rows.splice(rows.indexOf(f.r)+1,0,row); a.after={r:row,d:f.d}; continue}}
     D().rows.push(row); }
+  if(plan.seq) applySeqPlan(plan.seq);
   commit(); renderAll(); $("#docModal").classList.remove("open");
-  toast(`Updated ${shots} shot${shots===1?"":"s"}${plan.adds.length?`, added ${plan.adds.length}`:""} - Undo to take it back`);
+  toast(`Updated ${shots} shot${shots===1?"":"s"}${plan.seq&&plan.seq.names.length?`, ${plan.seq.names.length} sequence${plan.seq.names.length===1?"":"s"}`:""}${plan.seq&&plan.seq.reorder?", running order by sequence":""}${plan.adds.length?`, added ${plan.adds.length}`:""} - Undo to take it back`);
   UPD.plan=null;
 }
 function guessColType(c){
@@ -4495,6 +4544,7 @@ async function runImport(){
     const project={name:IMP.file.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ")};
     if(IMP.proj){const pr=IMP.proj.rows;const lk={"client / production":"client","shoot date(s)":"dates","location":"location","capture system":"system","director / lead":"lead","shoot / production id":"prodId","frame rate (fps)":"fps","notes":"notes"};
       if(pr[0]&&String(pr[0][0]).trim())project.name=String(pr[0][0]).trim();pr.slice(1).forEach(r=>{const k=lk[normH(r[0])];if(k&&String(r[1]??"").trim())project[k]=String(r[1])})}
+    groupImportedSeqs(days);
     const doc=normDoc({project,cols:newCols(),days}); commit();
     $("#impModal").classList.remove("open");
     try{const pend=takeDataRefs(doc.days);const id=await createProject(project.name,docToSeed(doc));await openProject(id);await putDataRefs(pend);toast(`Imported ${groups.length} shots into a new project`)}catch(e){toast("Couldn't import: "+e.message)}
@@ -4511,6 +4561,7 @@ async function runImport(){
     target=D(); if(dest==="replace") target.rows=[];
     groups.forEach(g=>target.rows.push(groupToRow(g,recorded,target.kind==="capture"||capture)));
   }
+  groupImportedSeqs(live());
   commit(); P.activeByProject[pid()]=target.id; savePrefs(); renderAll();
   $("#impModal").classList.remove("open");
   toast(`Imported ${groups.length} shot${groups.length===1?"":"s"}${made?` and ${made} new column${made>1?"s":""}`:""} - Undo to take it back`);
@@ -5495,7 +5546,7 @@ function videoCell(r){
    Its DIT name uses the shot range. On Live Action days each take records which shots it caught. */
 function seqMembers(r,d){ if(!r||!r.seq) return []; const f=findRow(r.id); d=d||(f&&f.d); if(!d) return []; return d.rows.filter(x=>x.seq===r.seq&&!isBlock(x)); }
 function seqAnchor(r){ if(!r||!r.seq) return r; const f=findRow(r.seq); return f&&f.r.seq===r.seq?f.r:r; }
-function seqRange(a,d){ const f=findRow(a.id); d=d||(f&&f.d); if(!d) return ""; const m=seqMembers(a,d); if(m.length<2) return "";
+function seqRange(a,d){ const f=findRow(a.id); d=d||(f&&f.d); if(!d) return ""; const m=seqMembers(a,d); if(!m.length) return ""; if(m.length<2) return shotNumber0(m[0],d);
   const nums=m.map(x=>shotNumber0(x,d)).sort(COLLATE.compare); const all=d.rows.filter(x=>!isBlock(x)); const idx=m.map(x=>all.indexOf(x));
   // next to each other in the shot list: lowest to highest number; spread out: each one
   const together=idx.every((v,i)=>!i||v===idx[i-1]+1); return together?nums[0]+"-"+nums[nums.length-1]:nums.join("+"); }
