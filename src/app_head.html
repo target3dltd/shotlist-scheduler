@@ -557,6 +557,23 @@ header.top .toolbar{align-items:center;gap:.5rem}
 .pop.menu .mi small{color:var(--muted);font-size:.78em}
 .pop.menu .mi:hover,.pop.menu .mi:focus-visible{background:var(--panel2);outline:none}
 .pop.menu hr{border:none;border-top:1px solid var(--line);margin:.25rem .3rem}
+.fl-phone,.pop.menu .phoneonly{display:none}
+/* phones: one row of buttons; the rest lives in the ☰ Menu */
+@media (max-width:600px){
+  header.top .toolbar{flex-wrap:nowrap;gap:.35rem;width:100%}
+  .tgroup+.tgroup,.tgroup+.onsetgroup{padding-left:0;border-left:none}
+  #colBtn,#ditBtn,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
+  .fl-desk{display:none} .fl-phone{display:inline}
+  .pop.menu .mi.phoneonly{display:flex} .pop.menu hr.phoneonly{display:block}
+  .onsetgroup{margin-left:auto}
+  #fileMenu .pop.menu{position:fixed;left:.5rem;right:.5rem;top:auto;bottom:.5rem;max-height:75vh;overflow:auto;min-width:0;z-index:80;box-shadow:0 -10px 40px -10px rgba(0,0,0,.45)}
+  #colMenu .pop{position:fixed;left:.5rem;right:.5rem;top:auto;bottom:.5rem;max-height:75vh;overflow:auto;width:auto;z-index:80;box-shadow:0 -10px 40px -10px rgba(0,0,0,.45)}
+  /* day tabs: full size, scrolling sideways */
+  .daytabs .tabgroup{display:none}
+  .daytabs .tg .daytab,.daytabs .tg.t1 .daytab,.daytabs .tg.t2 .daytab:not(.on),.daytabs .tg.t3 .daytab:not(.on){min-width:auto;padding:.55rem .8rem;overflow:visible}
+  .daytabs .tg.t1 .daytab:not(.on) .kind{display:inline}
+  .daytabs .tg.wrapped{border-left:1px solid var(--line2);padding-left:.4rem;margin-left:.2rem}
+}
 .colmenu .pop label{display:flex;gap:.45rem;align-items:center;padding:2px 0;white-space:nowrap}
 .colmenu .pop .note{font-size:.85rem;color:var(--muted);margin:.2rem 0 .4rem}
 .addrow{margin-top:.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
@@ -686,7 +703,7 @@ body.nosteps .mins.timing input{width:4.5em}
   /* tabs scroll sideways instead of squeezing */
   .daytabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
   .daytabs::-webkit-scrollbar{display:none}
-  .daytabs .tg{flex:0 0 auto}
+  .daytabs .tg,.daytabs .tg.ready,.daytabs .tg.wrapped{flex:0 0 auto}
   .daytabs .tg .daytab{flex:0 0 auto;min-width:auto}
   .titlebar h1 small{display:none}
   .legend{flex-wrap:wrap;gap:.4rem .9rem}
@@ -761,8 +778,16 @@ body.nosteps .mins.timing input{width:4.5em}
       <span class="tgroup">
         <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
         <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
-        <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity">File ▾</button>
+        <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity"><span class="fl-desk">File ▾</span><span class="fl-phone" aria-hidden="true">☰ Menu</span></button>
           <div class="pop menu" id="filePop" role="menu">
+            <!-- on a phone the toolbar folds into this menu -->
+            <button class="mi phoneonly" data-proxy="setBtn" role="menuitem">Settings</button>
+            <button class="mi phoneonly" data-proxy="helpBtn" role="menuitem">Help</button>
+            <button class="mi phoneonly" data-proxy="shareBtn" role="menuitem">Share <small>invite someone to this project</small></button>
+            <button class="mi phoneonly" data-proxy="colBtn" role="menuitem">Columns <small>show or hide columns</small></button>
+            <button class="mi phoneonly" data-proxy="ditBtn" role="menuitem">DIT names</button>
+            <button class="mi phoneonly" data-proxy="themeBtn" role="menuitem">Light / dark</button>
+            <hr class="phoneonly">
             <button class="mi" id="impBtn" role="menuitem" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import… <small>sheet, CSV or storyboard PDF</small></button>
             <hr>
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>

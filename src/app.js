@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.28.1";
+const VERSION = "2.28.2";
 const CHANGELOG = [
-  ["2.28.1","2026-11-20","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
+  ["2.28.2","2026-11-20","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
+  ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
   ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
   ["2.27.1","","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
   ["2.27.0","","Columns menu: Hide all not in use hides every column that's empty on all days of this kind (Live Action or Mocap), and Show all brings them all back."],
@@ -2550,6 +2551,8 @@ $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
 document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+// phone menu items stand in for the toolbar buttons that fold away
+$$("#filePop [data-proxy]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false");const t=$("#"+b.dataset.proxy);if(t)t.click()}));
 $("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");

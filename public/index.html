@@ -557,6 +557,23 @@ header.top .toolbar{align-items:center;gap:.5rem}
 .pop.menu .mi small{color:var(--muted);font-size:.78em}
 .pop.menu .mi:hover,.pop.menu .mi:focus-visible{background:var(--panel2);outline:none}
 .pop.menu hr{border:none;border-top:1px solid var(--line);margin:.25rem .3rem}
+.fl-phone,.pop.menu .phoneonly{display:none}
+/* phones: one row of buttons; the rest lives in the ☰ Menu */
+@media (max-width:600px){
+  header.top .toolbar{flex-wrap:nowrap;gap:.35rem;width:100%}
+  .tgroup+.tgroup,.tgroup+.onsetgroup{padding-left:0;border-left:none}
+  #colBtn,#ditBtn,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
+  .fl-desk{display:none} .fl-phone{display:inline}
+  .pop.menu .mi.phoneonly{display:flex} .pop.menu hr.phoneonly{display:block}
+  .onsetgroup{margin-left:auto}
+  #fileMenu .pop.menu{position:fixed;left:.5rem;right:.5rem;top:auto;bottom:.5rem;max-height:75vh;overflow:auto;min-width:0;z-index:80;box-shadow:0 -10px 40px -10px rgba(0,0,0,.45)}
+  #colMenu .pop{position:fixed;left:.5rem;right:.5rem;top:auto;bottom:.5rem;max-height:75vh;overflow:auto;width:auto;z-index:80;box-shadow:0 -10px 40px -10px rgba(0,0,0,.45)}
+  /* day tabs: full size, scrolling sideways */
+  .daytabs .tabgroup{display:none}
+  .daytabs .tg .daytab,.daytabs .tg.t1 .daytab,.daytabs .tg.t2 .daytab:not(.on),.daytabs .tg.t3 .daytab:not(.on){min-width:auto;padding:.55rem .8rem;overflow:visible}
+  .daytabs .tg.t1 .daytab:not(.on) .kind{display:inline}
+  .daytabs .tg.wrapped{border-left:1px solid var(--line2);padding-left:.4rem;margin-left:.2rem}
+}
 .colmenu .pop label{display:flex;gap:.45rem;align-items:center;padding:2px 0;white-space:nowrap}
 .colmenu .pop .note{font-size:.85rem;color:var(--muted);margin:.2rem 0 .4rem}
 .addrow{margin-top:.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
@@ -686,7 +703,7 @@ body.nosteps .mins.timing input{width:4.5em}
   /* tabs scroll sideways instead of squeezing */
   .daytabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
   .daytabs::-webkit-scrollbar{display:none}
-  .daytabs .tg{flex:0 0 auto}
+  .daytabs .tg,.daytabs .tg.ready,.daytabs .tg.wrapped{flex:0 0 auto}
   .daytabs .tg .daytab{flex:0 0 auto;min-width:auto}
   .titlebar h1 small{display:none}
   .legend{flex-wrap:wrap;gap:.4rem .9rem}
@@ -761,8 +778,16 @@ body.nosteps .mins.timing input{width:4.5em}
       <span class="tgroup">
         <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
         <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
-        <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity">File ▾</button>
+        <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity"><span class="fl-desk">File ▾</span><span class="fl-phone" aria-hidden="true">☰ Menu</span></button>
           <div class="pop menu" id="filePop" role="menu">
+            <!-- on a phone the toolbar folds into this menu -->
+            <button class="mi phoneonly" data-proxy="setBtn" role="menuitem">Settings</button>
+            <button class="mi phoneonly" data-proxy="helpBtn" role="menuitem">Help</button>
+            <button class="mi phoneonly" data-proxy="shareBtn" role="menuitem">Share <small>invite someone to this project</small></button>
+            <button class="mi phoneonly" data-proxy="colBtn" role="menuitem">Columns <small>show or hide columns</small></button>
+            <button class="mi phoneonly" data-proxy="ditBtn" role="menuitem">DIT names</button>
+            <button class="mi phoneonly" data-proxy="themeBtn" role="menuitem">Light / dark</button>
+            <hr class="phoneonly">
             <button class="mi" id="impBtn" role="menuitem" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import… <small>sheet, CSV or storyboard PDF</small></button>
             <hr>
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
@@ -1225,6 +1250,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li>The tool works on iPads and other tablets, and on phones for quick checks and ticking shots off. Add it to your home screen (Share → Add to Home Screen) and it opens like an app.</li>
     <li>On narrower screens the <b>Shot #</b> column stays put while you swipe sideways along a row, so you always know which shot you're in.</li>
     <li>The day banner folds down to the <b>Show</b> and <b>Priority</b> filters. Tap <b>Day settings</b> to open the name, status, times and buffers.</li>
+    <li>On a phone the header is one row: undo, redo, <b>☰ Menu</b>, Slate and Notes. The menu has Settings, Help, Share, Columns, DIT names and light / dark, as well as Import, Export and Print.</li>
     <li>Day tabs, the summary cards and the Settings tabs scroll sideways.</li>
     <li>Buttons and the − / + steppers get bigger on touch screens. Drag a column's right edge with your finger to resize it. To move a row, use the ↑ ↓ buttons in the row's last column if dragging the ⠿ handle is fiddly.</li>
   </ul>
@@ -1289,9 +1315,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.28.1";
+const VERSION = "2.28.2";
 const CHANGELOG = [
-  ["2.28.1","2026-11-20","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
+  ["2.28.2","2026-11-20","Tidier header on phones: one row (undo, redo, ☰ Menu, Slate, Notes). The menu holds Settings, Help, Share, Columns, DIT names and light / dark as well as the file items, and opens from the bottom of the screen. Day tabs keep their full size and scroll sideways."],
+  ["2.28.1","","Import reads a Sequence column (Seq, Sequence...): shots with the same letter or name become a sequence (/, -, n/a mean none). Updating from a revised sheet regroups the shots, shows the sequences in the preview, and can put the running order in sequence order (A, B, C...) with shot numbers in order inside each. A one-shot sequence works too."],
   ["2.28.0","","Sequences: group shots you shoot in one go (Seq on a row, or + in the new Sequence column). The sequence gets one set of takes and a DIT name covering the shot range (162-166, or 162+164+166). Sequence View shows the shots together with Roll / Cut, marks and notes; on Live Action days each take records which shots it caught, and the view lists what's still to get. Slate shows and claps the sequence; Sequence done ticks every shot. VCS: a tick per shot in Camera & look, shown on the slate, in Note View and Sequence View (shown by default on Mocap days)."],
   ["2.27.1","","Who's online: Go there switches to their day, clears any filter that would hide their row, scrolls to it and outlines it in their colour; someone in Slate or Note View is shown on the shot they have open. Change your name straight from the list (it's also in Settings, Team & sync). Drive account is per person (see 2.26.1)."],
   ["2.27.0","","Columns menu: Hide all not in use hides every column that's empty on all days of this kind (Live Action or Mocap), and Show all brings them all back."],
@@ -5120,6 +5147,8 @@ $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
 document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+// phone menu items stand in for the toolbar buttons that fold away
+$$("#filePop [data-proxy]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false");const t=$("#"+b.dataset.proxy);if(t)t.click()}));
 $("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
