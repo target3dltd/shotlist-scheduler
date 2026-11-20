@@ -372,7 +372,7 @@ function videoSection(r){
 function updateVideoHost(r){
   const host=$("#nvVideoHost"); if(!host) return; const pr=S.project||{}; const key=r.id+"|"+(r.video||"")+"|"+VID.i+"|"+[pr.vidSource,pr.vidAccount,pr.vidFolder,pr.vidBase].join("|");
   host.classList.toggle("has-video",videoLinks(r).length>0);
-  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r).childNodes);
+  if(host.dataset.key===key) return; host.dataset.key=key; host.innerHTML=""; host.append(...videoSection(r).childNodes); cardControls(host); applyNvLayout();
 }
 // in the table: the links, plus ▶ to open the shot in Note View
 function videoCell(r){
@@ -382,6 +382,61 @@ function videoCell(r){
   w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Note View",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
   return w;
 }
+
+/* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------
+   Panels are reordered with CSS order and sized with grid spans, never moved in the page, so a playing video carries on. */
+const NV_CARDS=["what","video","takes","notes","scribble"];
+function nvLayout(){P.nvLayout=P.nvLayout||{};return P.nvLayout}
+function nvCustom(){const L=P.nvLayout||{};return !!((L.order&&L.order.length)||Object.keys(L.span||{}).length||Object.keys(L.h||{}).length)}
+// how many columns the panel grid has room for (the same sum the grid does: 26rem panels and their gaps), whatever is spanning now
+function nvCols(body){const cs=getComputedStyle(body),gap=parseFloat(cs.columnGap)||16,inner=body.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
+  const rem=parseFloat(getComputedStyle(document.documentElement).fontSize)||16,min=Math.min(inner,26*rem);return Math.max(1,Math.floor((inner+gap)/(min+gap)))}
+function applyNvLayout(){
+  const body=$("#nvBody"); if(!body) return; const L=nvLayout(), cols=nvCols(body);
+  for(const c of body.children){ const k=c.dataset.card; if(!k) continue;
+    const i=(L.order||[]).indexOf(k); c.style.order=i>=0?String(i):"";
+    const sp=Math.min(cols,Number((L.span||{})[k])||1); c.style.gridColumn=sp>1?`span ${sp}`:"";
+    const hh=Number((L.h||{})[k]); c.style.height=hh&&cols>1?hh+"px":""; c.classList.toggle("sized",!!(hh&&cols>1)); }
+  const rb=$("#noteView .nvreset"); if(rb) rb.hidden=!nvCustom();
+}
+function resetNvLayout(){P.nvLayout={};savePrefs();applyNvLayout();toast("Note View layout reset")}
+function cardControls(sec){
+  sec.querySelectorAll(":scope > .cardgrip, :scope > .cardsize").forEach(x=>x.remove());
+  const grip=h("button",{class:"cardgrip",title:"Drag to move this panel","aria-label":"Move panel"},"⠿");
+  const size=h("span",{class:"cardsize",title:"Drag to resize. Double-click to reset this panel's size","aria-hidden":"true"});
+  grip.addEventListener("pointerdown",e=>moveCard(e,sec)); size.addEventListener("pointerdown",e=>sizeCard(e,sec));
+  size.addEventListener("dblclick",()=>{const L=nvLayout();if(L.span)delete L.span[sec.dataset.card];if(L.h)delete L.h[sec.dataset.card];savePrefs();applyNvLayout()});
+  // keyboard: arrow keys move the panel earlier or later
+  grip.addEventListener("keydown",e=>{const d=e.key==="ArrowLeft"||e.key==="ArrowUp"?-1:e.key==="ArrowRight"||e.key==="ArrowDown"?1:0;if(!d)return;e.preventDefault();e.stopPropagation();
+    const ord=currentCardOrder(),i=ord.indexOf(sec.dataset.card),j=i+d;if(j<0||j>=ord.length)return;ord.splice(j,0,ord.splice(i,1)[0]);nvLayout().order=ord;savePrefs();applyNvLayout();grip.focus()});
+  sec.append(grip,size);
+}
+function currentCardOrder(){const body=$("#nvBody");return [...body.children].filter(c=>c.dataset.card).sort((a,b)=>{const r1=a.getBoundingClientRect(),r2=b.getBoundingClientRect();return Math.abs(r1.top-r2.top)>20?r1.top-r2.top:r1.left-r2.left}).map(c=>c.dataset.card)}
+function moveCard(e,sec){
+  e.preventDefault(); const body=$("#nvBody"); const g=e.currentTarget; try{g.setPointerCapture(e.pointerId)}catch(err){}
+  document.body.classList.add("nvdragging"); sec.classList.add("nvmoving"); let target=null, after=false;
+  const others=()=>[...body.children].filter(c=>c.dataset.card&&c!==sec);
+  const mv=ev=>{ let best=null,dist=1e9; for(const c of others()){const r=c.getBoundingClientRect();const dx=Math.max(r.left-ev.clientX,0,ev.clientX-r.right),dy=Math.max(r.top-ev.clientY,0,ev.clientY-r.bottom);const d=dx*dx+dy*dy;if(d<dist){dist=d;best=c}}
+    $$(".nvdrop").forEach(x=>x.classList.remove("nvdrop","nvdrop-after")); target=best; if(!best) return;
+    const r=best.getBoundingClientRect(); after=ev.clientX>r.left+r.width/2; best.classList.add("nvdrop"); if(after) best.classList.add("nvdrop-after"); };
+  const up=()=>{ g.removeEventListener("pointermove",mv); g.removeEventListener("pointerup",up); g.removeEventListener("pointercancel",up);
+    document.body.classList.remove("nvdragging"); sec.classList.remove("nvmoving"); $$(".nvdrop").forEach(x=>x.classList.remove("nvdrop","nvdrop-after"));
+    if(!target) return; const ord=currentCardOrder().filter(k=>k!==sec.dataset.card); let i=ord.indexOf(target.dataset.card); if(after) i++;
+    ord.splice(i,0,sec.dataset.card); nvLayout().order=ord; savePrefs(); applyNvLayout(); };
+  g.addEventListener("pointermove",mv); g.addEventListener("pointerup",up); g.addEventListener("pointercancel",up);
+}
+function sizeCard(e,sec){
+  e.preventDefault(); const body=$("#nvBody"); const g=e.currentTarget; try{g.setPointerCapture(e.pointerId)}catch(err){}
+  const cols=nvCols(body), gap=parseFloat(getComputedStyle(body).columnGap)||16, inner=body.clientWidth-(parseFloat(getComputedStyle(body).paddingLeft)||0)-(parseFloat(getComputedStyle(body).paddingRight)||0);
+  const colW=(inner-gap*(cols-1))/cols, r0=sec.getBoundingClientRect(); document.body.classList.add("nvdragging"); sec.classList.add("nvsizing");
+  const L=nvLayout(); L.span=L.span||{}; L.h=L.h||{}; const k=sec.dataset.card;
+  const mv=ev=>{ const w=ev.clientX-r0.left, hh=Math.max(160,Math.round(ev.clientY-r0.top));
+    const sp=Math.max(1,Math.min(cols,Math.round((w+gap)/(colW+gap)))); L.span[k]=sp; if(cols>1) L.h[k]=hh; applyNvLayout(); };
+  const up=()=>{ g.removeEventListener("pointermove",mv); g.removeEventListener("pointerup",up); g.removeEventListener("pointercancel",up);
+    document.body.classList.remove("nvdragging"); sec.classList.remove("nvsizing"); savePrefs(); applyNvLayout(); };
+  g.addEventListener("pointermove",mv); g.addEventListener("pointerup",up); g.addEventListener("pointercancel",up);
+}
+addEventListener("resize",()=>{if($("#noteView").classList.contains("open"))applyNvLayout()});
 
 /* ---------- stay in Slate / Note View across a reload (this browser tab only) ---------- */
 function rememberView(view,id){ try{ if(view&&id) sessionStorage.setItem("shotlist-view",JSON.stringify({view,id,pid:pid(),day:(D()||{}).id})); else sessionStorage.removeItem("shotlist-view"); }catch(e){} }

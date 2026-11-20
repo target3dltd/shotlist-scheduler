@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.25.3";
+const VERSION = "2.26.0";
 const CHANGELOG = [
-  ["2.25.3","2026-11-20","A reload keeps you where you were: Slate View or Note View reopens on the same shot (in that browser tab). Note View puts a shot's reference video in the top row beside the storyboard, so it's visible on laptop screens without scrolling; shots without one get a small Add video box at the end."],
+  ["2.26.0","2026-11-20","Note View panels can be moved and resized: drag ⠿ (top right of a panel) to move it, or use the arrow keys on it; drag the corner at the bottom right to make it wider (in whole columns) and taller. Double-click the corner to reset that panel; Reset layout in the header puts them all back. Kept on each device. A playing video carries on while you rearrange."],
+  ["2.25.3","","A reload keeps you where you were: Slate View or Note View reopens on the same shot (in that browser tab). Note View puts a shot's reference video in the top row beside the storyboard, so it's visible on laptop screens without scrolling; shots without one get a small Add video box at the end."],
   ["2.25.2","","Slate and Note View shortcuts no longer fire when Ctrl, Cmd or Alt is held, so Ctrl+Shift+R (reload) doesn't roll a take."],
   ["2.25.1","","Slate View: tap the shot number to open that shot in Note View."],
   ["2.25.0","","Reference video in Note View: paste a Google Drive link (or Dropbox, Box, OneDrive embed code, Vimeo, YouTube, .mp4) for a shot and it plays in a panel under the notes, for the whole team. Several videos per shot. Marking takes doesn't restart it. Direct video files get speed (quarter, half, full), frame steps, loop and mirror. A Reference video column in the table with a play button. Settings, Project, Reference video: where each project keeps its videos, the Google account its Drive files open with, the project folder, or your own server's web address so the team can type just a file name. PDF storyboard import no longer adds pictures a shot already has, and File > Remove duplicate pictures tidies shots that got them twice."],
@@ -1843,6 +1844,7 @@ function renderNotes(){
     h("div",{class:"nvtitle"},h("b",{},r?"Shot "+(r.shot||"-"):"No shots"),r&&r.priority?h("span",{class:"pill nvprio",style:`background:${prioHex(r.priority)||"var(--panel2)"};color:${inkOn(prioHex(r.priority)||"#ffffff")}`},r.priority):null,
       h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
+    h("button",{class:"nvreset",title:"Put the panels back in their usual places and sizes",onclick:resetNvLayout,hidden:!nvCustom()},"Reset layout"),
     h("button",{title:"Close",onclick:closeNotes},"✕"));
   v.insertBefore(head,body); if(!r){host.innerHTML="";host.dataset.key="";host.className="nvvhost";return}
   // what the shot is
@@ -1880,8 +1882,8 @@ function renderNotes(){
     t.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[k]=t.value;autosize(t);softCommit()}); t.addEventListener("change",commit);
     notes.append(h("label",{},l,t)); requestAnimationFrame(()=>autosize(t));
   }
-  for(const sec of [h("section",{class:"nvwhat"},pics,info),h("section",{class:"nvtk"},h("h3",{},"Takes"),takes),h("section",{class:"nvnt"},h("h3",{},"Notes"),notes),h("section",{class:"nvsc"},h("h3",{},"Scribble"),scribblePad(r))]) body.insertBefore(sec,host);
-  updateVideoHost(r); rememberView("notes",r.id);
+  for(const [sec,key] of [[h("section",{class:"nvwhat"},pics,info),"what"],[h("section",{class:"nvtk"},h("h3",{},"Takes"),takes),"takes"],[h("section",{class:"nvnt"},h("h3",{},"Notes"),notes),"notes"],[h("section",{class:"nvsc"},h("h3",{},"Scribble"),scribblePad(r)),"scribble"]]){ sec.dataset.card=key; cardControls(sec); body.insertBefore(sec,host); }
+  host.dataset.card="video"; updateVideoHost(r); rememberView("notes",r.id); applyNvLayout();
   v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
 }
 function fmtDur(ms){const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
