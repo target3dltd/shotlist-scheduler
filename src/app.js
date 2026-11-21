@@ -1,7 +1,13 @@
 "use strict";
-const VERSION = "2.36.0";
+const VERSION = "2.41.0";
 const CHANGELOG = [
-  ["2.36.0","2026-11-21","Breaks, lunch and tech rows have a status too: Not yet, On now or Done. Start and end them from the chip on the row, or the Start / End button on the Running card when one is up next. While one is on, the Running card counts down (or shows how far over it is) and ahead / behind follows its real end; the actual timeline draws it at its real times. Even unmarked, the planned break now counts before the next setup, so the delta no longer drifts towards ahead over lunch."],
+  ["2.41.0","2026-11-21","Reset: go again without cutting. While a take rolls, ↺ Reset (or E) in Slate View, Sequence View and Details marks R1, R2... with their timecode on the take. Each reset shows under the take; click one to mark it Hero, Good, NG or Safety (a hero reset fills the Hero column as T3 R4). Resets go in Export takes, and in the Edit tool a reset comes in at its own timecode (Swap in latest takes picks up hero resets). + Take in Details and Sequence View (and T) now only adds a take you forgot to roll on: the next take number, no timecode, nothing rolling. ● Roll is still how you start one."],
+  ["2.40.0","","Note View is now called Details. Open any shot in Details from the list with the ↗ at the end of its Shot #. The description can be edited in Details (click it and type; it saves for the whole team)."],
+  ["2.39.1","","Slate: the clap flash (the picture sync point) now always shows. With Log take on clap turned on, the redraw used to wipe it before it was seen. It's also held back by the device's audio delay, so the flash and the clap sound land together, even through Bluetooth or an external speaker."],
+  ["2.39.0","","Edit / animatic (Edit in the header): build a cut from the shotlist, starting with storyboard frames and swapping in takes from the take log or video links (rushes, previz) as they arrive. Drag to reorder, drag an edge to trim, set in points, split at the playhead. Play it through in the browser with a music or VO track (a link, or a file on your device). Several cuts per project, shared with the team. Export a CMX3600 EDL or FCP XML (take clip names and timecode in, shot names and notes as comments and markers) for Premiere, Resolve or Avid."],
+  ["2.38.0","","Call sheet: Kit, suppliers and deliveries (per day: supplier, kit, contact, delivery / collection; Copy from another day) and a Risk assessment table (hazard, who may be harmed, risk, controls, risk after), starting from eight common film-set risks you can edit, shared by the whole project, with a link to the full risk assessment. Both optional; empty rows aren't printed."],
+  ["2.37.0","","Call sheet: an Emergency box (dial 999, nearest A&E, police station, fire station, first aid, fire assembly point) with Find nearest (from the day's location, via OpenStreetMap) and Copy from another day; Call times by department; Travel and parking; and standard Health and safety, Confidentiality, Code of conduct, Green note and Invoicing sections, pre-written, editable, shared by the whole project and each one optional. A company line under the title. Anything left empty is left off the print."],
+  ["2.36.0","","Breaks, lunch and tech rows have a status too: Not yet, On now or Done. Start and end them from the chip on the row, or the Start / End button on the Running card when one is up next. While one is on, the Running card counts down (or shows how far over it is) and ahead / behind follows its real end; the actual timeline draws it at its real times. Even unmarked, the planned break now counts before the next setup, so the delta no longer drifts towards ahead over lunch."],
   ["2.35.1","","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
   ["2.35.0","","Tidier dashboard. Layouts: one click for 1st AD, DIT / data, Director or Everything, or save your own (cards, panels, focus and columns), from the ⋯ at the end of the cards or Display settings. Shoot-day focus (the Focus button by the cards) tucks away planning cards, hints, the planned timeline and planning columns. Pace sits inside the Running card: tap the card for the details. The Recovery plan is one line while you're on target and opens itself at amber or red. Call sheet, Running order, Wrap report, DIT names, Export takes and the Shoot-ready check are together in a Documents menu. On phones, a thin bar with the delta, the shot you're on and the wrap pins to the top once you scroll past the cards (tap it to go back up)."],
   ["2.34.0","","Choose which summary cards show along the top (Running, Calculated wrap, Day length, totals, Shots, Takes and so on): tap the ⋯ at the end of the cards, or Display settings > Summary cards. The hint pills under the cards can be turned off too. Per device."],
@@ -445,7 +451,7 @@ function goToPerson(p){
 }
 function renderWhoPop(quiet){
   const real=$("#whoPop"); const pop=quiet?h("div",{}):real; if(!quiet) real.innerHTML="";
-  const devName={phone:"phone",tablet:"tablet",computer:"computer"}, viewName={slate:"in Slate View",notes:"in Note View"};
+  const devName={phone:"phone",tablet:"tablet",computer:"computer"}, viewName={slate:"in Slate View",notes:"in Details"};
   const dur=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just joined":m<60?`on for ${m} min`:`on for ${Math.floor(m/60)}h ${m%60}m`};
   const line=(p,me)=>{
     const where=[p.day,presenceRow(p)].filter(Boolean).join(" · ");
@@ -1044,7 +1050,7 @@ function renderBody(){
         hd.append(isBreak?blockChip(r):statusChip(r,NOWCUR));
         td.append(hd);
       }
-      else if(k==="shot"){ td.append(isBreak?textCell(r,"label",false):textCell(r,"shot",false,{ph:"-"})); }
+      else if(k==="shot"){ if(isBreak) td.append(textCell(r,"label",false)); else { td.classList.add("hasgo"); td.append(textCell(r,"shot",false,{ph:"-"}),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open this shot in Details",onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } }
       else if(k==="seq"){ if(!isBreak) td.append(seqCell(r)); }
       else if(k==="shotId"){ if(!isBreak) td.append(nameCell(r)); }
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
@@ -1676,8 +1682,9 @@ function upNext(d){const s=runningShots(d);return s.find(r=>!r.done)||s[s.length
 function takeList(r){try{const a=JSON.parse(r.takeLog||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
 function setTakeList(r,a){r.takeLog=JSON.stringify(a)}
 // hero / safety marks also fill the Hero and Safety columns (which drive the links reminder on wrapped days)
-function syncMarks(r){const a=takeList(r);const hs=a.filter(t=>t.mark==="hero").map(t=>"T"+t.n),ss=a.filter(t=>t.mark==="safety").map(t=>"T"+t.n);
-  if(hs.length||String(r.hero||"").match(/^(T\d+(, )?)*$/))r.hero=hs.join(", ");if(ss.length||String(r.safety||"").match(/^(T\d+(, )?)*$/))r.safety=ss.join(", ")}
+function syncMarks(r){const a=takeList(r);const pick=m=>a.flatMap(t=>[...(t.mark===m?["T"+t.n]:[]),...(t.resets||[]).filter(x=>x.mark===m).map(x=>"T"+t.n+" R"+x.n)]);const hs=pick("hero"),ss=pick("safety");
+  const auto=v=>String(v||"").match(/^(T\d+( R\d+)?(, )?)*$/);
+  if(hs.length||auto(r.hero))r.hero=hs.join(", ");if(ss.length||auto(r.safety))r.safety=ss.join(", ")}
 // log a take on a shot: counts it, and keeps its timecode and time of day
 function logTake(id,extra={}){ { const d=D(), r0=R(id); if(d&&r0){ const t=r0.seq&&R(r0.seq)?seqAnchor(r0):r0; if(d.onRow!==t.id){ d.onRow=t.id; d.onSince=Date.now(); } } }
   const r=R(id); if(!r) return null; const d=D(); const n=nextTake(r,d);
@@ -1849,7 +1856,8 @@ function tickSlate(){const el=$("#slTc");if(el&&$("#slateView").classList.contai
   // while a take rolls: its number, timecode in and running length
   const now=Date.now(); if(!SLV.rt||now-SLV.rt>250){SLV.rt=now;const r=SLV.id&&R(SLV.id),t=rollingTake(r),m=$("#slMsg"),cb=$("#slCut");
     if(cb)cb.classList.toggle("live",!!t);$("#slateView").classList.toggle("rolling",!!t);
-    if(m&&t)m.textContent=`● Rolling take ${t.n} · in ${t.tc} · ${fmtDur(now-t.at)}`;}
+    const rb=$("#slReset"); if(rb){rb.classList.toggle("live",!!t);const lab=resetLabel(r);if(rb.textContent!==lab)rb.textContent=lab;}
+    if(m&&t&&!(SLV.msgUntil>now)){const rs=t.resets||[],lr=rs[rs.length-1];m.textContent=`● Rolling take ${t.n} · in ${t.tc} · ${fmtDur(now-t.at)}`+(lr?` · R${lr.n} at ${lr.tc} (${fmtDur(now-lr.at)})`:"");}}
   SLV.raf=requestAnimationFrame(tickSlate)}}
 function slateCut(){ if(!SLV.id) return; const t=cutTake(SLV.id); const m=$("#slMsg");
   if(!t){ if(m) m.textContent="Nothing rolling to cut: clap to log a take first"; return; }
@@ -1857,7 +1865,7 @@ function slateCut(){ if(!SLV.id) return; const t=cutTake(SLV.id); const m=$("#sl
 function renderSlate(){ if($("#slateView").classList.contains("open")) rememberView("slate",SLV.id);
   renderSlate0(); }
 function renderSlate0(){
-  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme;
+  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme+(v.classList.contains("flash")?" flash":"");
   v.innerHTML=""; const sh=c.show, fps=slateFps();
   const cell=(lab,val,cls="")=>h("div",{class:"slc "+cls},h("div",{class:"sll"},lab),h("div",{class:"slv"},val||"-"));
   const take=r?nextTake(r,d):"-";
@@ -1868,7 +1876,7 @@ function renderSlate0(){
   if(sh.dop) top.append(cell("Camera / DOP",c.dop));
   const mid=h("div",{class:"slrow big"});
   if(sh.shot){ const c=cell(r&&r.seq?"Sequence"+(seqAnyVcs(r)?" · VCS":""):"Shot"+(r&&r.vcs?" · VCS":""),r?(r.seq?seqRange(r,d)||r.shot:(r.shot||r.action||"-")):"-","huge");
-    // tap the shot number to open the same shot in Note View (looks the same, just clickable)
+    // tap the shot number to open the same shot in Details (looks the same, just clickable)
     if(r){ const go=()=>{closeSlate();r.seq?openSeqView(r.seq):openNotes(r.id)}; c.classList.add("slgo"); c.setAttribute("role","button"); c.tabIndex=0; c.title=r.seq?"Open this sequence in Sequence View":"Open this shot in Note View";
       c.addEventListener("click",go); c.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.stopPropagation();go()}}); }
     mid.append(c); }
@@ -1886,6 +1894,7 @@ function renderSlate0(){
   const nav=h("div",{class:"slnav"},
     h("button",{title:"Previous shot",onclick:()=>slateStep(-1)},"‹"),
     h("button",{class:"clap",onclick:()=>clap()},c.logOnClap?"Clap · log take":"Clap"),
+    h("button",{class:"resetb",id:"slReset",title:"Reset: go again without cutting. Marks R1, R2... with the timecode on the take that's rolling (E)",onclick:()=>slateReset()},resetLabel(R(SLV.id))),
     h("button",{class:"cutb",id:"slCut",title:"Cut: timecode out on the take that's rolling (X)",onclick:()=>slateCut()},"■ Cut"),
     ...(R(SLV.id)?[onNowBtn(R(SLV.id))]:[]),
     h("button",{title:"Mark this shot (or the whole sequence) done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){for(const m of (x.seq?seqMembers(x):[x])){m.done=true;m.doneAt=dayClock(D())}commit();renderBody()}const n=seqAnchor(upNext());SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
@@ -1894,7 +1903,7 @@ function renderSlate0(){
     h("button",{title:"Slate settings and timecode",onclick:()=>slateSettings()},"⚙"),
     document.fullscreenEnabled?h("button",{title:"Full screen",onclick:()=>{document.fullscreenElement?document.exitFullscreen():v.requestFullscreen().catch(()=>{})}},"⛶"):null,
     h("button",{title:"Close",onclick:closeSlate},"✕"));
-  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("p",{class:"keyhint"},"Keys: Space or C clap · X cut · ← → shots · F full screen · Esc close"),h("div",{class:"slsettings",id:"slSet"}));
+  v.append(bar,top,mid,low,extra.childNodes.length?extra:"",tc||"",h("div",{class:"slmsg",id:"slMsg"}),nav,h("p",{class:"keyhint"},"Keys: Space or C clap · E reset · X cut · ← → shots · F full screen · Esc close"),h("div",{class:"slsettings",id:"slSet"}));
   if(!r) $("#slMsg").textContent="No shots on this day yet.";
   fitSlate();
 }
@@ -1904,10 +1913,14 @@ window.addEventListener("resize",()=>{ if($("#slateView").classList.contains("op
 function bumpRoll(v){const m=String(v||"A000").match(/^(.*?)(\d+)$/);return m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):String(v||"")+"2"}
 function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+"h ago"}
 function clap(){
+  const c=slateCfg();
+  // log first: the redraw would otherwise wipe the flash before it showed
+  if(SLV.id&&c.logOnClap){const t=logTake(SLV.id);if(t){renderSlate();$("#slMsg").textContent=`Take ${t.n} logged at ${t.tc}`;renderBody()}}
   playClap();
-  const v=$("#slateView"); v.classList.remove("flash"); void v.offsetWidth; v.classList.add("flash");
-  if(!SLV.id) return; const c=slateCfg();
-  if(c.logOnClap){const t=logTake(SLV.id);if(t){renderSlate();$("#slMsg").textContent=`Take ${t.n} logged at ${t.tc}`;renderBody()}}
+  // the flash is the picture sync point: hold it back by the device's audio delay so the camera sees it as the sound comes out
+  let lag=0; try{ const ctx=sfx(); if((c.sound||"clap")!=="none"&&Number(c.volume)!==0) lag=((ctx.outputLatency||0)+(ctx.baseLatency||0)+0.005)*1000; }catch(e){}
+  const go=()=>{ const v=$("#slateView"); v.classList.remove("flash"); void v.offsetWidth; v.classList.add("flash"); };
+  lag>4?setTimeout(go,Math.min(lag,400)):go();
 }
 function slateSettings(){
   const box=$("#slSet"); if(box.classList.toggle("open")===false) return; box.innerHTML=""; const c=slateCfg();
@@ -1971,7 +1984,9 @@ function renderNotes(){
   const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}
   const info=h("div",{class:"nvinfo"});
   if(r.action) info.append(h("p",{},h("b",{},r.action)));
-  if(r.description) info.append(h("p",{},r.description));
+  { const t=h("textarea",{class:"nvdesc",rows:"2",placeholder:"Description: what happens in the shot","aria-label":"Description"}); t.value=r.description||"";
+    t.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x.description=t.value;autosize(t);softCommit()}); t.addEventListener("change",()=>{commit();renderBody()});
+    info.append(t); requestAnimationFrame(()=>autosize(t)); }
   if(r.script) info.append(h("blockquote",{},r.script));
   if(r.seq){ const a=seqAnchor(r); info.prepend(h("div",{class:"seqbanner",style:`--seq:${seqColor(r.seq)}`},h("b",{},"Part of sequence "+seqTitle(a)),` (${seqRange(a,d)}). `,h("button",{class:"go",onclick:()=>{closeNotes();openSeqView(r.seq)}},"Open Sequence View"))); }
   const chips=[["Location",r.location],["Shot type",r.shotType],["VCS",r.vcs?"yes":""],["Name",shotName(r,d,nextTake(r,d))]].filter(x=>x[1]);
@@ -1984,7 +1999,7 @@ function renderNotes(){
   clearInterval(NV.timer); if(rolling) NV.timer=setInterval(()=>{const c=$("#noteView .nvclock");const t=rollingTake(R(r.id));if(c&&t)c.textContent=fmtDur(Date.now()-t.at);else if(!t){clearInterval(NV.timer);renderNotes()}},250);
   // Roll logs the take with its timecode in; Cut adds the timecode out (the same take the slate clapped, if it did)
   rollBtn.onclick=()=>{ if(rollingTake(R(r.id))) cutTake(r.id); else logTake(r.id); renderNotes(); };
-  takes.append(h("div",{class:"toolbar"},rollBtn,clock,h("button",{class:"btn",onclick:()=>{logTake(r.id);renderNotes()}},"+ Take"),
+  takes.append(h("div",{class:"toolbar"},rollBtn,h("button",{class:"btn resetb",disabled:!rolling,title:"Reset: go again without cutting. Marks R1, R2... with the timecode on the take that's rolling (E)",onclick:()=>{resetTake(r.id);renderNotes()}},resetLabel(r)),clock,h("button",{class:"btn",title:"Add a take you didn't roll on (fills in a missing take number, nothing starts rolling). Double-click its timecode to fill it in.",onclick:()=>{addMissedTake(r.id);renderNotes()}},"+ Take"),
     h("button",{class:"btn primary",title:"Mark this shot done and go to the next",onclick:()=>{const x=R(r.id);if(x){x.done=true;x.doneAt=dayClock(D());commit()}const n=upNext();NV.id=n&&n.id;renderNotes()}},"Shot done ✓")));
   const list=takeList(r).slice().reverse();
   if(!list.length) takes.append(h("p",{class:"note"},"No takes logged yet. ● Roll logs a take with its timecode in, ■ Cut adds the timecode out; + Take logs one without rolling. Clap and Cut in Slate View do the same."));
@@ -1993,7 +2008,7 @@ function renderNotes(){
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.mark=it.mark===m?"":m;setTakeList(x,a);syncMarks(x);commit();renderNotes()}}},l));
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.note=note.value;setTakeList(x,a);commit()}});
     takes.append(h("div",{class:"nvtake"+(!t.out&&t.at&&Date.now()-t.at<4*3600e3&&t===list[0]?" live":"")},takeLabel(r.id,t,()=>renderNotes()),
-      tcEditable(h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"no TC in",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),r.id,t.n,()=>renderNotes()),marks,note,
+      tcEditable(h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"no TC in",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),r.id,t.n,()=>renderNotes()),marks,note,resetChips(r.id,t,()=>renderNotes()),
       h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(r.id,t.n,()=>renderNotes())},"✕")));
   }
   // notes, saved straight onto the shot for the whole team
@@ -2005,7 +2020,7 @@ function renderNotes(){
   }
   for(const [sec,key] of [[h("section",{class:"nvwhat"},pics,info),"what"],[h("section",{class:"nvtk"},h("h3",{},"Takes"),takes),"takes"],[h("section",{class:"nvnt"},h("h3",{},"Notes"),notes),"notes"],[h("section",{class:"nvsc"},h("h3",{},"Scribble"),scribblePad(r)),"scribble"]]){ sec.dataset.card=key; cardControls(sec); body.insertBefore(sec,host); }
   host.dataset.card="video"; updateVideoHost(r); rememberView("notes",r.id); applyNvLayout();
-  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
+  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · E reset · T add a missed take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
 }
 function fmtDur(ms){const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 // a drawing pad for finger or pencil; saved as a picture on the shot
@@ -2571,22 +2586,25 @@ $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.togg
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
 $("#shareBtn").onclick=openShare;
-$("#slateBtn").onclick=openSlate; $("#notesBtn").onclick=openNotes;
+$("#slateBtn").onclick=openSlate; $("#notesBtn").onclick=openNotes; $("#editBtn").onclick=openEdit;
 document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("input,textarea,select"))return;
   // browser and system shortcuts (Ctrl/Cmd+R reload, Cmd+F find, Alt+…) are left alone
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const k=e.key.toLowerCase();
-  if($("#slateView").classList.contains("open")){ if(e.key==="Escape"){if($("#slSet").classList.contains("open"))$("#slSet").classList.remove("open");else closeSlate()} else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "||k==="c"){e.preventDefault();clap()} else if(k==="x"||k==="."){e.preventDefault();slateCut()} else if(k==="f")toggleFull($("#slateView")); }
+  if($("#editView").classList.contains("open")){ edKey(e,k); return; }
+  if($("#slateView").classList.contains("open")){ if(e.key==="Escape"){if($("#slSet").classList.contains("open"))$("#slSet").classList.remove("open");else closeSlate()} else if(e.key==="ArrowRight")slateStep(1); else if(e.key==="ArrowLeft")slateStep(-1); else if(e.key===" "||k==="c"){e.preventDefault();clap()} else if(k==="x"||k==="."){e.preventDefault();slateCut()} else if(k==="e"){e.preventDefault();slateReset()} else if(k==="f")toggleFull($("#slateView")); }
   else if($("#seqView").classList.contains("open")){ const a=SQV.id&&R(SQV.id);
     if(e.key==="Escape")closeSeqView(); else if(e.key==="ArrowRight")seqStep(1); else if(e.key==="ArrowLeft")seqStep(-1);
     else if(k==="r"&&a){if(rollingTake(a))cutTake(a.id);else logTake(a.id,a&&D().kind!=="capture"?{caught:[]}:{});renderSeqView()}
-    else if(k==="t"&&a){logTake(a.id,D().kind!=="capture"?{caught:[]}:{});renderSeqView()}
+    else if(k==="e"&&a){resetTake(a.id);renderSeqView()}
+    else if(k==="t"&&a){addMissedTake(a.id,D().kind!=="capture"?{caught:[]}:{});renderSeqView()}
     else if(["g","n","h","s"].includes(k)&&a){const l=takeList(a);const last=l[l.length-1];if(last){const m={g:"good",n:"ng",h:"hero",s:"safety"}[k];last.mark=last.mark===m?"":m;setTakeList(a,l);syncMarks(a);commit();renderSeqView()}}
     else if(k==="f")toggleFull($("#seqView")); }
   else if($("#noteView").classList.contains("open")){ const r=NV.id&&R(NV.id);
     if(e.key==="Escape")closeNotes(); else if(e.key==="ArrowRight")notesStep(1); else if(e.key==="ArrowLeft")notesStep(-1);
     else if(k==="r"&&r){if(rollingTake(r))cutTake(r.id);else logTake(r.id);renderNotes()}
-    else if(k==="t"&&r){logTake(r.id);renderNotes()}
+    else if(k==="e"&&r){resetTake(r.id);renderNotes()}
+    else if(k==="t"&&r){addMissedTake(r.id);renderNotes()}
     else if(["g","n","h","s"].includes(k)&&r){const a=takeList(r);const last=a[a.length-1];if(last){const m={g:"good",n:"ng",h:"hero",s:"safety"}[k];last.mark=last.mark===m?"":m;setTakeList(r,a);syncMarks(r);commit();renderNotes()}}
     else if(k==="f")toggleFull($("#noteView")); } });
 function toggleFull(el){ if(!document.fullscreenEnabled) return; document.fullscreenElement?document.exitFullscreen().catch(()=>{}):el.requestFullscreen().catch(()=>{}); }

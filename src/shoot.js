@@ -31,7 +31,11 @@ function rebuildDoc(){const ae=document.activeElement;if(ae&&ae.closest&&ae.clos
 function printDoc(){
   document.body.classList.add("printdoc");
   $$("#docBody textarea").forEach(t=>{const div=h("div",{class:"ta-print"},t.value||"");t.after(div)});
-  const done=()=>{document.body.classList.remove("printdoc");$$("#docBody .ta-print").forEach(x=>x.remove());removeEventListener("afterprint",done)};
+  // leave out optional parts nobody filled in, and standard sections that are switched off
+  $$("#docBody .csopt").forEach(el=>{if(![...el.querySelectorAll("textarea")].some(t=>t.value.trim()))el.classList.add("printhide")});
+  $$("#docBody .csrow").forEach(el=>{const t=el.querySelector("textarea");if(t&&!t.value.trim())el.classList.add("printhide")});
+  $$("#docBody .cstable tbody tr").forEach(tr=>{if(![...tr.querySelectorAll("textarea")].some(t=>t.value.trim()))tr.classList.add("printhide")});
+  const done=()=>{document.body.classList.remove("printdoc");$$("#docBody .ta-print").forEach(x=>x.remove());$$("#docBody .printhide").forEach(x=>x.classList.remove("printhide"));removeEventListener("afterprint",done)};
   addEventListener("afterprint",done); window.print(); setTimeout(()=>{if(!matchMedia("print").matches&&document.body.classList.contains("printdoc"))done()},1500);
 }
 function docText(){
@@ -40,7 +44,7 @@ function docText(){
       if(n.nodeType===3){const t=n.textContent.replace(/\s+/g," ");if(t.trim())out.push(t);continue}
       if(n.nodeType!==1||n.classList.contains("noprint")||n.tagName==="BUTTON") continue;
       if(n.tagName==="TEXTAREA"||n.tagName==="INPUT"){if(n.value)out.push(n.value);continue}
-      if(n.tagName==="TR"){out.push("\n"+[...n.children].map(c=>c.innerText.replace(/\s+/g," ").trim()).filter(Boolean).join("  |  "));continue}
+      if(n.tagName==="TR"){const cells=[...n.children].filter(c=>!c.classList.contains("noprint")).map(c=>{const ta=c.querySelector("textarea");return (ta?ta.value:c.innerText).replace(/\s+/g," ").trim()}).filter(Boolean);if(cells.length)out.push("\n"+cells.join("  |  "));continue}
       const block=/^(H\d|P|DIV|SECTION|LI|TABLE|UL)$/.test(n.tagName); if(block) out.push("\n"); walk(n); if(/^H\d$/.test(n.tagName))out.push("\n");
     }}; walk($("#docBody"));
   return out.join("").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
@@ -66,11 +70,15 @@ function buildCallSheet(b,d){
     h("div",{class:"docday"},h("div",{},d.name),h("small",{},[dayOfN(d),longDate(d.date)].filter(Boolean).join(" · ")))));
   b.append(h("div",{class:"kvs big"},kv("Crew call",fmt(toMin(d.call||"09:00"))),kv("First shot",first?fmt(C.rows[first.id].start):"-"),
     kv(lunch?blockName(lunch):"Break",lunch?fmt(C.rows[lunch.id].start)+" for "+dur(C.rows[lunch.id].sh):"-"),kv("Target wrap",fmt(wrapMin(d))),kv("Scheduled wrap",fmt(C.wrap))));
+  if(pr.csCompany) b.append(h("p",{class:"docco"},pr.csCompany));
+  b.append(h("section",{class:"docsec csopt"},h("h3",{},"Call times"),csBox(d,"csCalls","One per line, e.g.\n07:00 Production & runners\n07:30 Hair & make-up, talent\n08:00 Main unit\n09:30 Client",false)));
+  b.append(emergencySection(d));
   const sky=skyLine(d,true);
   b.append(h("section",{class:"docsec"},h("h3",{},"Location"),
-    h("div",{class:"doc2"},h("div",{},h("label",{class:"doclabel"},"Address, parking and access"),dayNoteBox(d,"address","Address, postcode, parking, unit base, access notes")),
-      h("div",{},h("label",{class:"doclabel"},"Weather and daylight"),sky||h("p",{class:"note"},"No location set for this day."),locationButton(d,"noprint")))));
-  b.append(h("section",{class:"docsec"},h("h3",{},"Notes"),dayNoteBox(d,"callNotes","Nearest hospital, safety, catering, wardrobe, what to bring, contacts on the day")));
+    h("div",{class:"doc2"},h("div",{},h("label",{class:"doclabel"},"Address and access"),dayNoteBox(d,"address","Address, postcode, unit base, what3words, access notes")),
+      h("div",{},h("label",{class:"doclabel"},"Weather and daylight"),sky||h("p",{class:"note"},"No location set for this day."),locationButton(d,"noprint"))),
+    h("div",{class:"csopt",style:"margin-top:.5rem"},h("label",{class:"doclabel"},"Travel and parking"),csBox(d,"csTravel","Nearest stations and walk times, parking (and who it's booked for), load-in",false))));
+  b.append(h("section",{class:"docsec csopt"},h("h3",{},"Notes"),dayNoteBox(d,"callNotes","Catering, wardrobe, what to bring, anything else for the day")));
   for(const group of ["Cast","Crew"]){
     const ppl=S.people.filter(p=>(p.group||"Crew")===group&&(p.name||p.role)); if(!ppl.length) continue;
     const t=h("table",{class:"doctable"},h("thead",{},h("tr",{},...["Name",group==="Cast"?"Character / role":"Role","Phone","Email","Notes"].map(x=>h("th",{},x)))));
@@ -85,6 +93,10 @@ function buildCallSheet(b,d){
     tb.append(h("tr",{},h("td",{class:"nowrap"},fmt(c.start)),h("td",{class:"nowrap"},h("b",{},r.shot||"")),h("td",{},String((capture?r.action:r.description)||r.description||r.action||"").slice(0,160)),
       h("td",{},r.location||""),h("td",{},capture?(r.performers||""):(r.shotType||"")),h("td",{class:"num"},String(Math.round(c.su+c.sh)))));});
   t.append(tb); b.append(h("section",{class:"docsec"},h("h3",{},`Schedule (${shots.length} shot${shots.length===1?"":"s"})`),t));
+  b.append(tableSection(d,CS_KIT));
+  for(const s of CS_STD) b.append(stdSection(s));
+  b.append(tableSection(d,CS_RISK));
+  b.append(h("details",{class:"noprint cssetup"},h("summary",{},"Company line"),h("p",{class:"note"},"Shown under the title on every call sheet in this project, e.g. production company, address and phone."),csBox(null,"csCompany","e.g. Target3D Ltd · 11C Dock Street, London E1 8JN · 0203 488 2575",true)));
   b.append(h("p",{class:"docfoot"},`${pr.name||"Shotlist"} · ${d.name} · printed ${new Date().toLocaleString([], {dateStyle:"medium",timeStyle:"short"})}`));
 }
 
@@ -143,15 +155,15 @@ function buildWrap(b,d){
 /* ---------- takes for the edit / DIT ---------- */
 function exportTakes(days){
   commit(); days=days||live();
-  const head=["Day","Date","Shot #","Take","Clip name","Mark","TC in","TC out","Duration (s)","Duration","Logged at","Take note","Shot description","Action","Location / setup","Shot notes","Hero URL","Safety URL","Frame rate"];
+  const head=["Day","Date","Shot #","Take","Clip name","Mark","TC in","TC out","Duration (s)","Duration","Logged at","Take note","Resets","Shot description","Action","Location / setup","Shot notes","Hero URL","Safety URL","Frame rate"];
   const lines=[head.map(csvEsc).join(",")]; let n=0;
   const fps=Number(S.project.fps)||"";
   for(const d of days) for(const r of d.rows){ if(isBlock(r)) continue;
     for(const t of takeList(r)){ n++; const ms=takeMs(t);
       lines.push([d.name,d.date||"",r.shot||"",t.n,t.name||shotName(r,d,t.n)||"",t.mark?t.mark[0].toUpperCase()+t.mark.slice(1):"",t.tc||"",t.out||"",ms?Math.round(ms/100)/10:"",ms?durSecs(ms):"",
-        t.at?new Date(t.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}):(t.t||""),t.note||"",r.description||"",r.action||"",r.location||"",r.notes||r.director||"",r.heroUrl||"",r.safetyUrl||"",fps].map(csvEsc).join(","));
+        t.at?new Date(t.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}):(t.t||""),t.note||"",resetText(t),r.description||"",r.action||"",r.location||"",r.notes||r.director||"",r.heroUrl||"",r.safetyUrl||"",fps].map(csvEsc).join(","));
     } }
-  if(!n){toast("No takes logged yet. Takes come from Slate View or Note View.");return}
+  if(!n){toast("No takes logged yet. Takes come from Slate View or Details.");return}
   download(fileBase()+(days.length===1?"_"+String(days[0].name).replace(/[^\w\-]+/g,"_"):"")+"_takes.csv","﻿"+lines.join("\r\n"),"text/csv");
   toast(`Exported ${n} take${n===1?"":"s"}`);
 }
@@ -272,7 +284,7 @@ function buildReady(b){
     [btn("Download project file",async()=>{await saveFile();mark("backup",true)},true),btn("Print / save PDF of this day",()=>{$("#docModal").classList.remove("open");setTimeout(()=>window.print(),100)}),btn("Call sheet",openCallSheet)]);
   item("sound","Clap sound heard on the slating device",`Sound: ${slateCfg().sound||"clap"}. Check the volume and the silent switch on the device you'll slate from.`,null,[btn("Play the clap",()=>playClap())]);
   item("tc","Timecode source chosen",`This device: ${tcLabel()}. Jam from a Tentacle or similar in Slate View settings, or use time of day.`,null,[btn("Open Slate View",()=>{$("#docModal").classList.remove("open");openSlate()})]);
-  item("awake","Screens stay on","wakeLock" in navigator?"Slate View and Note View keep the screen awake on this device. Plug in or charge the slating device.":"This browser can't keep the screen awake: set auto-lock to Never on this device.","wakeLock" in navigator?true:false);
+  item("awake","Screens stay on","wakeLock" in navigator?"Slate View and Details keep the screen awake on this device. Plug in or charge the slating device.":"This browser can't keep the screen awake: set auto-lock to Never on this device.","wakeLock" in navigator?true:false);
   item("drop","Practised a dropout",SIM_OFFLINE>Date.now()?"Practice running: make a change, watch the status say Offline with changes waiting, then Live again once it's sent.":"Takes 30 seconds: the status goes Offline, your changes wait on this device, then send themselves when the connection is back. Nothing is lost.",null,
     MODE==="team"?[btn(SIM_OFFLINE>Date.now()?"Practice running…":"Practise a 30 second dropout",()=>{SIM_OFFLINE=Date.now()+30000;netErr="Practice dropout";updateStatus();toast("Practice dropout for 30 seconds: make a change and watch the status");setTimeout(()=>{SIM_OFFLINE=0;netErr="";backoff=0;scheduleFlush(50);scheduleSync(100);setTimeout(()=>{updateStatus();mark("drop",true)},1500)},30000);rebuildDoc()})]:[]);
   item("fb","Feedback alerts reach you","Send a test from the ? button (bottom left) and check it arrives the way you set up (inbox, phone, chat or email).",null,[btn("Send a test report",async()=>{try{await api("/api/feedback",{type:"question",title:"Test report from the shoot-ready check",details:"Just checking alerts arrive. You can delete this.",from:P.name||"",ctx:fbContext()},{noProject:true});toast("Test report sent");mark("fb",true)}catch(e){toast("Couldn't send: "+e.message)}})]);
@@ -313,7 +325,7 @@ function renderVideoSettings(b){
   sel.addEventListener("change",()=>{S.project.vidSource=sel.value;commit();renderSetTab()});
   const field=(k,label,ph,type)=>{const i=h("input",{type:type||"text",value:pr[k]||"",placeholder:ph,spellcheck:"false"});bindDoc(i,null,v=>{S.project[k]=v.trim()});return h("label",{},label,i)};
   const f=h("div",{class:"form"},h("label",{},"Videos and files are shared through",sel));
-  const tips={drive:"Paste Drive file links into each shot (Note View or the Reference video column). If you're signed into several Google accounts, enter the one that can see this project's files: Drive then opens them with it instead of whichever account is first. That's your own setting; each person enters theirs, and nobody else sees it.",
+  const tips={drive:"Paste Drive file links into each shot (Details or the Reference video column). If you're signed into several Google accounts, enter the one that can see this project's files: Drive then opens them with it instead of whichever account is first. That's your own setting; each person enters theirs, and nobody else sees it.",
     dropbox:"Paste Dropbox file links; they play with speed, frame steps, loop and mirror.",
     onedrive:"In OneDrive or SharePoint choose the video, then Embed, and paste the whole embed code into the shot. Plain share links open in a new tab.",
     box:"Paste Box shared links; they play in Box's own player.",
@@ -385,7 +397,7 @@ function videoCell(r){
   const w=h("div",{class:"videocell"});
   const i=h("input",{class:"cell",type:"text",placeholder:vidBase()?"File name or link":"Video link",value:videoLinks(r).join(", "),"data-k":"video",spellcheck:"false",title:"Video links (or file names, with a web address set in Settings, Project), separated by commas"});
   i.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.video=videoLinks({video:i.value}).join("\n");commit();renderBody()});
-  w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Note View",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
+  w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Details",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
   return w;
 }
 
@@ -732,7 +744,7 @@ function renderSeqView(){
     shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):"")},m.ref1?im:h("div",{class:"noimg"}),
       h("div",{},h("b",{},"Shot "+(m.shot||"-")),m.vcs?h("span",{class:"pill"},"VCS"):null,h("p",{},String(m.action||m.description||"").slice(0,120)),
         la?h("small",{},got?"Caught in "+got.map(n=>"T"+n).join(", "):"Not caught yet"):null,
-        h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Notes"),
+        h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Details"),
         videoLinks(m).length?h("button",{class:"go",style:"margin-left:.6rem",title:"This shot has its own reference video",onclick:()=>{closeSeqView();openNotes(m.id)}},"▶ shot video"):null)));
   }
   if(la) shots.append(h("p",{class:"seqcov "+(cov.missing.length?"miss":"got")},cov.missing.length?`Still to get: ${cov.missing.map(m=>m.shot||"?").join(", ")}`:"Every shot caught"+(takeList(a).length?"":" (no takes yet)")));
@@ -741,8 +753,9 @@ function renderSeqView(){
   const rolling=rollingTake(a); const extra=()=>la?{caught:[]}:{};
   const clock=h("span",{class:"mono nvclock"},rolling?fmtDur(Date.now()-rolling.at):"0:00");
   clearInterval(SQV.timer); if(rolling) SQV.timer=setInterval(()=>{const t=rollingTake(R(a.id));if(t)clock.textContent=fmtDur(Date.now()-t.at);else{clearInterval(SQV.timer);renderSeqView()}},250);
-  takes.append(h("div",{class:"toolbar"},h("button",{class:"btn"+(rolling?" rolling":""),onclick:()=>{rollingTake(R(a.id))?cutTake(a.id):logTake(a.id,extra());renderSeqView()}},rolling?"■ Cut":"● Roll"),clock,
-    h("button",{class:"btn",onclick:()=>{logTake(a.id,extra());renderSeqView()}},"+ Take"),
+  takes.append(h("div",{class:"toolbar"},h("button",{class:"btn"+(rolling?" rolling":""),onclick:()=>{rollingTake(R(a.id))?cutTake(a.id):logTake(a.id,extra());renderSeqView()}},rolling?"■ Cut":"● Roll"),
+    h("button",{class:"btn resetb",disabled:!rolling,title:"Reset: go again without cutting. Marks R1, R2... with the timecode on the take that's rolling (E)",onclick:()=>{resetTake(a.id);renderSeqView()}},resetLabel(a)),clock,
+    h("button",{class:"btn",title:"Add a take you didn't roll on (fills in a missing take number, nothing starts rolling). Double-click its timecode to fill it in.",onclick:()=>{addMissedTake(a.id,extra());renderSeqView()}},"+ Take"),
     h("button",{class:"btn primary",title:"Mark every shot in the sequence done",onclick:()=>{for(const m of seqMembers(R(a.id))){m.done=true;m.doneAt=dayClock(D())}commit();toast("Sequence done");const n=daySeqs().find(x=>!seqMembers(x).every(y=>y.done));if(n){SQV.id=n.id}renderSeqView()}},"Sequence done ✓")));
   const list=takeList(a).slice().reverse();
   if(!list.length) takes.append(h("p",{class:"note"},"No takes yet. ● Roll logs a take for the whole sequence with its timecode in, ■ Cut adds the timecode out; Clap and Cut in Slate View do the same."+(la?" Then tick the shots each take caught.":"")));
@@ -756,6 +769,7 @@ function renderSeqView(){
       ticks.append(h("button",{class:"tick all",onclick:()=>edit(t.n,z=>{z.caught=(z.caught||[]).length===mem.length?[]:mem.map(y=>y.id)})},(t.caught||[]).length===mem.length?"None":"All"));
       row.append(ticks); }
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>edit(t.n,z=>{z.note=note.value})); row.append(note);
+    row.append(resetChips(a.id,t,()=>renderSeqView()));
     row.append(h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(a.id,t.n,()=>renderSeqView())},"✕"));
     takes.append(row);
   }
@@ -771,7 +785,7 @@ function renderSeqView(){
   for(const sec of [shots,takes,timing,dit,notes]) body.insertBefore(sec,host);
   if(body.parentNode!==v) v.append(body); v.insertBefore(head,body);
   updateVideoHost(a,{field:"seqVideo",host:"#sqVideoHost"});
-  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · T log a take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
+  v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · E reset · T add a missed take · G N H S mark the last take · ← → sequences · F full screen · Esc close"));
 }
 
 /* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------
@@ -790,7 +804,7 @@ function applyNvLayout(){
     const hh=Number((L.h||{})[k]); c.style.height=hh&&cols>1?hh+"px":""; c.classList.toggle("sized",!!(hh&&cols>1)); }
   const rb=$("#noteView .nvreset"); if(rb) rb.hidden=!nvCustom();
 }
-function resetNvLayout(){P.nvLayout={};savePrefs();applyNvLayout();toast("Note View layout reset")}
+function resetNvLayout(){P.nvLayout={};savePrefs();applyNvLayout();toast("Details layout reset")}
 function cardControls(sec){
   sec.querySelectorAll(":scope > .cardgrip, :scope > .cardsize").forEach(x=>x.remove());
   const grip=h("button",{class:"cardgrip",title:"Drag to move this panel","aria-label":"Move panel"},"⠿");
@@ -838,7 +852,7 @@ function restoreView(){
   if(!s||s.pid!==pid()) return;
   let n=0; const t=setInterval(()=>{ n++;
     if(S&&S.days&&S.days.some(d=>d.rows.some(r=>r.id===s.id))){ clearInterval(t);
-      const f=findRow(s.id); if(f&&!f.d.archived){ P.activeByProject[pid()]=f.d.id; renderAll(); s.view==="slate"?openSlate(s.id):s.view==="seq"?openSeqView(s.id):openNotes(s.id); } }
+      const f=findRow(s.id); if(f&&!f.d.archived){ P.activeByProject[pid()]=f.d.id; renderAll(); s.view==="slate"?openSlate(s.id):s.view==="seq"?openSeqView(s.id):s.view==="edit"?openEdit():openNotes(s.id); } }
     else if(n>60) clearInterval(t); },150);
 }
 
@@ -1102,3 +1116,529 @@ function runningBreakBtn(card,d,C,L){
   if(!b) return;
   card.append(h("div",{class:"sub"},h("button",{class:"btn small breakbtn",type:"button",title:start?`Mark ${blockName(b)} as started now`:`Mark ${blockName(b)} as over now`,onclick:e=>{e.stopPropagation();start?startBlock(b.id):endBlock(b.id)}},(start?"Start ":"End ")+blockName(b))));
 }
+
+// ---- Call sheet: emergency details, travel, call times, and the standard sections every call sheet carries ----
+// a text box on the day (key on the day) or on the project (shared by every day); single-line style when short
+function csBox(d,key,ph,project,def){
+  const t=h("textarea",{class:"docnote csnote",placeholder:ph,rows:"1","data-key":key}); const src=()=>project?S.project:S.days.find(y=>y.id===d.id);
+  t.value=(src()||{})[key]||def||"";
+  const fit=()=>{t.style.height="auto";t.style.height=Math.max(34,t.scrollHeight+2)+"px"};
+  t.addEventListener("input",()=>{const x=src();if(x)x[key]=t.value;fit();softCommit()}); t.addEventListener("change",commit);
+  requestAnimationFrame(fit); return t;
+}
+const CS_EMERG=[["csHospital","Nearest A&E","Hospital name, address, phone"],["csPolice","Police station","Name, address, phone"],["csFire","Fire station","Name, address, phone"],["csMedic","First aid","First aider / medic on set, where the first aid kit is"],["csAssembly","Fire assembly point","Where to go if the alarm sounds"]];
+function emergencySection(d){
+  const pr=S.project, no=pr.csEmergNo||"999";
+  const sec=h("section",{class:"docsec csemerg"});
+  const noIn=h("input",{type:"text",class:"csno noprint",value:no,"aria-label":"Emergency number",title:"Emergency number for this project (999 in the UK, 112 in the EU, 911 in the US)"});
+  noIn.addEventListener("change",()=>{S.project.csEmergNo=noIn.value.trim()||"999";commit();const n=sec.querySelector(".csnum");if(n)n.textContent=S.project.csEmergNo});
+  sec.append(h("h3",{},"Emergency"),h("div",{class:"csdial"},"In an emergency dial ",h("b",{class:"csnum"},no),noIn));
+  const grid=h("div",{class:"csgrid"});
+  for(const [k,label,ph] of CS_EMERG) grid.append(h("div",{class:"csrow"},h("label",{class:"doclabel"},label),csBox(d,k,ph,false)));
+  sec.append(grid);
+  // fill in: the nearest from the map, or copy another day's
+  const tools=h("div",{class:"toolbar noprint",style:"margin-top:.4rem"});
+  const has=d.lat!==""&&d.lat!=null;
+  tools.append(h("button",{class:"btn small",disabled:!has,title:has?"Look up the nearest A&E, police and fire station from this day's location (OpenStreetMap). Check them before you send the call sheet.":"Set the day's location first (under Weather and daylight)",onclick:e=>findNearest(d,e.currentTarget)},"Find nearest A&E, police, fire"));
+  const empty=CS_EMERG.every(([k])=>!String(d[k]||"").trim());
+  const other=S.days.filter(x=>x.id!==d.id&&!x.archived&&CS_EMERG.some(([k])=>String(x[k]||"").trim())).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+  if(other.length){ const same=other.find(x=>x.lat!==""&&x.lat!=null&&Math.abs(x.lat-d.lat)<0.002&&Math.abs(x.lon-d.lon)<0.002)||other[0];
+    tools.append(h("button",{class:"btn small",title:`Copy the emergency details, travel and parking from ${same.name||"another day"}`,onclick:async()=>{if(!empty&&!await ask("Replace these details?",`Copy the emergency details, travel and parking from ${same.name||"that day"} over this day's?`,"Copy"))return;const x=S.days.find(y=>y.id===d.id);for(const [k] of CS_EMERG)x[k]=same[k]||"";if(same.csTravel)x.csTravel=same.csTravel;commit();rebuildDoc();toast("Copied from "+(same.name||"the other day"))}},`Copy from ${same.name||"another day"}`)); }
+  sec.append(tools);
+  return sec;
+}
+// nearest A&E, police station and fire station, from OpenStreetMap (Overpass)
+async function findNearest(d,btn){
+  const lat=Number(d.lat), lon=Number(d.lon); if(!isFinite(lat)||!isFinite(lon)) return;
+  const old=btn.textContent; btn.disabled=true; btn.textContent="Looking…";
+  const q=`[out:json][timeout:20];(nwr["amenity"="hospital"](around:20000,${lat},${lon});nwr["amenity"="police"](around:8000,${lat},${lon});nwr["amenity"="fire_station"](around:8000,${lat},${lon}););out center tags;`;
+  try{
+    const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"}});
+    if(!r.ok) throw new Error("lookup "+r.status);
+    const found=nearestPlaces((await r.json()).elements||[],lat,lon);
+    const x=S.days.find(y=>y.id===d.id); let n=0, filled=[];
+    for(const [k,f] of [["csHospital",found.hospital],["csPolice",found.police],["csFire",found.fire]]){
+      if(!f) continue; if(String(x[k]||"").trim()&&!await ask("Replace?",`Replace "${String(x[k]).split("\n")[0]}" with ${f.split("\n")[0]}?`,"Replace")) continue; x[k]=f; n++; filled.push(k); }
+    commit(); rebuildDoc();
+    toast(n?`Filled ${n} from OpenStreetMap: please check them (especially that the hospital has an A&E)`:"Nothing new found nearby");
+  }catch(e){ toast("Couldn't look them up just now ("+(e.message||e)+"). Type them in, or try again."); btn.disabled=false; btn.textContent=old; }
+}
+function nearestPlaces(els,lat,lon){
+  const km=(a,b)=>{const R=6371,dl=(a.lat-lat)*Math.PI/180,dn=(a.lon-lon)*Math.PI/180,x=Math.sin(dl/2)**2+Math.cos(lat*Math.PI/180)*Math.cos(a.lat*Math.PI/180)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+  const pts=els.map(e=>{const t=e.tags||{}, p={lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),t}; p.km=p.lat!=null?km(p):1e9; return p}).filter(p=>p.km<1e8&&p.t.name);
+  const best=f=>pts.filter(f).sort((a,b)=>a.km-b.km)[0];
+  const fmtP=(p,note)=>{ if(!p) return ""; const t=p.t;
+    const addr=[[t["addr:housenumber"],t["addr:street"]].filter(Boolean).join(" "),t["addr:city"],t["addr:postcode"]].filter(Boolean).join(", ");
+    const tel=t.phone||t["contact:phone"]||"";
+    return [t.name+(note?" ("+note+")":""),addr,tel,`about ${p.km<1?Math.round(p.km*1000)+" m":p.km.toFixed(1)+" km"} away`].filter(Boolean).join("\n"); };
+  const isH=p=>p.t.amenity==="hospital", ae=best(p=>isH(p)&&(p.t.emergency==="yes"||/a\s*&\s*e|accident|emergency/i.test(p.t.name+" "+(p.t.healthcare_speciality||""))));
+  return {hospital:ae?fmtP(ae):fmtP(best(isH),"check it has an A&E"),police:fmtP(best(p=>p.t.amenity==="police")),fire:fmtP(best(p=>p.t.amenity==="fire_station"))};
+}
+// standard sections: shared by every call sheet in the project; untick to leave one off
+const CS_STD=[
+  {key:"csSafety",title:"Health and safety",def:`Report all accidents, illness and near misses straight away to the producer or production manager, who will record them.
+Don't move an injured person unless leaving them puts them at further risk.
+Keep fire exits, doorways and walkways clear at all times. Cables matted or ramped; overhead kit properly secured.
+Lift with care and use trolleys or lifting gear where available. Don't operate equipment if you're overtired or unwell.
+No alcohol or non-prescription drugs during the working day. No smoking on set.
+Phones on silent, and off while sound is recording.
+Heads of department are responsible for safe working in their department: raise any risk with the producer early.
+Everyone on set has a duty of care for their own health and safety and that of others (Health and Safety at Work etc. Act 1974, sections 7 and 8).
+A safety briefing will take place before the shoot starts. Please read the risk assessment.`},
+  {key:"csConfid",title:"Confidentiality",def:`By attending this shoot you agree to keep all project details, client assets, scripts, cast and production activity confidential. No photos, videos or details on social media or shared outside the production without written permission from production.`},
+  {key:"csConduct",title:"Code of conduct",def:`Treat everyone fairly and with respect. Bullying, harassment, discrimination or abuse of any kind won't be tolerated: report anything you see or experience to the producer, in confidence.`},
+  {key:"csGreen",title:"Green note",def:`Please bring a labelled reusable water bottle and coffee cup. Water and hot drinks are provided; we avoid single-use plastic where we can.`},
+  {key:"csInvoice",title:"Invoicing",def:"",ph:"Who to send invoices to, address, job / PO number to quote, what to include and payment terms"}];
+function csHidden(){ return String(S.project.csHide||"").split(",").filter(Boolean); }
+function stdSection(s){
+  const off=csHidden().includes(s.key);
+  const cb=h("input",{type:"checkbox"}); cb.checked=!off;
+  cb.addEventListener("change",()=>{const H=csHidden().filter(k=>k!==s.key);if(!cb.checked)H.push(s.key);S.project.csHide=H.join(",");commit();rebuildDoc()});
+  const head=h("h3",{},s.title,h("label",{class:"csinc noprint",title:"Include this section on every call sheet in this project"},cb," include"));
+  const sec=h("section",{class:"docsec csopt csstd"+(off?" csoff noprint":"")},head);
+  if(!off) sec.append(csBox(null,s.key,s.ph||"",true,s.def), h("div",{class:"note noprint csshared"},"Shared by every call sheet in this project."+(s.def?" ":""),s.def&&S.project[s.key]&&S.project[s.key]!==s.def?h("a",{href:"#",onclick:e=>{e.preventDefault();S.project[s.key]="";commit();rebuildDoc()}},"Back to the standard wording"):null));
+  return sec;
+}
+
+// ---- Call sheet tables: kit and suppliers (per day), risk assessment (shared by the project) ----
+const CS_KIT={key:"csKit",title:"Kit, suppliers and deliveries",project:false,add:"+ Add supplier",
+  cols:[{k:"who",label:"Supplier / department",ph:"e.g. Emmyland, catering"},{k:"kit",label:"Kit",ph:"What's coming",wide:true},{k:"contact",label:"Contact",ph:"Name, phone"},{k:"when",label:"Delivery / collection",ph:"e.g. In 07:00, out 20:00"}],def:[]};
+const CS_RISK={key:"csRisk",title:"Risk assessment",project:true,add:"+ Add risk",
+  cols:[{k:"risk",label:"Hazard",ph:"e.g. Slips, trips and falls"},{k:"who",label:"Who may be harmed",ph:"Crew, talent"},{k:"rate",label:"Risk",ph:"Low / Moderate / High",narrow:true},{k:"ctrl",label:"Controls",ph:"What's done to reduce it",wide:true},{k:"after",label:"After",ph:"Low",narrow:true}],
+  def:[
+    {risk:"Slips, trips and falls",who:"Crew, talent, others in the area",rate:"Moderate",ctrl:"Cables run overhead or along walls, covered or ramped where they cross walkways. Kit stored off walkways. Spills cleaned straight away. Suitable footwear.",after:"Low"},
+    {risk:"Electrical equipment",who:"Crew, talent",rate:"Moderate",ctrl:"PAT-tested kit only, set up by competent crew. No liquids near power. Circuits not overloaded; connections checked through the day.",after:"Low"},
+    {risk:"Falling stands, rigs and kit",who:"Crew, talent, others in the area",rate:"Moderate",ctrl:"Stands weighted with sandbags, put up by competent crew, not overloaded and checked through the day. Overhead kit secured with safety bonds.",after:"Low"},
+    {risk:"Burns from hot lights",who:"Crew",rate:"Moderate",ctrl:"Only designated crew move lights, once cool or with heat-resistant gloves. Blown bulbs: power off, gloves on, glass cleared up.",after:"Low"},
+    {risk:"Manual handling",who:"Crew",rate:"High",ctrl:"Correct lifting technique; two people or trolleys for heavy items; nothing over 25 kg carried alone; walking pace on the agreed route.",after:"Low"},
+    {risk:"Working at height",who:"Crew",rate:"Low",ctrl:"Avoided where possible. Ladders put up by competent crew, footed by a second person, used for short periods only.",after:"Low"},
+    {risk:"Fire",who:"Everyone on site",rate:"High",ctrl:"Fire exits and extinguishers kept clear. No smoking or naked flames. Follow venue staff in an evacuation; meet at the assembly point.",after:"Low"},
+    {risk:"Fatigue and welfare",who:"Crew, talent",rate:"Low",ctrl:"Breaks scheduled, food and water available. Anyone feeling unwell tells the producer straight away.",after:"Low"}]};
+function csRows(d,T){ const src=T.project?S.project:S.days.find(y=>y.id===d.id); let a=null; try{a=JSON.parse((src||{})[T.key]||"null")}catch(e){} return Array.isArray(a)?a:null; }
+function tableSection(d,T){
+  const off=csHidden().includes(T.key), src=()=>T.project?S.project:S.days.find(y=>y.id===d.id);
+  const cb=h("input",{type:"checkbox"}); cb.checked=!off;
+  cb.addEventListener("change",()=>{const H=csHidden().filter(k=>k!==T.key);if(!cb.checked)H.push(T.key);S.project.csHide=H.join(",");commit();rebuildDoc()});
+  const sec=h("section",{class:"docsec csopt cstab"+(off?" csoff noprint":"")},h("h3",{},T.title,h("label",{class:"csinc noprint",title:T.project?"Include this section on every call sheet in this project":"Include this section on call sheets"},cb," include")));
+  if(off) return sec;
+  let rows=csRows(d,T); const usingDef=!rows; if(!rows) rows=T.def.map(r=>Object.assign({},r));
+  const save=()=>{const x=src();if(x)x[T.key]=JSON.stringify(rows)};
+  const t=h("table",{class:"doctable cstable"},h("thead",{},h("tr",{},...T.cols.map(c=>h("th",{class:c.wide?"wide":c.narrow?"narrow":""},c.label)),h("th",{class:"noprint"},""))));
+  const tb=h("tbody",{});
+  rows.forEach((r,i)=>{ const tr=h("tr",{});
+    for(const c of T.cols){ const ta=h("textarea",{class:"docnote cscell",rows:"1",placeholder:c.ph,"aria-label":c.label}); ta.value=r[c.k]||"";
+      const fit=()=>{ta.style.height="auto";ta.style.height=Math.max(30,ta.scrollHeight+2)+"px"};
+      ta.addEventListener("input",()=>{r[c.k]=ta.value;save();fit();softCommit()}); ta.addEventListener("change",commit); requestAnimationFrame(fit);
+      tr.append(h("td",{},ta)); }
+    tr.append(h("td",{class:"noprint"},h("button",{class:"x",title:"Remove this row","aria-label":"Remove row",onclick:()=>{rows.splice(i,1);save();commit();rebuildDoc()}},"×")));
+    tb.append(tr); });
+  t.append(tb); sec.append(t);
+  const tools=h("div",{class:"toolbar noprint",style:"margin-top:.3rem"},h("button",{class:"btn small",onclick:()=>{rows.push({});save();commit();rebuildDoc();setTimeout(()=>{const sc=[...$$("#docBody .cstab")].find(x=>x.querySelector("h3").textContent.startsWith(T.title));const f=sc&&sc.querySelector("tbody tr:last-child textarea");if(f)f.focus()},60)}},T.add));
+  if(T.project){
+    tools.append(h("span",{class:"note"},usingDef?"Starter risks: edit them to fit your shoot. Shared by every call sheet in this project.":"Shared by every call sheet in this project."));
+    if(!usingDef) tools.append(h("a",{href:"#",class:"note",onclick:async e=>{e.preventDefault();if(!await ask("Back to the starter risks?","Your edits to this risk assessment will be replaced by the starter list.","Replace"))return;S.project[T.key]="";commit();rebuildDoc()}},"Back to the starter risks"));
+  } else if(!rows.some(r=>T.cols.some(c=>String(r[c.k]||"").trim()))){
+    const other=S.days.filter(x=>x.id!==d.id&&!x.archived&&(csRows(x,T)||[]).some(r=>T.cols.some(c=>String(r[c.k]||"").trim()))).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+    if(other.length){ const o=other[0]; tools.append(h("button",{class:"btn small",onclick:()=>{const x=src();x[T.key]=o[T.key];commit();rebuildDoc();toast("Copied from "+(o.name||"the other day"))}},"Copy from "+(o.name||"another day"))); }
+  }
+  sec.append(tools);
+  if(T.key==="csRisk") sec.append(h("div",{class:"csopt",style:"margin-top:.4rem"},h("label",{class:"doclabel"},"Full risk assessment"),csBox(null,"csRiskLink","Link to the full risk assessment, or where to find it on set",true)));
+  return sec;
+}
+
+/* ---------- Edit / animatic: time a cut from boards, takes and video, play it, export an EDL or FCP XML ---------- */
+// Cuts are shared with the team (project field cutJson). Clips: {id,row,src:"board"|"take"|"video",take,url,f (frames),inF,name,note}
+const ED={sel:null,t:0,playing:false,zoom:60,raf:0,last:0,cur:"",aud:null,localAudio:"",thumbs:new Map(),tab:"shots",binDay:""};
+function edFps(){const f=Number(S.project.fps);return f>0?f:25}
+function edNom(){return Math.round(edFps())||25}
+function edData(){let o=null;try{o=JSON.parse(S.project.cutJson||"null")}catch(e){} return o&&Array.isArray(o.cuts)?o:{cuts:[]}}
+function edSave(o,soft){S.project.cutJson=JSON.stringify(o); soft?softCommit():commit()}
+function edCut(o){ o=o||edData(); const id=(P.edCut||{})[pid()]; let c=o.cuts.find(x=>x.id===id)||o.cuts[0];
+  if(!c){c={id:uid("c"),name:"Cut 1",clips:[],audio:""};o.cuts.push(c);edSave(o)} return c; }
+// change the current cut: fn(cut, all) then save
+function edDo(fn,soft){ const o=edData(), c=edCut(o); fn(c,o); edSave(o,soft); }
+function edTc(fr){ const n=edNom(); fr=Math.max(0,Math.round(fr)); return [Math.floor(fr/(n*3600)),Math.floor(fr/(n*60))%60,Math.floor(fr/n)%60,fr%n].map(x=>String(x).padStart(2,"0")).join(":"); }
+function edTcToF(tc){ const ms=parseTc(tc,edFps()); return ms==null?null:Math.round(ms*edNom()/1000); }
+function edSecs(fr){ const s=fr/edFps(); return s<60?s.toFixed(s<10?2:1).replace(/\.?0+$/,"")+"s":Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0"); }
+function edA(r){ return r&&r.seq&&R(r.seq)?seqAnchor(r):r; }
+function edTakes(r){ return r?takeList(edA(r)).filter(t=>t.n!=null):[]; }
+function edTake(cl,r){ return cl.src==="take"?edTakes(r).find(t=>t.n==cl.take)||null:null; }
+function edPic(r){ return r?(r.ref1||r.ref2||r.ref3||""):""; }
+function edVidUrl(cl,r){ return cl.url||(r&&videoLinks(r)[0])||""; }
+function edBest(r){ const tk=edTakes(r).filter(t=>t.out||takeMs(t));
+  const rz=m=>{ for(const t of tk.slice().reverse()){ const x=(t.resets||[]).filter(y=>y.mark===m).pop(); if(x) return {src:"take",take:t.n,reset:x.n}; } return null; };
+  const t=tk.filter(x=>x.mark==="hero").pop(); if(t) return {src:"take",take:t.n};
+  const rh=rz("hero"); if(rh) return rh;
+  const g=tk.filter(x=>x.mark==="good").pop(); if(g) return {src:"take",take:g.n};
+  const rg=rz("good"); if(rg) return rg;
+  if(videoLinks(r).length) return {src:"video"}; return {src:"board"}; }
+// a reset within a take: where it starts (frames into the take) and how long it runs (to the next reset or the cut)
+function edResetSpan(t,rn){ const rs=(t.resets||[]).slice().sort((a,b)=>a.at-b.at), i=rs.findIndex(x=>x.n==rn); if(i<0) return null; const x=rs[i], fps=edFps();
+  const a=edTcToF(t.tc), b=edTcToF(x.tc); const inF=a!=null&&b!=null&&b>=a?b-a:Math.max(0,Math.round((x.at-t.at)/1000*fps));
+  const endMs=i+1<rs.length?rs[i+1].at:(t.at&&takeMs(t)?t.at+takeMs(t):0); const f=endMs?Math.max(1,Math.round((endMs-x.at)/1000*fps)):0; return {inF,f}; }
+function edNewClip(r,opt){ const fps=edFps(), b=Object.assign(edBest(r),opt||{}); if(opt&&opt.src&&!("reset" in opt)) delete b.reset; let f=Math.round((durSec(r.duration)||3)*fps), inF=0;
+  const t=b.src==="take"?edTakes(r).find(x=>x.n==b.take):null;
+  if(t&&b.reset){ const sp=edResetSpan(t,b.reset); if(sp){ inF=sp.inF; if(!durSec(r.duration)&&sp.f) f=sp.f; } }
+  else if(t&&!durSec(r.duration)){ const ms=takeMs(t); if(ms) f=Math.round(ms/1000*fps); }
+  return Object.assign({id:uid("k"),row:r.id,f:Math.max(1,f),inF},b); }
+function edShotLabel(r){ return r?(r.shot||r.action||"-"):"Missing shot"; }
+function edClipName(cl,r){ if(cl.name) return cl.name; if(!r) return "Missing";
+  const t=edTake(cl,r); if(t){ const rs=cl.reset?"_R"+cl.reset:""; if(t.name) return t.name+rs; const f=findRow(r.id); try{return shotName(edA(r),f?f.d:D(),t.n)+rs}catch(e){return (r.shot||"Shot")+"_T"+t.n+rs} }
+  return (r.shot||"Shot")+(cl.src==="video"?"_video":"_board"); }
+function edSrcLabel(cl,r){ const t=edTake(cl,r); if(cl.src==="take"&&t&&cl.reset){ const x=(t.resets||[]).find(y=>y.n==cl.reset); return "Take "+t.n+" R"+cl.reset+(x&&x.mark==="hero"?" ★":x&&x.mark==="good"?" ✓":""); }
+  return cl.src==="take"?(t?"Take "+t.n+(t.mark==="hero"?" ★":t.mark==="good"?" ✓":""):"Take "+cl.take+" (gone)"):cl.src==="video"?"Video":"Board"; }
+function edClips(c){ c=c||edCut(); let s=0; return c.clips.map(cl=>{const o={cl,r:R(cl.row),start:s,end:s+cl.f}; s+=cl.f; return o}); }
+function edTotal(c){ return (c||edCut()).clips.reduce((t,x)=>t+x.f,0); }
+function edThumb(r,cb){ const ref=edPic(r); if(!ref) return cb(""); if(ED.thumbs.has(ref)) return cb(ED.thumbs.get(ref)); imgSrc(ref).then(u=>{ED.thumbs.set(ref,u||"");cb(u||"")}); }
+
+function openEdit(){ commit(); $("#editView").classList.add("open"); document.body.classList.add("viewopen"); const d=D(); ED.binDay=ED.binDay||(d?d.id:""); edCut(); renderEdit(); const r=d&&d.rows.find(x=>!isBlock(x)); if(r) rememberView("edit",r.id); }
+function closeEdit(){ edStop(); rememberView(null); $("#editView").classList.remove("open"); document.body.classList.remove("viewopen"); const st=$("#edStage"); if(st) st.innerHTML=""; ED.cur=""; }
+function renderEdit(){
+  // a redraw can start while one is under way (a field's change fires as the old panel is removed): run it once that finishes
+  if(ED.rendering){ ED.again=true; return; }
+  ED.rendering=true; try{ renderEditNow(); } finally { ED.rendering=false; }
+  if(ED.again){ ED.again=false; setTimeout(renderEdit,0); }
+}
+function renderEditNow(){
+  const v=$("#editView"); if(!v.classList.contains("open")) return;
+  const o=edData(), c=edCut(o), fps=edFps(), total=edTotal(c);
+  if(ED.sel&&!c.clips.some(x=>x.id===ED.sel)) ED.sel=null;
+  ED.t=Math.min(ED.t,total);
+  let stage=$("#edStage"); if(!stage) stage=h("div",{class:"edstage",id:"edStage"});
+  // top bar: cut picker, running time, export, close
+  const cutSel=h("select",{class:"edcutsel","aria-label":"Cut"},...o.cuts.map(x=>h("option",{value:x.id,selected:x.id===c.id},x.name||"Cut")),h("option",{value:"__new"},"+ New cut"));
+  cutSel.onchange=()=>{ if(cutSel.value==="__new"){ const n={id:uid("c"),name:"Cut "+(o.cuts.length+1),clips:[],audio:""}; o.cuts.push(n); edSave(o); P.edCut=Object.assign({},P.edCut,{[pid()]:n.id}); }
+    else P.edCut=Object.assign({},P.edCut,{[pid()]:cutSel.value}); savePrefs(); edStop(); ED.t=0; ED.sel=null; ED.cur=""; renderEdit(); };
+  const cutMenu=h("button",{class:"btn small",title:"Rename, duplicate or delete this cut",onclick:e=>edCutMenu(e.currentTarget)},"⋯");
+  const top=h("div",{class:"edtop"},h("b",{class:"edtitle"},"Edit"),cutSel,cutMenu,
+    h("span",{class:"edrt",title:"Running time of the cut"},edTc(total)+" · "+c.clips.length+" clip"+(c.clips.length===1?"":"s")+" · "+(Number.isInteger(fps)?fps:fps.toFixed(3))+" fps"),
+    h("span",{style:"flex:1"}),
+    h("button",{class:"btn small",title:"Swap boards (and older takes) for each shot's hero or good take where there is one",onclick:edUpgrade},"Swap in latest takes"),
+    h("button",{class:"btn small",title:"CMX3600 EDL for Premiere, Resolve or Avid",onclick:()=>edExport("edl")},"Export EDL"),
+    h("button",{class:"btn small",title:"Final Cut Pro 7 XML: opens in Premiere and Resolve",onclick:()=>edExport("xml")},"Export FCP XML"),
+    h("button",{class:"btn small vclose",title:"Close (Esc)","aria-label":"Close",onclick:closeEdit},"✕"));
+  // player
+  const tcBox=h("span",{class:"edtc",id:"edTcNow"},edTc(ED.t));
+  const btn=(label,title,fn)=>h("button",{class:"btn small",title,"aria-label":title,onclick:fn},label);
+  const transport=h("div",{class:"edtransport"},
+    btn("⏮","Start (Home)",()=>edSeek(0)),btn("◀","Previous clip (↑)",()=>edJump(-1)),
+    h("button",{class:"btn edplay",id:"edPlay",title:"Play / pause (Space)",onclick:edToggle},ED.playing?"❚❚":"▶"),
+    btn("▶","Next clip (↓)",()=>edJump(1)),btn("⏭","End (End)",()=>edSeek(edTotal())),tcBox,h("span",{class:"note"},"/ "+edTc(total)),
+    h("label",{class:"edchk",title:"Show the shot name over the picture"},(()=>{const x=h("input",{type:"checkbox"});x.checked=P.edCaption!==false;x.onchange=()=>{P.edCaption=x.checked;savePrefs();ED.cur="";edShow()};return x})()," Captions"),
+    h("label",{class:"edchk",title:"Play the sound on video clips"},(()=>{const x=h("input",{type:"checkbox"});x.checked=!!P.edClipSound;x.onchange=()=>{P.edClipSound=x.checked;savePrefs();const vv=$("#edStage video");if(vv)vv.muted=!x.checked};return x})()," Clip sound"));
+  const player=h("div",{class:"edplayer"},stage,transport,edAudioRow(c));
+  // side: shots bin / clip inspector
+  const tabs=h("div",{class:"edtabs",role:"tablist"},...[["shots","Shots"],["clip","Clip"]].map(([k,l])=>h("button",{class:"edtab"+(ED.tab===k?" on":""),role:"tab","aria-selected":String(ED.tab===k),onclick:()=>{ED.tab=k;renderEdit()}},l)));
+  const side=h("div",{class:"edside"},tabs,ED.tab==="clip"?edInspector(c):edBin(c));
+  // timeline
+  const tl=edTimeline(c);
+  const keepScroll=($(".edscroll")||{}).scrollLeft||0, keepSide=($(".edbin,.edinsp")||{}).scrollTop||0;
+  v.replaceChildren(h("div",{class:"edwrap"},top,h("div",{class:"edmain"},player,side),tl));
+  const sc=$(".edscroll"); if(sc) sc.scrollLeft=keepScroll; const sd=$(".edbin,.edinsp"); if(sd) sd.scrollTop=keepSide;
+  edShow(true);
+}
+function edCutMenu(anchor){
+  $$(".locpop").forEach(x=>x.remove()); const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+  const item=(l,fn)=>h("button",{class:"mi",role:"menuitem",onclick:()=>{close();fn()}},l);
+  pop.append(
+    item("Rename…",()=>{ const c=edCut(); const box=h("div",{class:"locpop seqmenu"}); const inp=h("input",{type:"text",value:c.name||"","aria-label":"Cut name"});
+      const ok=()=>{edDo(x=>{x.name=inp.value.trim()||x.name});box.remove();renderEdit()};
+      inp.onkeydown=e=>{if(e.key==="Enter")ok();if(e.key==="Escape")box.remove()}; box.append(inp,h("button",{class:"btn small",onclick:ok},"Save"));
+      document.body.append(box); const b=anchor.getBoundingClientRect(); box.style.top=b.bottom+6+"px"; box.style.left=Math.max(8,b.left-120)+"px"; inp.focus(); inp.select();
+      setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!box.contains(e.target)){box.remove();document.removeEventListener("pointerdown",off)}}),0); }),
+    item("Duplicate",()=>{ const o=edData(), c=edCut(o), n=clone(c); n.id=uid("c"); n.name=(c.name||"Cut")+" copy"; n.clips.forEach(k=>k.id=uid("k")); o.cuts.push(n); edSave(o); P.edCut=Object.assign({},P.edCut,{[pid()]:n.id}); savePrefs(); renderEdit(); toast("Duplicated: "+n.name); }),
+    item("Delete cut",async()=>{ const o=edData(), c=edCut(o); if(!await ask("Delete this cut?",`"${c.name}" and its ${c.clips.length} clips will be removed for everyone (Undo brings it back).`,"Delete")) return;
+      o.cuts=o.cuts.filter(x=>x.id!==c.id); edSave(o); edStop(); ED.t=0; ED.sel=null; ED.cur=""; renderEdit(); }));
+  document.body.append(pop); const b=anchor.getBoundingClientRect(); pop.style.top=b.bottom+6+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+// music / VO to time against: a shared link (direct audio file) or a file on this device (not uploaded)
+function edAudioRow(c){
+  const has=!!(ED.localAudio||c.audio);
+  const url=h("input",{type:"url",placeholder:"Music or VO: link to an audio file (mp3, wav, m4a)",value:c.audio||"","aria-label":"Audio link"});
+  url.onchange=()=>{edDo(x=>{x.audio=url.value.trim()});ED.localAudio="";edAudioLoad(true)};
+  const file=h("input",{type:"file",accept:"audio/*",style:"display:none"});
+  file.onchange=()=>{const f=file.files[0];if(!f)return;if(ED.localAudio)URL.revokeObjectURL(ED.localAudio);ED.localAudio=URL.createObjectURL(f);ED.localName=f.name;edAudioLoad(true);renderEdit();toast("Playing "+f.name+" from this device (not uploaded or shared)")};
+  return h("div",{class:"edaudio"},h("span",{class:"note"},"♪"),url,file,h("button",{class:"btn small",title:"Use an audio file from this device (not uploaded; only on this device)",onclick:()=>file.click()},"From this device…"),
+    ED.localAudio?h("span",{class:"note",title:"From this device"},(ED.localName||"local file")+" "):null,
+    ED.localAudio?h("button",{class:"x",title:"Stop using the local file",onclick:()=>{URL.revokeObjectURL(ED.localAudio);ED.localAudio="";edAudioLoad(true);renderEdit()}},"×"):null,
+    has?null:h("span",{class:"note"},"optional"));
+}
+function edAudioLoad(reset){ const c=edCut(), src=ED.localAudio||c.audio||"";
+  if(!src){ if(ED.aud){ED.aud.pause();ED.aud=null} return null; }
+  if(!ED.aud||reset||ED.aud.dataset.src!==src){ if(ED.aud) ED.aud.pause(); ED.aud=new Audio(); ED.aud.preload="auto"; ED.aud.src=src; ED.aud.dataset.src=src; ED.aud.onerror=()=>toast("Couldn't play that audio. It needs to be a direct link to an audio file, or use From this device."); }
+  return ED.aud; }
+
+function edBin(c){
+  const box=h("div",{class:"edbin"});
+  const days=S.days.filter(d=>!d.archived);
+  const sel=h("select",{"aria-label":"Day"},...days.map(d=>h("option",{value:d.id,selected:d.id===ED.binDay},d.name||"Day")));
+  sel.onchange=()=>{ED.binDay=sel.value;renderEdit()};
+  const d=days.find(x=>x.id===ED.binDay)||D()||days[0]; if(!d) return box;
+  const shots=d.rows.filter(r=>!isBlock(r)&&!r.cut);
+  const inCut=new Set(c.clips.map(k=>k.row));
+  box.append(h("div",{class:"edbinhead"},sel,h("button",{class:"btn small",title:"Add every shot of this day, in order, each with its best picture (hero take, video or board)",onclick:()=>{edAdd(shots.filter(r=>!inCut.has(r.id)).map(r=>edNewClip(r)));}},"+ Add all ("+shots.filter(r=>!inCut.has(r.id)).length+")")),
+    h("p",{class:"note"},"Click a picture to add it after the selected clip, or drag it onto the timeline. The best source is picked for you: hero take, then good take, then video, then board."));
+  const list=h("div",{class:"edbinlist"});
+  for(const r of shots){
+    const tk=edTakes(r).filter(t=>t.out||takeMs(t)), vids=videoLinks(r), pic=edPic(r), best=edBest(r);
+    const th=h("div",{class:"edthumb"}); edThumb(r,u=>{if(u)th.style.backgroundImage=`url("${u}")`;else th.textContent=r.shot||"-"});
+    const add=o=>()=>edAdd([edNewClip(r,o)]);
+    const opts=h("div",{class:"edbinopts"},
+      pic?h("button",{class:"chip",title:"Add the storyboard frame",onclick:add({src:"board"})},"Board"):null,
+      ...tk.slice(-6).flatMap(t=>[h("button",{class:"chip"+(t.mark==="hero"?" hero":t.mark==="good"?" good":""),title:`Take ${t.n}${t.mark?" ("+t.mark+")":""} · in ${t.tc||"-"}${t.out?" · out "+t.out:""}`,onclick:add({src:"take",take:t.n})},"T"+t.n+(t.mark==="hero"?"★":t.mark==="good"?"✓":"")),
+        ...(t.resets||[]).filter(x=>x.mark==="hero"||x.mark==="good").map(x=>h("button",{class:"chip"+(x.mark==="hero"?" hero":" good"),title:`Take ${t.n}, reset R${x.n} (${x.mark}) at ${x.tc}`,onclick:add({src:"take",take:t.n,reset:x.n})},"T"+t.n+"·R"+x.n+(x.mark==="hero"?"★":"✓")))]),
+      vids.length?h("button",{class:"chip",title:"Add the video link (rushes or previz)",onclick:add({src:"video"})},"Video"):null);
+    const it=h("div",{class:"edbinitem"+(inCut.has(r.id)?" used":""),draggable:"true",title:(r.description||r.action||"")+(inCut.has(r.id)?" (already in the cut)":"")},
+      h("button",{class:"edthumbbtn",title:"Add with the best source ("+(best.src==="take"?"take "+best.take:best.src)+")",onclick:add()},th),
+      h("div",{class:"edbininfo"},h("b",{},r.shot||"-"),h("span",{class:"note"},String(r.description||r.action||"").slice(0,70)),opts));
+    it.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/x-edshot",r.id);e.dataTransfer.effectAllowed="copy"});
+    list.append(it);
+  }
+  if(!shots.length) list.append(h("p",{class:"note"},"No shots on this day."));
+  box.append(list); return box;
+}
+function edAdd(clips,at){ if(!clips.length) return; let firstId=clips[0].id;
+  edDo(c=>{ let i=at!=null?at:(ED.sel?c.clips.findIndex(x=>x.id===ED.sel)+1:c.clips.length); if(i<0) i=c.clips.length; c.clips.splice(i,0,...clips); });
+  ED.sel=clips[clips.length-1].id; renderEdit(); toast(clips.length===1?"Added "+edClipName(clips[0],R(clips[0].row)):"Added "+clips.length+" clips"); }
+function edUpgrade(){ let n=0;
+  edDo(c=>{ for(const k of c.clips){ const r=R(k.row); if(!r) continue; const b=edBest(r);
+    if(b.src==="take"&&(k.src!=="take"||k.take!=b.take||(k.reset||0)!=(b.reset||0))){ const was=k.src; k.src="take"; k.take=b.take;
+      if(b.reset){ k.reset=b.reset; const t=edTakes(r).find(z=>z.n==b.take), sp=t&&edResetSpan(t,b.reset); k.inF=sp?sp.inF:0; } else { delete k.reset; if(was!=="take") k.inF=0; } n++; }
+    else if(b.src==="video"&&k.src==="board"){ k.src="video"; n++; } } });
+  ED.cur=""; renderEdit(); toast(n?`Swapped in ${n} newer source${n===1?"":"s"} (durations kept)`:"Everything's already on its latest take"); }
+
+function edInspector(c){
+  const box=h("div",{class:"edinsp"}); const k=c.clips.find(x=>x.id===ED.sel);
+  if(!k){ box.append(h("p",{class:"note"},"Click a clip on the timeline to set its source, length and in point.")); return box; }
+  const r=R(k.row), fps=edFps(), tk=edTakes(r), vids=r?videoLinks(r):[], t=edTake(k,r);
+  const upd=(fn,soft)=>{edDo(cc=>{const x=cc.clips.find(y=>y.id===k.id);if(x)fn(x)},soft);};
+  box.append(h("div",{class:"edinsphead"},h("b",{},"Shot "+edShotLabel(r)),h("span",{class:"note"},r?String(r.description||r.action||""):"This shot was deleted")));
+  // source
+  const src=h("select",{"aria-label":"Source"},
+    h("option",{value:"board",selected:k.src==="board"},"Board"+(edPic(r)?"":" (no picture)")),
+    ...tk.flatMap(x=>[h("option",{value:"take:"+x.n,selected:k.src==="take"&&k.take==x.n&&!k.reset},`Take ${x.n}${x.mark?" · "+x.mark:""}${x.tc?" · "+x.tc:""}${x.len?" · "+x.len:""}`),
+      ...(x.resets||[]).map(y=>h("option",{value:"take:"+x.n+":"+y.n,selected:k.src==="take"&&k.take==x.n&&k.reset==y.n},`   Take ${x.n} · R${y.n}${y.mark?" · "+y.mark:""} · ${y.tc}`))]),
+    h("option",{value:"video",selected:k.src==="video"},"Video link"+(vids.length?"":" (none yet)")));
+  src.onchange=()=>{const v=src.value;upd(x=>{delete x.reset;x.inF=0;if(v.startsWith("take:")){const [,tn,rn]=v.split(":");x.src="take";x.take=Number(tn);if(rn){x.reset=Number(rn);const tt=edTakes(r).find(z=>z.n==x.take),sp=tt&&edResetSpan(tt,x.reset);if(sp){x.inF=sp.inF;if(sp.f)x.f=sp.f}}}else{x.src=v;delete x.take}});ED.cur="";renderEdit()};
+  // length
+  const durIn=h("input",{type:"number",step:String(1/fps),min:String(1/fps),value:(k.f/fps).toFixed(3).replace(/\.?0+$/,""),"aria-label":"Length in seconds"});
+  durIn.onchange=()=>{const s=Number(durIn.value);if(s>0){upd(x=>{x.f=Math.max(1,Math.round(s*fps))});renderEdit()}};
+  const nudge=d=>()=>{upd(x=>{x.f=Math.max(1,x.f+d)});renderEdit()};
+  // in point (into the take or video)
+  const inIn=h("input",{type:"number",step:String(1/fps),min:"0",value:(k.inF/fps).toFixed(3).replace(/\.?0+$/,""),"aria-label":"In point, seconds into the source"});
+  inIn.onchange=()=>{const s=Number(inIn.value);if(s>=0){upd(x=>{x.inF=Math.round(s*fps)});ED.cur="";renderEdit()}};
+  const tIn=t&&edTcToF(t.tc);
+  const srcTc=t&&tIn!=null?edTc(tIn+k.inF)+" to "+edTc(tIn+k.inF+k.f):"";
+  const tLen=t&&takeMs(t)?Math.round(takeMs(t)/1000*fps):0;
+  const urlIn=h("input",{type:"url",value:k.url||"",placeholder:vids[0]?"Using the shot's video: "+vids[0].slice(0,40)+"…":"Paste a link to the rushes or previz for this clip","aria-label":"Video link for this clip"});
+  urlIn.onchange=()=>{upd(x=>{x.url=urlIn.value.trim()});ED.cur="";renderEdit()};
+  const nameIn=h("input",{type:"text",value:k.name||"",placeholder:edClipName(Object.assign({},k,{name:""}),r),"aria-label":"Clip name for the EDL"});
+  nameIn.onchange=()=>{upd(x=>{x.name=nameIn.value.trim()});renderEdit()};
+  const noteIn=h("textarea",{rows:"2",placeholder:"Note (goes into the EDL and XML as a comment)","aria-label":"Clip note"}); noteIn.value=k.note||"";
+  noteIn.onchange=()=>upd(x=>{x.note=noteIn.value});
+  const i=c.clips.findIndex(x=>x.id===k.id);
+  box.append(...[
+    h("label",{class:"edfield"},h("span",{},"Source"),src),
+    h("div",{class:"edfield"},h("span",{},"Length"),h("div",{class:"edrow"},durIn,h("span",{class:"note"},"s · "+k.f+" frames"),h("button",{class:"btn small",title:"One frame shorter",onclick:nudge(-1)},"−1f"),h("button",{class:"btn small",title:"One frame longer",onclick:nudge(1)},"+1f"),
+      tLen?h("button",{class:"btn small",title:"Use the whole take ("+edSecs(tLen)+")",onclick:()=>{upd(x=>{x.f=Math.max(1,tLen-x.inF)});renderEdit()}},"Whole take"):null)),
+    k.src!=="board"?h("div",{class:"edfield"},h("span",{},"In point"),h("div",{class:"edrow"},inIn,h("span",{class:"note"},"s in"+(srcTc?" · source "+srcTc:"")),h("button",{class:"btn small",title:"Set the in point to where the playhead is in this clip",onclick:()=>{const at=edClips(c).find(x=>x.cl.id===k.id);if(!at)return;const off=Math.max(0,Math.min(k.f-1,Math.round(ED.t)-at.start));upd(x=>{x.inF=x.inF+off;x.f=Math.max(1,x.f-off)});ED.t=at.start;ED.cur="";renderEdit()}},"In at playhead"))):null,
+    k.src!=="board"?h("label",{class:"edfield"},h("span",{},"Video"),urlIn):null,
+    h("label",{class:"edfield"},h("span",{},"Clip name"),nameIn),
+    h("label",{class:"edfield"},h("span",{},"Note"),noteIn),
+    h("div",{class:"edrow",style:"margin-top:.5rem;flex-wrap:wrap"},
+      h("button",{class:"btn small",disabled:i<=0,onclick:()=>{edDo(cc=>{const j=cc.clips.findIndex(x=>x.id===k.id);if(j>0)cc.clips.splice(j-1,0,cc.clips.splice(j,1)[0])});renderEdit()}},"◀ Move"),
+      h("button",{class:"btn small",disabled:i>=c.clips.length-1,onclick:()=>{edDo(cc=>{const j=cc.clips.findIndex(x=>x.id===k.id);if(j<cc.clips.length-1)cc.clips.splice(j+1,0,cc.clips.splice(j,1)[0])});renderEdit()}},"Move ▶"),
+      h("button",{class:"btn small",onclick:()=>{const n=Object.assign(clone(k),{id:uid("k")});edDo(cc=>{const j=cc.clips.findIndex(x=>x.id===k.id);cc.clips.splice(j+1,0,n)});ED.sel=n.id;renderEdit()}},"Duplicate"),
+      h("button",{class:"btn small",title:"Split this clip at the playhead",onclick:edSplit},"Split at playhead"),
+      h("button",{class:"btn small danger",onclick:()=>edRemove(k.id)},"Remove")),
+    r?h("button",{class:"btn small",style:"margin-top:.4rem",onclick:()=>{closeEdit();jump(r.id)}},"Go to the shot in the list"):null].filter(Boolean));
+  return box;
+}
+function edRemove(id){ edDo(c=>{c.clips=c.clips.filter(x=>x.id!==id)}); ED.sel=null; ED.cur=""; renderEdit(); toast("Clip removed",{label:"Undo",fn:()=>{undo();renderEdit()}}); }
+function edSplit(){ const c=edCut(), at=edClips(c).find(x=>ED.t>x.start&&ED.t<x.end); if(!at){toast("Put the playhead inside a clip to split it");return}
+  const off=Math.round(ED.t)-at.start; if(off<1||off>=at.cl.f) return;
+  const b=Object.assign(clone(at.cl),{id:uid("k"),f:at.cl.f-off,inF:(at.cl.inF||0)+(at.cl.src==="board"?0:off)});
+  edDo(cc=>{const j=cc.clips.findIndex(x=>x.id===at.cl.id);cc.clips[j].f=off;cc.clips.splice(j+1,0,b)}); ED.sel=b.id; ED.cur=""; renderEdit(); }
+
+function edTimeline(c){
+  const fps=edFps(), pps=ED.zoom, total=edTotal(c), W=Math.max(total/fps*pps+200,600);
+  const wrap=h("div",{class:"edtl"});
+  const zoom=h("input",{type:"range",min:"8",max:"240",value:String(ED.zoom),"aria-label":"Timeline zoom"}); zoom.oninput=()=>{ED.zoom=Number(zoom.value);const sc=$(".edscroll");const keep=sc?sc.scrollLeft/(sc.scrollWidth||1):0;renderEdit();const s2=$(".edscroll");if(s2)s2.scrollLeft=keep*s2.scrollWidth};
+  wrap.append(h("div",{class:"edtlbar"},h("span",{class:"note"},"Drag clips to reorder, drag a clip's right edge to trim. Drop shots from the list."),h("span",{style:"flex:1"}),h("span",{class:"note"},"Zoom"),zoom));
+  const sc=h("div",{class:"edscroll"}), inner=h("div",{class:"edinner",style:`width:${W}px`});
+  // ruler
+  const ruler=h("div",{class:"edruler"}); const step=pps<14?10:pps<30?5:pps<70?2:1;
+  for(let s=0;s<=total/fps+3;s+=step) ruler.append(h("span",{class:"edtick",style:`left:${s*pps}px`},s%60===0&&s?Math.floor(s/60)+"m":s>=60?Math.floor(s/60)+":"+String(s%60).padStart(2,"0"):s+"s"));
+  const scrub=e=>{const rc=inner.getBoundingClientRect();edSeek(Math.max(0,Math.min(total,Math.round((e.clientX-rc.left)/pps*fps))))};
+  ruler.addEventListener("pointerdown",e=>{scrub(e);const mv=ev=>scrub(ev),up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up)};addEventListener("pointermove",mv);addEventListener("pointerup",up)});
+  const track=h("div",{class:"edtrack"});
+  for(const x of edClips(c)){
+    const k=x.cl, r=x.r, w=Math.max(4,k.f/fps*pps);
+    const blk=h("div",{class:"edclip src-"+k.src+(k.id===ED.sel?" sel":"")+(r?"":" missing"),style:`left:${x.start/fps*pps}px;width:${w}px`,draggable:"true","data-id":k.id,title:`${edClipName(k,r)} · ${edSrcLabel(k,r)} · ${edSecs(k.f)}`},
+      h("div",{class:"edcliplabel"},h("b",{},edShotLabel(r)),w>70?h("span",{}," "+edSrcLabel(k,r)):null),
+      w>40?h("div",{class:"edclipdur"},edSecs(k.f)):null,
+      r&&k.src==="board"&&edBest(r).src==="take"?h("span",{class:"ednewer",title:"A hero or good take is in: Swap in latest takes, or choose it under Clip"},"★"):null,
+      h("div",{class:"edtrim",title:"Drag to trim"}));
+    if(r) edThumb(r,u=>{if(u&&(k.src==="board"||!videoLinks(r).length))blk.style.backgroundImage=`linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.55)),url("${u}")`});
+    blk.addEventListener("click",e=>{if(e.target.classList.contains("edtrim"))return;ED.sel=k.id;ED.tab="clip";if(!ED.playing)ED.t=x.start;ED.cur="";renderEdit()});
+    blk.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/x-edclip",k.id);e.dataTransfer.effectAllowed="move"});
+    // trim the right edge
+    const trim=blk.querySelector(".edtrim");
+    trim.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();blk.draggable=false;const x0=e.clientX,f0=k.f;let nf=f0;
+      const lab=blk.querySelector(".edclipdur");
+      const mv=ev=>{nf=Math.max(1,Math.round(f0+(ev.clientX-x0)/pps*fps));blk.style.width=Math.max(4,nf/fps*pps)+"px";if(lab)lab.textContent=edSecs(nf);$("#edTcNow").textContent="len "+edSecs(nf)};
+      const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up);blk.draggable=true;if(nf!==f0){edDo(cc=>{const y=cc.clips.find(z=>z.id===k.id);if(y)y.f=nf})}ED.sel=k.id;renderEdit()};
+      addEventListener("pointermove",mv);addEventListener("pointerup",up)});
+    track.append(blk);
+  }
+  // drop: reorder clips, or add shots from the list, at the mouse position
+  const dropIndex=e=>{const rc=inner.getBoundingClientRect(), fr=(e.clientX-rc.left)/pps*fps; const L=edClips(c); for(let i=0;i<L.length;i++) if(fr<(L[i].start+L[i].end)/2) return i; return L.length;};
+  const marker=h("div",{class:"eddrop",hidden:true}); track.append(marker);
+  track.addEventListener("dragover",e=>{e.preventDefault();const i=dropIndex(e),L=edClips(c);marker.hidden=false;marker.style.left=((i<L.length?L[i].start:edTotal(c))/fps*pps)+"px"});
+  track.addEventListener("dragleave",()=>{marker.hidden=true});
+  track.addEventListener("drop",e=>{e.preventDefault();marker.hidden=true;const i=dropIndex(e);
+    const cid=e.dataTransfer.getData("text/x-edclip"), sid=e.dataTransfer.getData("text/x-edshot");
+    if(cid){edDo(cc=>{const j=cc.clips.findIndex(x=>x.id===cid);if(j<0)return;const [m]=cc.clips.splice(j,1);cc.clips.splice(i>j?i-1:i,0,m)});ED.sel=cid;ED.cur="";renderEdit()}
+    else if(sid){const r=R(sid);if(r)edAdd([edNewClip(r)],i)}});
+  if(!c.clips.length) track.append(h("div",{class:"edempty"},"Add shots from the list on the right, or drag them here."));
+  inner.append(ruler,track,h("div",{class:"edhead",id:"edHead",style:`left:${ED.t/fps*pps}px`}));
+  sc.append(inner); wrap.append(sc); return wrap;
+}
+// ---- playback ----
+function edMount(x){
+  const st=$("#edStage"); if(!st) return null; ED.cur=x?x.cl.id+"|"+x.cl.src+"|"+(x.cl.take||"")+"|"+(x.cl.url||"")+"|"+x.cl.inF:"";
+  st.innerHTML=""; if(!x){ st.append(h("div",{class:"edblank"},edCut().clips.length?"End of the cut":"Empty cut: add shots from the list")); return null; }
+  const k=x.cl, r=x.r, t=edTake(k,r), url=k.src==="board"?"":edVidUrl(k,r), em=url?videoEmbed(url):null;
+  let el=null;
+  if(em&&em.kind==="file"){ el=h("video",{src:em.src,playsinline:"",preload:"auto"}); el.muted=!P.edClipSound; el.addEventListener("error",()=>{const n=h("div",{class:"edblank"},"This video won't play here: "+em.name);el.replaceWith(n)}); }
+  else if(em&&["drive","youtube","vimeo","embed"].includes(em.kind)){
+    let src=em.src; const s=Math.floor((k.inF||0)/edFps());
+    if(em.kind==="youtube") src+=`&start=${s}&autoplay=${ED.playing?1:0}&mute=${P.edClipSound?0:1}`; if(em.kind==="vimeo") src+=(src.includes("?")?"&":"?")+`autoplay=${ED.playing?1:0}&muted=${P.edClipSound?0:1}#t=${s}s`;
+    el=h("iframe",{src,allow:"autoplay; fullscreen",title:edClipName(k,r)});
+    if(em.kind==="drive") st.append(h("div",{class:"edwarn"},"Drive preview: press play inside it. It can't be timed from here."));
+  } else {
+    const img=h("img",{alt:edClipName(k,r)}); el=img;
+    if(r) edThumb(r,u=>{if(u)img.src=u;else img.replaceWith(h("div",{class:"edblank"},h("b",{},"Shot "+edShotLabel(r)),h("div",{},String(r.description||r.action||"No picture yet").slice(0,200))))});
+    else img.replaceWith(h("div",{class:"edblank"},"Missing shot"));
+  }
+  st.append(el);
+  if(P.edCaption!==false) st.append(h("div",{class:"edcap"},h("b",{},edShotLabel(r)),"  "+edSrcLabel(k,r)+(t&&t.tc?" · "+t.tc:"")+(k.src!=="board"&&!url?" · no video yet":"")));
+  return el;
+}
+function edShow(force){
+  const c=edCut(), total=edTotal(c), fps=edFps();
+  const x=edClips(c).find(y=>ED.t>=y.start&&ED.t<y.end)||null;
+  const key=x?x.cl.id+"|"+x.cl.src+"|"+(x.cl.take||"")+"|"+(x.cl.url||"")+"|"+x.cl.inF:"";
+  let el=$("#edStage video");
+  if(force||key!==ED.cur||!$("#edStage").firstChild){ edMount(x); el=$("#edStage video"); }
+  if(el&&x){ const want=((x.cl.inF||0)+(ED.t-x.start))/fps;
+    if(ED.playing){ if(Math.abs(el.currentTime-want)>0.3) try{el.currentTime=want}catch(e){} if(el.paused) el.play().catch(()=>{}); }
+    else { el.pause(); if(Math.abs(el.currentTime-want)>0.02) try{el.currentTime=want}catch(e){} } }
+  const hd=$("#edHead"); if(hd) hd.style.left=(ED.t/fps*ED.zoom)+"px";
+  const tc=$("#edTcNow"); if(tc) tc.textContent=edTc(ED.t);
+  const a=edAudioLoad(false); if(a){ const want=ED.t/fps; if(ED.playing){ if(Math.abs(a.currentTime-want)>0.25) try{a.currentTime=want}catch(e){} if(a.paused) a.play().catch(()=>{}); } else { a.pause(); try{a.currentTime=want}catch(e){} } }
+  // keep the playhead in view
+  if(ED.playing){ const sc=$(".edscroll"); if(sc){ const px=ED.t/fps*ED.zoom; if(px<sc.scrollLeft||px>sc.scrollLeft+sc.clientWidth-40) sc.scrollLeft=Math.max(0,px-60); } }
+  if(total&&ED.t>=total&&ED.playing) edStop();
+}
+function edLoop(now){ if(!ED.playing) return; ED.t+=(now-ED.last)/1000*edFps(); ED.last=now; const tot=edTotal(); if(ED.t>=tot){ED.t=tot;edShow();edStop();return} edShow(); ED.raf=requestAnimationFrame(edLoop); }
+function edPlay(){ const tot=edTotal(); if(!tot) return; if(ED.t>=tot) ED.t=0; ED.playing=true; ED.last=performance.now(); ED.cur=""; edShow(true); const b=$("#edPlay"); if(b) b.textContent="❚❚"; cancelAnimationFrame(ED.raf); ED.raf=requestAnimationFrame(edLoop); }
+function edStop(){ ED.playing=false; cancelAnimationFrame(ED.raf); const b=$("#edPlay"); if(b) b.textContent="▶"; const v=$("#edStage video"); if(v) v.pause(); if(ED.aud) ED.aud.pause(); }
+function edToggle(){ ED.playing?edStop():edPlay(); }
+function edSeek(fr){ ED.t=Math.max(0,Math.min(edTotal(),fr)); edShow(); }
+function edJump(dir){ const L=edClips(); if(!L.length) return; let i=L.findIndex(x=>ED.t>=x.start&&ED.t<x.end); if(i<0) i=L.length;
+  const j=Math.max(0,Math.min(L.length-1,dir<0&&ED.t>L[Math.min(i,L.length-1)].start+2&&i<L.length?i:i+dir)); ED.t=L[j].start; if(!ED.playing){ED.sel=L[j].cl.id;renderEdit()} else edShow(); }
+function edKey(e,k){
+  if(e.key==="Escape"){ if($(".locpop")) $$(".locpop").forEach(x=>x.remove()); else closeEdit(); return true; }
+  if(e.key===" "||k==="k"){ e.preventDefault(); edToggle(); return true; }
+  const fps=edFps();
+  if(e.key==="ArrowLeft"){ e.preventDefault(); edStop(); edSeek(Math.round(ED.t)-(e.shiftKey?Math.round(fps):1)); return true; }
+  if(e.key==="ArrowRight"){ e.preventDefault(); edStop(); edSeek(Math.round(ED.t)+(e.shiftKey?Math.round(fps):1)); return true; }
+  if(e.key==="ArrowUp"){ e.preventDefault(); edJump(-1); return true; }
+  if(e.key==="ArrowDown"){ e.preventDefault(); edJump(1); return true; }
+  if(e.key==="Home"){ edSeek(0); return true; } if(e.key==="End"){ edSeek(edTotal()); return true; }
+  if((e.key==="Delete"||e.key==="Backspace")&&ED.sel){ e.preventDefault(); edRemove(ED.sel); return true; }
+  if(k==="s"&&!ED.playing){ edSplit(); return true; }
+  return true;
+}
+// ---- export ----
+function edExport(kind){
+  const c=edCut(), L=edClips(c); if(!L.length){toast("The cut is empty");return}
+  const fps=edFps(), nom=edNom(), recStart=3600*nom, title=String(c.name||"Cut").replace(/[^\w .-]/g,"").slice(0,60)||"Cut";
+  const proj=String(S.project.name||"Shotlist").replace(/[^\w .-]/g,"").trim()||"Shotlist";
+  const srcIn=x=>{const t=edTake(x.cl,x.r), base=t?edTcToF(t.tc):null; return (base!=null?base:0)+(x.cl.src==="board"?0:(x.cl.inF||0));};
+  const reelOf=x=>{const t=edTake(x.cl,x.r); if(!t&&x.cl.src==="board") return "AX"; return edClipName(x.cl,x.r).toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,8)||"AX";};
+  let out="", fn="";
+  if(kind==="edl"){
+    const lines=[`TITLE: ${title}`,"FCM: NON-DROP FRAME",""];
+    L.forEach((x,i)=>{ const si=srcIn(x);
+      lines.push(`${String(i+1).padStart(3,"0")}  ${reelOf(x).padEnd(8)} V     C        ${edTc(si)} ${edTc(si+x.cl.f)} ${edTc(recStart+x.start)} ${edTc(recStart+x.end)}`);
+      lines.push(`* FROM CLIP NAME: ${edClipName(x.cl,x.r)}`);
+      lines.push(`* COMMENT: SHOT ${x.r?x.r.shot||"-":"MISSING"} - ${edSrcLabel(x.cl,x.r).replace(/[★✓]/g,"").trim().toUpperCase()}${x.cl.note?" - "+x.cl.note.replace(/\s+/g," "):""}`);
+      lines.push(""); });
+    out=lines.join("\r\n"); fn=`${proj} - ${title}.edl`;
+  } else {
+    const ntsc=Math.abs(fps-nom)>0.01, esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    const rate=`<rate><timebase>${nom}</timebase><ntsc>${ntsc?"TRUE":"FALSE"}</ntsc></rate>`, total=edTotal(c);
+    const tcXml=f=>`<timecode>${rate}<string>${edTc(f)}</string><frame>${f}</frame><displayformat>NDF</displayformat></timecode>`;
+    const files=new Map(); let items="", markers="";
+    L.forEach((x,i)=>{ const k=x.cl, r=x.r, t=edTake(k,r), name=edClipName(k,r), url=k.src==="board"?"":edVidUrl(k,r), em=url?videoEmbed(url):null;
+      const fkey=(t?"take:"+(r?r.id:"")+":"+t.n:k.src+":"+(r?r.id:"")+":"+(url||""));
+      let fid=files.get(fkey), fileXml;
+      const base=t?(edTcToF(t.tc)||0):0, inF=k.src==="board"?0:(k.inF||0), mediaDur=Math.max(inF+k.f,t&&takeMs(t)?Math.round(takeMs(t)/1000*fps):0,k.f);
+      if(fid) fileXml=`<file id="${fid}"/>`;
+      else { fid="file-"+(files.size+1); files.set(fkey,fid);
+        const fname=k.src==="board"?name+".png":em&&em.kind==="file"?em.name:name;
+        fileXml=`<file id="${fid}"><name>${esc(fname)}</name>${em&&em.kind==="file"&&/^https?:/.test(em.src)?`<pathurl>${esc(em.src)}</pathurl>`:""}${rate}<duration>${mediaDur}</duration>${tcXml(base)}<media><video><samplecharacteristics>${rate}<width>1920</width><height>1080</height></samplecharacteristics></video></media></file>`; }
+      items+=`<clipitem id="clipitem-${i+1}"><name>${esc(name)}</name><enabled>TRUE</enabled><duration>${mediaDur}</duration>${rate}<start>${x.start}</start><end>${x.end}</end><in>${inF}</in><out>${inF+k.f}</out>${fileXml}<comments><mastercomment1>${esc("Shot "+(r?r.shot||"-":"missing")+" - "+edSrcLabel(k,r).replace(/[★✓]/g,"").trim())}</mastercomment1>${k.note?`<mastercomment2>${esc(k.note)}</mastercomment2>`:""}</comments></clipitem>`;
+      markers+=`<marker><name>${esc(r?r.shot||"-":"missing")}</name><comment>${esc((r&&(r.description||r.action))||"")}</comment><in>${x.start}</in><out>-1</out></marker>`; });
+    out=`<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="5"><sequence id="sequence-1"><name>${esc(title)}</name><duration>${total}</duration>${rate}<timecode>${rate}<string>01:00:00:00</string><frame>${recStart}</frame><displayformat>NDF</displayformat></timecode><in>-1</in><out>-1</out><media><video><format><samplecharacteristics>${rate}<width>1920</width><height>1080</height><pixelaspectratio>square</pixelaspectratio></samplecharacteristics></format><track>${items}<enabled>TRUE</enabled><locked>FALSE</locked></track></video></media>${markers}</sequence></xmeml>\n`;
+    fn=`${proj} - ${title}.xml`;
+  }
+  const blob=new Blob([out],{type:kind==="edl"?"text/plain":"application/xml"}), a=h("a",{href:URL.createObjectURL(blob),download:fn}); document.body.append(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+  toast(`Exported ${fn}${L.some(x=>x.cl.src==="board")?" (boards come in as offline clips named after the shot)":""}`);
+  return out;
+}
+
+/* ---------- Resets: go again without cutting. R1, R2... with their timecode, on the take that's rolling ---------- */
+function resetLabel(r){ const a=r&&(r.seq&&R(r.seq)?seqAnchor(r):r), t=a&&rollingTake(a), n=t?(t.resets||[]).length+1:1; return "↺ Reset"+(t?" R"+n:""); }
+function resetTake(id){
+  const r0=R(id); if(!r0) return null; const r=r0.seq&&R(r0.seq)?seqAnchor(r0):r0;
+  const a=takeList(r), t=a[a.length-1];
+  if(!t||t.out||!t.at||Date.now()-t.at>=4*3600e3){ toast("Nothing rolling: roll (or clap) first. Reset marks each go within a take you don't cut."); return null; }
+  const rs=t.resets||(t.resets=[]), x={n:rs.reduce((m,y)=>Math.max(m,y.n),0)+1,tc:tcString(nowTcMs(),slateFps()),at:Date.now(),mark:""};
+  rs.push(x); setTakeList(r,a); commit(); renderBody();
+  toast(`Take ${t.n} · reset R${x.n} at ${x.tc}`);
+  return {take:t,reset:x};
+}
+function slateReset(){ if(!SLV.id) return; const res=resetTake(SLV.id); const m=$("#slMsg");
+  if(!res){ if(m) m.textContent="Nothing rolling to reset: clap to log a take first"; return; }
+  renderSlate(); SLV.msgUntil=Date.now()+2500; const m2=$("#slMsg"); if(m2) m2.textContent=`↺ Take ${res.take.n} · reset R${res.reset.n} at ${res.reset.tc}`; }
+function resetText(t){ return (t.resets||[]).map(x=>`R${x.n} ${x.tc}${x.mark?" ("+x.mark+")":""}`).join("; "); }
+const RESET_MARK={hero:"★",good:"✓",ng:"✗",safety:"S"};
+function editReset(rowId,tn,rn,fn){ const r0=R(rowId); if(!r0) return; const r=r0.seq&&R(r0.seq)?seqAnchor(r0):r0; const a=takeList(r), t=a.find(z=>z.n===tn); if(!t) return;
+  const x=(t.resets||[]).find(z=>z.n===rn); if(!x) return; const keep=fn(x,t); if(keep===false) t.resets=t.resets.filter(z=>z!==x); setTakeList(r,a); syncMarks(r); commit(); renderBody(); }
+function resetChips(rowId,t,redraw){
+  const rs=t.resets||[]; if(!rs.length) return "";
+  const box=h("div",{class:"nvresets"},h("small",{class:"note"},"Resets:"));
+  for(const x of rs){
+    const chip=h("button",{class:"rchip"+(x.mark?" m-"+x.mark:""),title:`Reset R${x.n} at ${x.tc}${x.mark?" · "+x.mark:""}. Click to mark it Hero, Good, NG or Safety`},
+      h("b",{},"R"+x.n),h("span",{class:"mono"}," "+x.tc),x.mark?h("span",{class:"rmk"}," "+RESET_MARK[x.mark]):"");
+    chip.onclick=e=>{ e.stopPropagation(); $$(".locpop").forEach(p=>p.remove());
+      const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+      const item=(l,fn,on)=>h("button",{class:"mi"+(on?" on":""),role:"menuitem",onclick:()=>{close();fn();redraw&&redraw()}},l);
+      pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},`Take ${t.n} · R${x.n} · ${x.tc}`),
+        ...[["hero","Hero ★"],["good","Good ✓"],["ng","NG ✗"],["safety","Safety"]].map(([m,l])=>item(l,()=>editReset(rowId,t.n,x.n,z=>{z.mark=z.mark===m?"":m}),x.mark===m)),
+        item("Remove this reset",()=>{editReset(rowId,t.n,x.n,()=>false);toast(`R${x.n} removed`,{label:"Undo",fn:()=>{undo();redraw&&redraw()}})}));
+      document.body.append(pop); const b=chip.getBoundingClientRect(); const top=b.bottom+6+pop.offsetHeight>innerHeight?Math.max(8,b.top-pop.offsetHeight-6):b.bottom+6;
+      pop.style.top=top+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+      setTimeout(()=>document.addEventListener("pointerdown",function off(ev){if(!pop.contains(ev.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0); };
+    box.append(chip);
+  }
+  return box;
+}
+
+// + Take: a take you forgot to roll on. It takes the next number but has no timecode and never shows as rolling
+function addMissedTake(id,extra){ const t=logTake(id,Object.assign({tc:"",at:null,t:"",added:true},extra||{}));
+  if(t) toast(`Take ${t.n} added (not rolled). Double-click its timecode to fill it in.`); return t; }
