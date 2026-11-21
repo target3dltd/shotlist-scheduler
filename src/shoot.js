@@ -389,6 +389,13 @@ function videoCell(r){
   return w;
 }
 
+/* ---------- "We're on this shot": the live ahead / behind works from it ---------- */
+function onNowBtn(r){
+  const d=D(); const L=d&&liveStatus(d,compute());
+  if(isOnNow(r)) return h("span",{class:"onnow on",title:L?L.basis:""},"● On now · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L&&L.phase]||""));
+  return h("button",{class:"onnow",title:"Say this is the shot (or sequence) you're on: until you roll it counts as setting up, so ahead / behind is right",onclick:e=>{e.stopPropagation();setOnNow(r.id)}},"We're on this");
+}
+
 /* ---------- takes: remove (with Undo) and rename (double-click the take number) ---------- */
 function deleteTake(rowId,n,redraw){
   const x=R(rowId); if(!x) return; const l=takeList(x); if(!l.some(z=>z.n===n)) return;
@@ -673,7 +680,7 @@ function renderSeqView(){
   const la=d.kind!=="capture", mem=seqMembers(a,d), cov=seqCoverage(a), take=nextTake(a,d), name=shotName(a,d,take);
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous sequence",onclick:()=>seqStep(-1)},"‹"),
-    h("div",{class:"nvtitle"},(()=>{const t=h("b",{title:"Double-click to rename",style:"cursor:text"},seqTitle(a));t.addEventListener("dblclick",()=>renameSeqInline(t,a.id));return t})(),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
+    h("div",{class:"nvtitle"},(()=>{const t=h("b",{title:"Double-click to rename",style:"cursor:text"},seqTitle(a));t.addEventListener("dblclick",()=>renameSeqInline(t,a.id));return t})(),onNowBtn(a),h("span",{class:"pill",style:`background:${seqColor(a.seq)};color:#fff`},seqRange(a,d)),seqAnyVcs(a)?h("span",{class:"pill"},"VCS"):null,h("span",{class:"note"},d.name+" · next take "+take)),
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
     h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),

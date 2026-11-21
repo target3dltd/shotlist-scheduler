@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.30.2";
+const VERSION = "2.31.0";
 const CHANGELOG = [
-  ["2.30.2","2026-11-21","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
+  ["2.31.0","2026-11-21","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
+  ["2.30.2","","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
   ["2.30.1","","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
   ["2.30.0","","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
   ["2.29.2","","Double-click a sequence's name (header row, Sequence column or Sequence View) to rename it. Each shot's ▾ in the Sequence column moves it to another sequence, takes it out, or starts a new sequence with it; + puts a shot into one."],
@@ -1109,7 +1110,8 @@ function renderStats(C){
   const L=liveStatus(d,C);
   if(L){ const s=L.slip, po=Math.round(L.proj-wrapT), g=cfg();
     const cls=s<=0?"ok":po>=(Number(g.gateRed)||30)?"bad":po>=(Number(g.gateAmber)||10)?"warn":"";
-    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(s>0?"behind":s<0?"ahead":"")+" · projected wrap "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis; st.append(c); }
+    const now=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
+    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis; st.append(c); }
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
@@ -1194,14 +1196,35 @@ function liveStatus(d,C){
   const rows=d.rows.filter(r=>!r.cut);
   let li=-1; rows.forEach((r,i)=>{if(!isBlock(r)&&r.done)li=i});
   const last=li>=0?rows[li]:null, next=rows.slice(li+1).find(r=>!isBlock(r)&&!r.done)||null;
-  let slip, basis;
-  if(last&&last.doneAt!=null){slip=last.doneAt-C.rows[last.id].end;basis=`shot ${last.shot||last.action||""} finished at ${fmt(last.doneAt)}, planned ${fmt(C.rows[last.id].end)}`.replace("shot  ","shot ")}
-  else if(next){slip=Math.min(0,now-C.rows[next.id].setupStart);basis=slip<0?"next shot isn't due to start until "+fmt(C.rows[next.id].setupStart):"on the shot that's due now"}
-  else {slip=0;basis="every shot is ticked"}
-  if(next){const late=now-C.rows[next.id].end; if(late>slip){slip=late;basis=`shot ${next.shot||next.action||""} was due to finish at ${fmt(C.rows[next.id].end)}`}}
+  // the shot we're on: the one picked ("We're on this shot", or the last one rolled on), else the next one not done
+  const picked=d.onRow&&rows.find(r=>r.id===d.onRow&&!isBlock(r)&&!r.done);
+  const cur=picked||next;
+  if(!cur) return {slip:last&&last.doneAt!=null?Math.round(last.doneAt-C.rows[last.id].end):0,basis:"every shot is ticked",now,next:null,cur:null,phase:"done",proj:C.wrap};
+  // a sequence is planned and shot as one
+  const tk=cur.seq&&R(cur.seq)?seqAnchor(cur):cur, mem=tk.seq?seqMembers(tk,d).filter(x=>!x.cut):[cur];
+  const cs=mem.map(x=>C.rows[x.id]).filter(Boolean); if(!cs.length) return null;
+  const pSet=Math.min(...cs.map(c=>c.setupStart)), pStart=Math.min(...cs.map(c=>c.start)), pEnd=Math.max(...cs.map(c=>c.end)), su=pStart-pSet, sh=pEnd-pStart;
+  const at=ms=>now-(Date.now()-ms)/60000;               // a moment, as a time on this day's clock
+  const takes=takeList(tk).filter(t=>t.at&&Date.now()-t.at<16*3600e3), rolling=rollingTake(tk);
+  const label=tk.seq?seqTitle(tk):"shot "+(cur.shot||cur.action||"");
+  let slip, basis, phase;
+  if(takes.length){
+    // shooting: started at the first take, so it should finish a shoot's length later
+    const began=at(Math.min(...takes.map(t=>t.at))), projEnd=Math.max(now,began+sh); slip=projEnd-pEnd; phase=rolling?"rolling":"shooting";
+    basis=`${label}: ${rolling?"rolling":"shooting"} since ${fmt(began)}, should finish about ${fmt(projEnd)} (planned ${fmt(pEnd)})`;
+  } else {
+    // not rolling yet: setting up, since we moved on to it (or the last shot finished, or the planned time)
+    let began=picked&&d.onSince?at(d.onSince):last&&last.doneAt!=null?last.doneAt:Math.min(now,pSet); if(began>now) began=now;
+    const projStart=Math.max(now,began+su); slip=projStart-pStart; phase="setup";
+    basis=`${label}: setting up since ${fmt(began)}, ready to roll about ${fmt(projStart)} (planned ${fmt(pStart)})`;
+  }
   slip=Math.round(slip);
-  return {slip,basis,now,next,proj:C.wrap+slip};
+  return {slip,basis,now,next,cur,phase,proj:C.wrap+slip};
 }
+// "We're on this shot": what the live ahead / behind works from (shared with the team); setting up until a take rolls
+function setOnNow(id){ const d=D(); if(!d) return; const r=R(id); if(!r) return; const t=r.seq&&R(r.seq)?seqAnchor(r):r;
+  d.onRow=t.id; d.onSince=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
+function isOnNow(r){ const d=D(); if(!d||!r) return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
 function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
 function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
 function buildPlan(d,C){
@@ -1629,7 +1652,7 @@ function setTakeList(r,a){r.takeLog=JSON.stringify(a)}
 function syncMarks(r){const a=takeList(r);const hs=a.filter(t=>t.mark==="hero").map(t=>"T"+t.n),ss=a.filter(t=>t.mark==="safety").map(t=>"T"+t.n);
   if(hs.length||String(r.hero||"").match(/^(T\d+(, )?)*$/))r.hero=hs.join(", ");if(ss.length||String(r.safety||"").match(/^(T\d+(, )?)*$/))r.safety=ss.join(", ")}
 // log a take on a shot: counts it, and keeps its timecode and time of day
-function logTake(id,extra={}){
+function logTake(id,extra={}){ { const d=D(), r0=R(id); if(d&&r0){ const t=r0.seq&&R(r0.seq)?seqAnchor(r0):r0; if(d.onRow!==t.id){ d.onRow=t.id; d.onSince=Date.now(); } } }
   const r=R(id); if(!r) return null; const d=D(); const n=nextTake(r,d);
   const a=takeList(r); const t=Object.assign({n,tc:tcString(nowTcMs(),slateFps()),t:hhmm(nowMin()),at:Date.now(),mark:"",note:""},extra);
   a.push(t); setTakeList(r,a); r.takes=(Number(r.takes)||0)+1; commit();
@@ -1837,6 +1860,7 @@ function renderSlate0(){
     h("button",{title:"Previous shot",onclick:()=>slateStep(-1)},"‹"),
     h("button",{class:"clap",onclick:()=>clap()},c.logOnClap?"Clap · log take":"Clap"),
     h("button",{class:"cutb",id:"slCut",title:"Cut: timecode out on the take that's rolling (X)",onclick:()=>slateCut()},"■ Cut"),
+    ...(R(SLV.id)?[onNowBtn(R(SLV.id))]:[]),
     h("button",{title:"Mark this shot (or the whole sequence) done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){for(const m of (x.seq?seqMembers(x):[x])){m.done=true;m.doneAt=dayClock(D())}commit();renderBody()}const n=seqAnchor(upNext());SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
     h("button",{title:"Next shot",onclick:()=>slateStep(1)},"›"),
     h("span",{class:"slgrow"}),
@@ -1911,7 +1935,7 @@ function renderNotes(){
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
     h("div",{class:"nvtitle"},h("b",{},r?"Shot "+(r.shot||"-"):"No shots"),r&&r.priority?h("span",{class:"pill nvprio",style:`background:${prioHex(r.priority)||"var(--panel2)"};color:${inkOn(prioHex(r.priority)||"#ffffff")}`},r.priority):null,
-      h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null),
+      h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null,r?onNowBtn(r):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{class:"nvreset",title:"Put the panels back in their usual places and sizes",onclick:resetNvLayout,hidden:!nvCustom()},"Reset layout"),
     h("button",{title:"Close",onclick:closeNotes},"✕"));
