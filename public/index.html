@@ -308,6 +308,9 @@ body.dayfrozen #grid td.jumpable{cursor:default}
 .field select.on{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
 .daybtns{display:flex;gap:.35rem;align-items:flex-end}
 .stats{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}
+.statcfg{align-self:center;background:none;border:1px dashed var(--line2);border-radius:8px;color:var(--muted);font:inherit;font-size:1.1rem;padding:.2rem .6rem;cursor:pointer;opacity:.55}
+.statcfg:hover,.statcfg:focus-visible{opacity:1;color:var(--ink)}
+.statmenu label.mi{display:flex;align-items:center;gap:.3rem;cursor:pointer}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.45rem .75rem;min-width:7.4rem}
 .stat .k{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .stat .v{font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums}
@@ -387,6 +390,29 @@ select.cell.prio{font-weight:700;border-radius:4px}
 .timeline.actual .seg.live{animation:actpulse 1.6s ease-in-out infinite}
 @keyframes actpulse{50%{opacity:.55}}
 body.calm .timeline.actual .seg.live{animation:none}
+.focusbtn{align-self:center;background:none;border:1px solid var(--line2);border-radius:999px;color:var(--muted);font:inherit;font-size:.82rem;padding:.25rem .7rem;cursor:pointer}
+.focusbtn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#fff)}
+.stat.haspace{cursor:pointer} .stat.haspace:hover{border-color:var(--line2)}
+.pacesub .pacechev{color:var(--muted);margin-left:.3rem;white-space:nowrap}
+.plan.calm{border-left-width:3px} .plan.calm .planhead{padding:.3rem .7rem;font-size:.88rem}
+.statlay{border-bottom:1px solid var(--line);margin-bottom:.3rem;padding-bottom:.4rem}
+.laychips{display:flex;flex-wrap:wrap;gap:.3rem;margin:.1rem .3rem .4rem}
+.laychip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:.25rem .65rem;font:inherit;font-size:.85rem;color:var(--ink);cursor:pointer}
+.laychip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#fff)}
+.laychip-wrap{display:inline-flex;align-items:center} .laychip-wrap .laychip{border-radius:999px 0 0 999px}
+.laydel{border:1px solid var(--line);border-left:none;border-radius:0 999px 999px 0;background:var(--panel2);color:var(--muted);padding:.25rem .45rem;cursor:pointer;font:inherit;font-size:.85rem}
+.laysave{display:flex;gap:.3rem;margin:0 .3rem .3rem} .laysave input{flex:1;min-width:0}
+.statmenu{max-height:min(80vh,40rem);overflow:auto;max-width:min(24rem,calc(100vw - 1rem))}
+.minibar{display:none}
+@media (max-width:760px){
+  .minibar{display:flex;position:fixed;left:0;right:0;top:0;z-index:45;gap:.6rem;align-items:baseline;padding:.45rem .8rem calc(.45rem);padding-top:max(.45rem,env(safe-area-inset-top));background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 4px 14px -8px rgba(0,0,0,.35);font-size:.88rem;transform:translateY(-110%);transition:transform .2s;cursor:pointer}
+  .minibar.show{transform:none}
+  .minibar .mbcur{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+  .minibar .mbwrap{white-space:nowrap} .minibar .mbup{color:var(--muted)}
+  .minibar .mbdelta.bad{color:var(--bad)} .minibar .mbdelta.ok{color:var(--ok)}
+  body.hasminibar #grid th{top:2.4rem}
+  body.viewopen .minibar{display:none}
+}
 .topbtn{position:fixed;right:max(.8rem,env(safe-area-inset-right));bottom:max(.8rem,env(safe-area-inset-bottom));z-index:50;width:2.6rem;height:2.6rem;border-radius:50%;border:1px solid var(--line2);background:var(--panel);color:var(--ink);font:700 1.15rem/1 inherit;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px -4px rgba(0,0,0,.35);opacity:0;pointer-events:none;transform:translateY(.6rem);transition:opacity .2s,transform .2s}
 .topbtn.show{opacity:1;pointer-events:auto;transform:none}
 body.viewopen .topbtn{display:none}
@@ -394,6 +420,8 @@ body.viewopen .topbtn{display:none}
 
 main{padding:.9rem 1.4rem 4.5rem}
 .tablewrap{overflow:auto;max-height:88vh;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+/* touch screens (iPad, phones): no scroll box inside the page, or a swipe bounces off the end of the table instead of scrolling the page. The table only scrolls sideways. */
+@media (pointer:coarse){.tablewrap{max-height:none;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}}
 #grid{font-size:var(--tbl);border-collapse:separate;border-spacing:0;table-layout:fixed}
 #grid th,#grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:.46em;overflow:hidden}
 body.compact #grid th,body.compact #grid td{padding:.2em .35em}
@@ -610,7 +638,7 @@ header.top .toolbar{align-items:center;gap:.5rem}
 @media (max-width:600px){
   header.top .toolbar{flex-wrap:nowrap;gap:.35rem;width:100%}
   .tgroup+.tgroup,.tgroup+.onsetgroup{padding-left:0;border-left:none}
-  #colBtn,#ditBtn,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
+  #colBtn,#docMenu,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
   .fl-desk{display:none} .fl-phone{display:inline}
   .pop.menu .mi.phoneonly{display:flex} .pop.menu hr.phoneonly{display:block}
   .onsetgroup{margin-left:auto}
@@ -829,7 +857,17 @@ body.nosteps .mins.timing input{width:4.5em}
       </span>
       <span class="tgroup">
         <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
-        <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
+        <div class="colmenu" id="docMenu"><button class="btn small" id="docBtn" aria-haspopup="true" aria-expanded="false" title="Call sheet, running order, wrap report, takes and DIT names for this day">Documents ▾</button>
+          <div class="pop menu" id="docPop" role="menu">
+            <button class="mi" id="callSheetBtn" role="menuitem">Call sheet <small>one page for the day, to print or share</small></button>
+            <button class="mi" id="runOrderBtn" role="menuitem">Running order <small>times, shots, sequences</small></button>
+            <button class="mi" id="wrapRepBtn" role="menuitem">Wrap report <small>shots done, takes, seconds, what carries over</small></button>
+            <hr>
+            <button class="mi" id="ditBtn" role="menuitem">DIT names <small>shot names with take numbers, to copy</small></button>
+            <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
+            <hr>
+            <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
+          </div></div>
         <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity"><span class="fl-desk">File ▾</span><span class="fl-phone" aria-hidden="true">☰ Menu</span></button>
           <div class="pop menu" id="filePop" role="menu">
             <!-- on a phone the toolbar folds into this menu -->
@@ -837,7 +875,12 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi phoneonly" data-proxy="helpBtn" role="menuitem">Help</button>
             <button class="mi phoneonly" data-proxy="shareBtn" role="menuitem">Share <small>invite someone to this project</small></button>
             <button class="mi phoneonly" data-proxy="colBtn" role="menuitem">Columns <small>show or hide columns</small></button>
+            <button class="mi phoneonly" data-proxy="callSheetBtn" role="menuitem">Call sheet</button>
+            <button class="mi phoneonly" data-proxy="runOrderBtn" role="menuitem">Running order</button>
+            <button class="mi phoneonly" data-proxy="wrapRepBtn" role="menuitem">Wrap report</button>
             <button class="mi phoneonly" data-proxy="ditBtn" role="menuitem">DIT names</button>
+            <button class="mi phoneonly" data-proxy="takesBtn" role="menuitem">Export takes</button>
+            <button class="mi phoneonly" data-proxy="readyBtn" role="menuitem">Shoot-ready check</button>
             <button class="mi phoneonly" data-proxy="themeBtn" role="menuitem">Light / dark</button>
             <hr class="phoneonly">
             <button class="mi" id="impBtn" role="menuitem" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import… <small>sheet, CSV or storyboard PDF</small></button>
@@ -845,11 +888,8 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
             <button class="mi" id="csvBtn" role="menuitem">Export CSV <small>every day, one row per shot</small></button>
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
-            <button class="mi" id="runOrderBtn" role="menuitem">Running order <small>one page for the day: times, shots, sequences</small></button>
-            <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
             <hr>
             <button class="mi" id="dedupeBtn" role="menuitem">Remove duplicate pictures <small>the same storyboard frame twice on a shot</small></button>
-            <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
             <hr>
             <button class="mi" id="actBtn" role="menuitem" title="Who changed what">Activity <small>who changed what</small></button>
           </div></div>
@@ -882,8 +922,6 @@ body.nosteps .mins.timing input{width:4.5em}
     <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="nocut">Hide cut shots</option><option value="todo">Not yet shot (no cuts)</option></select></div>
     <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
-      <button class="btn small" id="callSheetBtn" title="One-page call sheet for this day, to print or share">Call sheet</button>
-      <button class="btn small" id="wrapRepBtn" title="End-of-day summary: shots done, takes, seconds, hero selects and what carries over">Wrap report</button>
       <button class="btn small" id="freezeBtn" aria-pressed="false" title="Lock this day's timings and running order once you're rolling. Ticks, takes, notes and cuts still work.">Freeze timings</button>
       <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
       <button class="btn small" id="archDayBtn" title="Put this day away. Nothing is deleted: restore it from the Archived tab">Archive day</button>
@@ -1020,6 +1058,7 @@ body.nosteps .mins.timing input{width:4.5em}
 </div></div>
 
 <div class="whopop" id="whoPop" role="dialog" aria-label="Who's online"></div>
+<div class="minibar noprint" id="miniBar" role="button" tabindex="-1" title="Back to the top"></div>
 <button class="topbtn noprint" id="topBtn" type="button" title="Back to the top" aria-label="Back to the top">↑</button>
 <button class="fbbtn noprint" id="fbBtn" type="button" aria-haspopup="dialog" aria-expanded="false" title="Report a bug, request a feature or ask a question" aria-label="Feedback and help">?<i id="fbDot" hidden></i></button>
 <div class="fbpanel noprint" id="fbPanel" role="dialog" aria-label="Feedback"></div>
@@ -1131,6 +1170,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <ul>
     <li>In Slate View, tap the <b>shot number</b> to open that shot in Note View.</li>
     <li><b>Status</b> (first column): <b>To do</b>, <b>Setting up</b> (you're on it, not rolling yet), <b>● Rolling</b>, <b>Shooting</b> (takes logged, between takes), <b>Shot ✓</b> or <b>Cut</b>. Click it to change: Setting up, ● Roll / ■ Cut take, Shot ✓, To do, or Cut shot. On the shoot day the next shot shows Setting up on its own until you roll; a sequence's shots show the sequence's status.</li>
+    <li><b>Stepping back</b>: you can pick any status from the menu, forwards or backwards. <b>To do</b> puts a shot back to not started (if a take is rolling it's cut first, and the takes stay logged), and the shot stops showing Setting up even if it's next in the list, until you set it up or roll. <b>Setting up</b> on a shot that already has takes means a reset or re-rig: it shows Setting up until the next take rolls. From Shot ✓, either one unticks it. Ctrl+Z (Cmd+Z) also undoes the last change.</li>
     <li><b>Which shot you're on</b>: the live ahead / behind (the Running card, and the pill in Note View) works from the shot or sequence you're on. Rolling a take puts you on it; when you shoot out of order, press <b>We're on this</b> in Note View, Sequence View or the slate. Until a take rolls you're <b>setting up</b>: you go behind once its setup should have finished. Once rolling you're <b>shooting</b>: it times from the first take and you go behind once the shot should have finished. Ticking it done moves you on to the next. Hover the Running card to see how it's worked out.</li>
     <li><b>Takes</b>: <b>✕</b> removes a take and shows <b>Undo</b> straight away (Ctrl/Cmd+Z works too). <b>Double-click the take number</b> (T3) to renumber it, for example to match what's on the physical slate (the next take then follows on), or to give it its own clip name; leave the name empty to keep the automatic one. A renamed clip name goes into the takes export. <b>Fix the timecode</b>: double-click a take's TC (or its number) and change <b>in</b> or <b>out</b>, as HH:MM:SS:FF, if you rolled late or cut early; the take's length and the captured / raw seconds follow. Undo puts it back.</li>
     <li><b>Arrange Note View</b>: drag a panel by its <b>⠿</b> (top right) to move it, or focus the ⠿ and use the arrow keys. Drag the corner at its bottom right to make it wider (in whole columns) and taller; double-click the corner to put that panel back to its usual size. <b>Reset layout</b> in the header puts everything back. The layout is kept on each device, so a laptop and a phone can be arranged differently. A playing video carries on while you rearrange.</li>
@@ -1160,6 +1200,13 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Running card</b>: on the day itself (the day's Shoot date is today) a card shows how far ahead (<b>-</b>, green) or behind (<b>+</b>) you are. It uses the time each shot was ticked as shot, against when the schedule had it finishing. If the shot you're on runs past its planned finish, the delta keeps growing until you tick it. Hover the card to see what it's based on. The card also shows the projected wrap, and a blue line marks now on the timeline. It updates every 30 seconds.</li>
     <li>Tick shots as they finish, so the delta is accurate. Shots ticked before this version, or on another day, have no time recorded, so the delta falls back to the clock.</li>
     <li><b>Actual timeline</b> sits under the planned timeline, on the same time scale, so you can see where the day went. For each shot or sequence it shows <b>setting up</b> (from when its Status was set to Setting up, or else from when the last shot finished) and <b>shooting</b> (from the first take to when it was marked Shot ✓). Breaks and tech rows between two shots are drawn at their planned length. A shot ticked with no takes logged shows striped, as setup and shooting can't be split. The one you're on pulses and grows with the clock. Its header totals setting up and shooting for the shots done so far against the plan. Hover a bar for its times, click it to jump to the shot.</li>
+    <li><b>Choosing the summary cards</b>: tap the faint <b>⋯</b> at the end of the cards along the top (or Display settings &gt; Summary cards) and untick any you don't need, such as Day length or Breaks. You can also turn off the hint pills under the cards (no lunch scheduled, shots with no setup time). <b>Show all</b> brings everything back. Per device, so the DIT and the 1st AD can each have their own.</li>
+    <li><b>Layouts</b>: in the <b>⋯</b> menu at the end of the cards (or Display settings &gt; Layouts), pick <b>1st AD</b>, <b>DIT / data</b>, <b>Director</b> or <b>Everything</b> to set the cards, panels and focus in one go; your columns stay as they are. Type a name and <b>Save</b> to keep your own layout, which also remembers your columns and their order. A <b>*</b> on a layout means you've changed things since picking it. Layouts are per device.</li>
+    <li><b>Shoot-day focus</b>: the <b>Focus</b> button next to the cards (shown on the shoot day, or whenever focus is on) tucks away what you only need for planning: the Day length, Setup / Shooting / Breaks / Tech totals and Original wrap cards, the hint pills, the planned timeline, and the Orig. start, Screen dur. and Hero / Safety link columns. Click it again to bring everything back. Nothing is deleted or changed for anyone else.</li>
+    <li><b>Pace in the Running card</b>: the Running card shows your streak and the minutes won back and lost. Tap it to open the full pace panel underneath, tap again to close it. Prefer it separate? Turn off Display settings &gt; Pace inside the Running card.</li>
+    <li><b>Recovery plan</b> stays as a single line while you're on target or only slightly over (click it to open). At the amber or red gate it opens by itself.</li>
+    <li><b>Documents</b> (in the header) has the Call sheet, Running order, Wrap report, DIT names, Export takes and Shoot-ready check together. On a phone they're in the ☰ Menu.</li>
+    <li><b>Phone mini-bar</b>: on a phone, once you scroll past the cards a thin bar pins to the top with the delta, the shot you're on and the projected wrap (before the day: the day name, shots to go and the wrap). Tap it to go back to the top.</li>
     <li><b>Showing and folding panels</b>: Pace, Recovery plan, Planned timeline and Actual timeline can each be turned off in Display settings &gt; Table and on-set tools. Each has a header bar: click it to fold the panel away to one line (it still shows the headline, such as the delta) and click again to open it. These settings are per device.</li>
     <li><b>Recovery plan</b> (under the summary cards) appears when the projected wrap is past target, or there are wins or cut shots. Its colour shows the gate: green on target, grey slightly over, <b>amber</b> and <b>red</b> past the gates you set in Settings &gt; Team defaults (10 and 30 minutes over target wrap to start with). Before the day, it works from the planned wrap.</li>
     <li><b>Shots to consider cutting</b> are ranked by the minutes they take (setup plus shooting, with buffers) against their priority and screen duration: low priority, long setups and short screen time go first. The list stops once it covers the time you need. Top priority shots only appear as a last resort. The shot you're on is never suggested.</li>
@@ -1286,12 +1333,12 @@ body.nosteps .mins.timing input{width:4.5em}
 
   <h3>Shoot-day tools</h3>
   <ul>
-    <li><b>Shoot-ready check</b> (File menu): a checklist for the night before. It checks the day is set up and the site is connected, shows who has joined, and has buttons to download a project backup, play the clap, open Slate View, practise a 30 second dropout (the status goes Offline, your changes wait, then send themselves), send a test feedback report and freeze timings. Ticks are kept on your device.</li>
+    <li><b>Shoot-ready check</b> (Documents menu): a checklist for the night before. It checks the day is set up and the site is connected, shows who has joined, and has buttons to download a project backup, play the clap, open Slate View, practise a 30 second dropout (the status goes Offline, your changes wait, then send themselves), send a test feedback report and freeze timings. Ticks are kept on your device.</li>
     <li><b>Freeze timings</b> (day banner): once you're rolling, locks the day's setup and shoot minutes, the running order, call time and buffers, so nobody retimes or drags shots by accident. Ticking shots, takes, notes, text, marks and <b>Cut</b> still work for everyone. <b>Unfreeze</b> any time. A frozen day says so above the table.</li>
-    <li><b>Call sheet</b> (day banner): one page with crew call, first shot, lunch and wrap, the location with weather and daylight, notes, cast and crew with phone numbers, and the running order. Type the address and notes straight into it; they're saved with the day and shared. <b>Print / PDF</b> prints just the call sheet (portrait), <b>Copy as text</b> is ready to paste into an email or message.</li>
-    <li><b>Wrap report</b> (day banner): shots done out of planned, call and actual wrap against the target, takes, captured or raw seconds, hero selects, each shot's takes, marks and finish time against the plan, what carries over (with a button to move it to another day), cuts and your wrap notes.</li>
-    <li><b>Running order</b> (File menu): one page for the day with times, each shot or sequence (one line per sequence, listing its shots), location and minutes, plus breaks and tech. Untick <b>One line per sequence</b> to list every shot. Print / PDF, Copy as text, or <b>Download CSV</b>.</li>
-    <li><b>Export takes</b> (File menu, and in the wrap report for one day): a CSV with one row per take: clip name, take, mark, timecode in and out, duration, when it was logged, take note, shot details and hero / safety links. Opens in Excel or Sheets, or hand it to the edit or DIT.</li>
+    <li><b>Call sheet</b> (Documents menu): one page with crew call, first shot, lunch and wrap, the location with weather and daylight, notes, cast and crew with phone numbers, and the running order. Type the address and notes straight into it; they're saved with the day and shared. <b>Print / PDF</b> prints just the call sheet (portrait), <b>Copy as text</b> is ready to paste into an email or message.</li>
+    <li><b>Wrap report</b> (Documents menu): shots done out of planned, call and actual wrap against the target, takes, captured or raw seconds, hero selects, each shot's takes, marks and finish time against the plan, what carries over (with a button to move it to another day), cuts and your wrap notes.</li>
+    <li><b>Running order</b> (Documents menu): one page for the day with times, each shot or sequence (one line per sequence, listing its shots), location and minutes, plus breaks and tech. Untick <b>One line per sequence</b> to list every shot. Print / PDF, Copy as text, or <b>Download CSV</b>.</li>
+    <li><b>Export takes</b> (Documents menu, and in the wrap report for one day): a CSV with one row per take: clip name, take, mark, timecode in and out, duration, when it was logged, take note, shot details and hero / safety links. Opens in Excel or Sheets, or hand it to the edit or DIT.</li>
     <li><b>Weather and daylight</b>: give a day a location (<b>Set location</b> under the day banner, or in the call sheet) by town, UK postcode, latitude and longitude, or <b>Use where I am now</b>. You then see sunrise, golden hour and sunset (worked out on your device), plus the forecast once the day is within 16 days: conditions, high and low, the chance of rain and when it's likeliest, and wind in mph. Only the place name or position is sent, to the free Open-Meteo forecast service (and postcodes.io for postcodes). Mocap days only show it when you set a location.</li>
   </ul>
 
@@ -1319,7 +1366,7 @@ body.nosteps .mins.timing input{width:4.5em}
 
   <h3>The header</h3>
   <ul>
-    <li>From the left: <b>↶ ↷</b> undo and redo; <b>Columns</b>, <b>DIT names</b> and the <b>File ▾</b> menu (Import, Export .xlsx, Export CSV, Print / PDF, Activity); <b>◐</b> light / dark, <b>Share</b>, <b>Settings</b>, <b>Help</b>; then <b>Slate</b> and <b>Notes</b>.</li>
+    <li>From the left: <b>↶ ↷</b> undo and redo; <b>Columns</b>, the <b>Documents ▾</b> menu (Call sheet, Running order, Wrap report, DIT names, Export takes, Shoot-ready check) and the <b>File ▾</b> menu (Import, Export .xlsx, Export CSV, Print / PDF, Activity); <b>◐</b> light / dark, <b>Share</b>, <b>Settings</b>, <b>Help</b>; then <b>Slate</b> and <b>Notes</b>.</li>
   </ul>
 
   <h3>Tablets and phones</h3>
@@ -1327,7 +1374,8 @@ body.nosteps .mins.timing input{width:4.5em}
     <li>The tool works on iPads and other tablets, and on phones for quick checks and ticking shots off. Add it to your home screen (Share → Add to Home Screen) and it opens like an app.</li>
     <li>On narrower screens the <b>Shot #</b> column stays put while you swipe sideways along a row, so you always know which shot you're in.</li>
     <li>The day banner folds down to the <b>Show</b> and <b>Priority</b> filters. Tap <b>Day settings</b> to open the name, status, times and buffers.</li>
-    <li>On a phone the header is one row: undo, redo, <b>☰ Menu</b>, Slate and Notes. The menu has Settings, Help, Share, Columns, DIT names and light / dark, as well as Import, Export and Print.</li>
+    <li><b>Touch screens</b> (iPad, phones): the shot list scrolls with the page, so one swipe carries straight through. Swipe sideways on the table to see more columns; Status and Shot # stay pinned on the left. On a computer the list keeps its own scroll area so the column headings stay in view.</li>
+    <li>On a phone the header is one row: undo, redo, <b>☰ Menu</b>, Slate and Notes. The menu has Settings, Help, Share, Columns, the documents (Call sheet, Running order, Wrap report, DIT names, Export takes, Shoot-ready check) and light / dark, as well as Import, Export and Print.</li>
     <li>Day tabs, the summary cards and the Settings tabs scroll sideways.</li>
     <li>Buttons and the − / + steppers get bigger on touch screens. Drag a column's right edge with your finger to resize it. To move a row, use the ↑ ↓ buttons in the row's last column if dragging the ⠿ handle is fiddly.</li>
   </ul>
@@ -1392,9 +1440,13 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.33.0";
+const VERSION = "2.35.1";
 const CHANGELOG = [
-  ["2.33.0","2026-11-21","Actual timeline under the planned one, on the same scale: how long each shot or sequence really took to set up (from Setting up, or from the last shot finishing) and to shoot (first take to Shot ✓), with a running total against the plan. Pace, Recovery plan and both timelines can each be turned off in Display settings and folded with their header bar. A round ↑ button bottom right takes you back to the top once you scroll down."],
+  ["2.35.1","2026-11-21","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
+  ["2.35.0","","Tidier dashboard. Layouts: one click for 1st AD, DIT / data, Director or Everything, or save your own (cards, panels, focus and columns), from the ⋯ at the end of the cards or Display settings. Shoot-day focus (the Focus button by the cards) tucks away planning cards, hints, the planned timeline and planning columns. Pace sits inside the Running card: tap the card for the details. The Recovery plan is one line while you're on target and opens itself at amber or red. Call sheet, Running order, Wrap report, DIT names, Export takes and the Shoot-ready check are together in a Documents menu. On phones, a thin bar with the delta, the shot you're on and the wrap pins to the top once you scroll past the cards (tap it to go back up)."],
+  ["2.34.0","","Choose which summary cards show along the top (Running, Calculated wrap, Day length, totals, Shots, Takes and so on): tap the ⋯ at the end of the cards, or Display settings > Summary cards. The hint pills under the cards can be turned off too. Per device."],
+  ["2.33.1","","Status steps backwards: To do now really goes back (the shot no longer shows Setting up just because it is next, and a rolling take is cut first), and Setting up after takes means a reset, so it shows Setting up until the next take rolls."],
+  ["2.33.0","","Actual timeline under the planned one, on the same scale: how long each shot or sequence really took to set up (from Setting up, or from the last shot finishing) and to shoot (first take to Shot ✓), with a running total against the plan. Pace, Recovery plan and both timelines can each be turned off in Display settings and folded with their header bar. A round ↑ button bottom right takes you back to the top once you scroll down."],
   ["2.32.0","","The Shot tick in the first column is now Status: To do, Setting up, Rolling, Shooting, Shot ✓ or Cut. Click it to set up (we're on it), roll or cut a take, mark it shot, or cut the shot; the live ahead / behind, Note View and the slate follow."],
   ["2.31.0","","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
   ["2.30.2","","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
@@ -2372,7 +2424,7 @@ function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k
 // print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
 const PRINT_W={handle:20,shot:32,seq:56,vcs:24,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
 function printWidths(){
-  if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
+  if(!S) return; const hid=hiddenView(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
   const w={}, flex=[];
   for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=24; else if(c.type==="number") w[c.key]=30; else flex.push(c.key); }
   // text and notes columns share what's left, in proportion to their on-screen widths
@@ -2390,7 +2442,7 @@ function printWidths(){
   $("#grid").style.width=total+"px";
 }
 function applyWidths(){
-  let total=0; const hid=hidden();
+  let total=0; const hid=hiddenView();
   for(const c of cols()){const col=$(`#cols col[data-col="${c.key}"]`);if(!col)continue;const hd=hid.includes(c.key);col.style.width=hd?"0px":colW(c.key)+"px";col.style.display=hd?"none":"";if(!hd)total+=colW(c.key);}
   $("#grid").style.width=total+"px";
 }
@@ -2422,7 +2474,7 @@ function filterText(r,key,C){
 const COLLATE=new Intl.Collator(undefined,{numeric:true,sensitivity:"base"});
 function visibleRows(C){
   const d=D(); if(!d) return [];
-  const f=P.filters||{}; const hid=hidden(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
+  const f=P.filters||{}; const hid=hiddenView(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
   let list=d.rows.filter(r=>{
     if((P.view==="todo"||P.view==="nocut")&&r.cut&&!isBlock(r)) return false;
     if(P.view==="todo"&&r.done) return false;
@@ -2456,7 +2508,7 @@ function setSort(key){
 }
 function renderViewbar(shown){
   const vb=$("#viewbar"); vb.innerHTML=""; const d=D();
-  const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hidden().includes(k)).length;
+  const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hiddenView().includes(k)).length;
   const sorted=!!(P.sort&&P.sort.key);
   $("#grid").classList.toggle("sorted",sorted);
   if(!d||(!sorted&&!fcount&&(P.view||"all")==="all"&&!P.prioFilter)){vb.classList.remove("show");return}
@@ -2476,11 +2528,11 @@ function applySortAsOrder(){
   d.rows=[...shown,...rest]; P.sort=null; commit(); renderHead(); renderBody(); toast("Running order updated - Undo to go back");
 }
 function renderHead(){
-  $("#grid").style.setProperty("--stick-shot",(hidden().includes("handle")?0:colW("handle"))+"px");
+  $("#grid").style.setProperty("--stick-shot",(hiddenView().includes("handle")?0:colW("handle"))+"px");
   const cg=$("#cols"); cg.innerHTML="";
   for(const c of cols()) cg.append(h("col",{"data-col":c.key}));
   const thead=$("#grid thead"); thead.innerHTML="";
-  const tr=h("tr",{class:"labels"}), fr=h("tr",{class:"filters"}); const hid=hidden();
+  const tr=h("tr",{class:"labels"}), fr=h("tr",{class:"filters"}); const hid=hiddenView();
   for(const c of cols()){
     const hc=hid.includes(c.key)?" hide-col":"";
     const sortable=!NO_SORT.includes(c.key);
@@ -2681,7 +2733,7 @@ function refreshNames(id){
 function renderBody(){
   const tb=$("#grid tbody"); tb.innerHTML=""; const d=D();
   if(!d){renderViewbar(0);tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"No days yet. Use + Day to add one.")));return}
-  const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
+  const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hiddenView();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
   const seenSeq=new Set(); NOWCUR=nowCurId(d,C);
   shown.forEach(r=>{
@@ -2769,12 +2821,13 @@ function renderStats(C){
   const wrapT=wrapMin(d), callT=toMin(d.call||"09:00"); const over=C.wrap-wrapT;
   const shots=d.rows.filter(r=>!isBlock(r)); const done=shots.filter(r=>r.done).length;
   const takes=shots.reduce((a,r)=>a+(Number(r.takes)||0),0);
-  const card=(k,v,sub,cls="")=>h("div",{class:"stat"},h("div",{class:"k"},k),h("div",{class:"v "+cls},v),sub?h("div",{class:"sub"},sub):null);
+  const card=(k,v,sub,cls="")=>h("div",{class:"stat","data-k":statKey(k)},h("div",{class:"k"},k),h("div",{class:"v "+cls},v),sub?h("div",{class:"sub"},sub):null);
   const L=liveStatus(d,C);
   if(L){ const s=L.slip, po=Math.round(L.proj-wrapT), g=cfg();
     const cls=s<=0?"ok":po>=(Number(g.gateRed)||30)?"bad":po>=(Number(g.gateAmber)||10)?"warn":"";
     const now=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
-    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis; st.append(c); }
+    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis;
+    runningPace(c,d,C); st.append(c); }
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
@@ -2782,6 +2835,12 @@ function renderStats(C){
     card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")),
     ...takeCards(d,card));
   if(d.origWrap) st.append(card("Original wrap",fmt(toMin(d.origWrap)),"as planned"));
+  // cards you've chosen not to see (Display settings > Summary cards, or the ⋯ at the end of the cards)
+  const hid=statHiddenEff(); $$(".stat",st).forEach(c=>{if(hid.includes(c.dataset.k))c.remove()});
+  if(P.focus||dayClock(d)!=null) st.append(h("button",{class:"focusbtn noprint"+(P.focus?" on":""),type:"button","aria-pressed":String(!!P.focus),title:P.focus?"Shoot-day focus is on: planning cards, hints, the planned timeline and planning columns are tucked away. Click to show everything.":"Shoot-day focus: tuck away planning-only cards, hints, the planned timeline and planning columns",onclick:()=>toggleFocus()},P.focus?"◉ Focus":"○ Focus"));
+  st.append(h("button",{class:"statcfg noprint",type:"button",title:"Choose which cards show here, and layouts","aria-label":"Choose summary cards and layout",onclick:e=>{e.stopPropagation();statCardMenu(e.currentTarget)}},"⋯"));
+  w.style.display=hintsOn()?"":"none";
+  updateMiniBar(d,C,L);
   if(C.shootT>0&&!d.rows.some(r=>isBlock(r)&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
   if(dayStatus(d)==="wrapped"){const miss=linkNeeds(d).filter(n=>!isUrl(n.r[n.k])).length;if(miss)w.append(h("span",{class:"pill",style:"cursor:pointer",onclick:()=>{P.linksOpen=true;renderLinks();$("#links").scrollIntoView({behavior:"smooth",block:"center"})}},`${miss} hero / safety link${miss>1?"s":""} still needed`))}
   const zero=shots.filter(r=>effSetup(r,d)===0).length;
@@ -2887,7 +2946,7 @@ function liveStatus(d,C){
 // "We're on this shot": what the live ahead / behind works from (shared with the team); setting up until a take rolls
 function setOnNow(id){ const d=D(); if(!d) return; const r=R(id); if(!r) return; const t=r.seq&&R(r.seq)?seqAnchor(r):r;
   d.onRow=t.id; d.onSince=Date.now(); t.setupAt=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
-function isOnNow(r){ const d=D(); if(!d||!r) return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
+function isOnNow(r){ const d=D(); if(!d||!r||d.onRow==="none") return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
 function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
 function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
 function buildPlan(d,C){
@@ -2929,9 +2988,10 @@ function renderPlan(C){
   if(!show) return;
   const head={green:p.spare>0?`${dur(p.spare)} in hand`:"On target",slight:`${dur(p.need)} over target wrap`,amber:`Amber gate: ${dur(p.need)} over target wrap`,red:`Red gate: ${dur(p.need)} over target wrap`}[p.gate];
   const sub={green:"Nothing needs cutting.",slight:"Within the amber gate. Keep an eye on it.",amber:"Worth deciding now what could go.",red:"Cut something to wrap on time."}[p.gate];
-  const open=P.planOpen!==false;
-  box.className="plan noprint gate-"+p.gate;
-  const tg=h("button",{class:"planhead",onclick:()=>{P.planOpen=!open;savePrefs();renderPlan(compute())}},h("b",{},"Recovery plan · "+head),h("span",{class:"note"},(p.L?"Live: ":"Plan: ")+sub),h("span",{},open?"▴":"▾"));
+  // calm (on target or only slightly over): one line until you open it; amber / red open by themselves
+  const calm=p.gate==="green"||p.gate==="slight", open=calm?!!P.planOpenCalm:P.planOpen!==false;
+  box.className="plan noprint gate-"+p.gate+(calm&&!open?" calm":"");
+  const tg=h("button",{class:"planhead",onclick:()=>{if(calm)P.planOpenCalm=!open;else P.planOpen=!open;savePrefs();renderPlan(compute())}},h("b",{},"Recovery plan · "+head),h("span",{class:"note"},(p.L?"Live: ":"Plan: ")+sub),h("span",{},open?"▴":"▾"));
   box.append(tg); if(!open) return;
   const body=h("div",{class:"planbody"}); box.append(body);
   const shotBtn=r=>h("a",{href:"#",onclick:e=>{e.preventDefault();jump(r.id)}},rowLabel(r));
@@ -3849,9 +3909,15 @@ function renderSetTab(){
       h("div",{class:"dswitches",style:"margin-top:.5rem"},
         sw("Stripe alternate rows","easier to follow a row across",()=>!!P.zebra,v=>P.zebra=v),
         sw("Reduce motion","no flashing or fades",()=>!!P.calm,v=>P.calm=v)));
+    sec("Layouts",h("div",{class:"note",style:"margin-bottom:.4rem"},"One click sets the cards, panels and focus for a role. Save your own to keep your columns too."),layoutChooser(()=>{if($("#setModal").classList.contains("open")&&setTab==="display")renderSetTab()})),
+    sec("Summary cards",h("div",{class:"note",style:"margin-bottom:.4rem"},"Which cards show along the top of the day. Cards only appear when they have something to say (Running on the shoot day, Takes once takes are logged)."),
+      h("div",{class:"dswitches"},...STAT_CARDS.map(([k,label,sub])=>sw(label,sub,()=>!statHidden().includes(k),v=>{setStatShown(k,v);setTimeout(()=>renderStats(compute()),0)})),
+        sw("Hints under the cards","e.g. no lunch scheduled, shots with no setup time",()=>P.showHints!==false,v=>{P.showHints=v;setTimeout(()=>renderStats(compute()),0)}))),
     sec("Table and on-set tools",h("div",{class:"dswitches"},
       sw("− / + buttons on Setup and Shoot","turn off to just type the minutes",()=>P.steppers!==false,v=>P.steppers=v),
-      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>{const C=compute();renderPace(C);renderPanels(C)},0)}),
+      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>{const C=compute();renderStats(C);renderPace(C);renderPanels(C)},0)}),
+      sw("Pace inside the Running card","tap the Running card to open the pace details",()=>P.paceMerge!==false,v=>{P.paceMerge=v;setTimeout(()=>{const C=compute();renderStats(C);renderPanels(C)},0)}),
+      sw("Shoot-day focus","tuck away planning cards, hints, the planned timeline and planning columns",()=>!!P.focus,v=>{P.focus=v;setTimeout(()=>renderAll(),0)}),
       sw("Recovery plan","what to cut or move when the day runs over",()=>P.showPlan!==false,v=>{P.showPlan=v;setTimeout(()=>renderPanels(compute()),0)}),
       sw("Planned timeline","the day's plan as a bar, with the target wrap",()=>P.showTl!==false,v=>{P.showTl=v;setTimeout(()=>renderPanels(compute()),0)}),
       sw("Actual timeline","how long setting up and shooting really took, under the plan",()=>P.showActual!==false,v=>{P.showActual=v;setTimeout(()=>renderPanels(compute()),0)}),
@@ -5270,10 +5336,12 @@ $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
-document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#docBtn").contains(e.target)){$("#docMenu").classList.remove("open");$("#docBtn").setAttribute("aria-expanded","false")}if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
 // phone menu items stand in for the toolbar buttons that fold away
 $$("#filePop [data-proxy]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false");const t=$("#"+b.dataset.proxy);if(t)t.click()}));
-$("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
+$("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open");$("#docMenu").classList.remove("open")};
+$("#docBtn").onclick=e=>{e.stopPropagation();const o=$("#docMenu").classList.toggle("open");$("#docBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open");$("#fileMenu").classList.remove("open")};
+$$("#docPop .mi").forEach(b=>b.addEventListener("click",()=>{$("#docMenu").classList.remove("open");$("#docBtn").setAttribute("aria-expanded","false")}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
 $("#pasteBtn").onclick=()=>{if(frozenNo())return;$("#pasteText").value="";$("#pasteModal").classList.add("open");$("#pasteText").focus()};
@@ -5698,11 +5766,13 @@ function videoCell(r){
 /* ---------- Status in the first column: To do / Setting up / Rolling / Shooting / Shot / Cut ---------- */
 let NOWCUR=null;
 // the shot (or sequence's first shot) we're on: the live one on the shoot day, otherwise only one picked by hand
-function nowCurId(d,C){ const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
+function nowCurId(d,C){ if(d&&d.onRow==="none") return null; const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
 function rowStatus(r,cur){
   if(r.cut) return "cut"; if(r.done) return "shot";
   const t=r.seq&&R(r.seq)?seqAnchor(r):r; if(rollingTake(t)) return "rolling";
-  if(cur&&t.id===cur) return takeList(t).some(x=>x.at&&Date.now()-x.at<16*3600e3)?"shooting":"setup";
+  if(cur&&t.id===cur){ const tk=takeList(t).filter(x=>x.at&&Date.now()-x.at<16*3600e3); if(!tk.length) return "setup";
+    // set back to Setting up after takes (a reset or re-rig): setting up again until the next take rolls
+    const d=D(), last=Math.max(...tk.map(x=>x.at+(x.ms||0))); return d&&d.onRow===t.id&&d.onSince>last?"setup":"shooting"; }
   return "todo";
 }
 const STATUS_LABEL={todo:"To do",setup:"Setting up",rolling:"● Rolling",shooting:"Shooting",shot:"Shot ✓",cut:"Cut"};
@@ -5717,8 +5787,10 @@ function statusMenu(anchor,id){
   const undone=x=>{x.done=false;x.doneAt=null};
   pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},(t.seq?seqTitle(t)+" · shot ":"Shot ")+(r.shot||"-")));
   pop.append(
-    item("To do",()=>{const x=R(id);undone(x);x.cut=false;t.setupAt=null;if(d.onRow===t.id){d.onRow="";d.onSince=null}afterStatus()},"",st==="todo"),
-    item("Setting up",()=>{const x=R(id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();t.setupAt=Date.now();afterStatus();toast("Setting up: ahead / behind counts from now until you roll")},"we're on it, not rolling yet",st==="setup"),
+    item("To do",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);undone(x);x.cut=false;t.setupAt=null;
+      // step back: nobody's on this one now (so it doesn't show Setting up just because it's next)
+      if(d.onRow===t.id||st==="setup"||st==="shooting"||st==="rolling"){d.onRow="none";d.onSince=null}afterStatus()},st==="todo"?"":"not started, step back",st==="todo"),
+    item("Setting up",()=>{const x=R(id);const had=takeList(t).length>0;if(rollingTake(t))cutTake(t.id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();if(!had||!t.setupAt)t.setupAt=Date.now();afterStatus();toast(had?"Setting up again (reset): back to Shooting when the next take rolls":"Setting up: ahead / behind counts from now until you roll")},st==="shooting"||st==="rolling"?"reset between takes, not rolling":"we're on it, not rolling yet",st==="setup"),
     rolling?item("■ Cut take",()=>{cutTake(t.id);afterStatus()},"end take "+rolling.n+" (timecode out)")
            :item("● Roll",()=>{const x=R(id);undone(x);x.cut=false;logTake(t.id,t.seq&&d.kind!=="capture"?{caught:[]}:{});afterStatus()},"start take "+nextTake(t,d)+(t.seq?" of the sequence":""),st==="rolling"),
     item("Shot ✓",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);x.done=true;x.doneAt=dayClock(d);x.cut=false;afterStatus()},t.seq?"just this shot (Sequence done ticks them all)":"",st==="shot"),
@@ -6244,9 +6316,10 @@ function renderPanels(C){
   for(const key of Object.keys(PANELS)){
     const head=$(`.phead[data-panel="${key}"]`); if(!head) continue;
     const body=key==="pace"?$("#pace"):$(`.pbody[data-panel="${key}"]`);
-    const on=key==="pace"?(P.showPace!==false&&body.classList.contains("on")):key==="timeline"?(P.showTl!==false&&!!d):(nAct>0);
-    const fold=!!P.panelFold[key];
-    head.hidden=!on; if(key!=="pace") body.hidden=!on;
+    const on=key==="pace"?(P.showPace!==false&&body.classList.contains("on")):key==="timeline"?(P.showTl!==false&&!P.focus&&!!d):(nAct>0);
+    const merged=key==="pace"&&on&&paceMerged()&&!!$("#stats .stat.live");
+    const fold=merged?!P.paceOpen:!!P.panelFold[key];
+    head.hidden=!on||merged; if(key!=="pace") body.hidden=!on;
     body.classList.toggle("pfold",on&&fold);
     let sum="";
     if(key==="pace"&&on){ const n=$(".pacenum",body), wd=$(".pacewords b",body); sum=(n?n.textContent:"")+(wd?" · "+wd.textContent:""); }
@@ -6254,7 +6327,7 @@ function renderPanels(C){
     if(key==="actual"&&on) sum=ACT_SUM;
     head.replaceChildren(h("b",{},PANELS[key]),h("span",{class:"note"},sum),h("span",{class:"chev"},fold?"▾ show":"▴ hide"));
     head.setAttribute("aria-expanded",String(!fold));
-    head.onclick=()=>{ P.panelFold[key]=!P.panelFold[key]; savePrefs(); const C2=compute(); if(key==="timeline"&&!P.panelFold[key]) renderTimeline(C2); renderPanels(C2); };
+    head.onclick=()=>{ if(merged){P.paceOpen=!P.paceOpen;savePrefs();const C2=compute();renderStats(C2);renderPanels(C2);return} P.panelFold[key]=!P.panelFold[key]; savePrefs(); const C2=compute(); if(key==="timeline"&&!P.panelFold[key]) renderTimeline(C2); renderPanels(C2); };
   }
 }
 // back to the top: a round button bottom right once you've scrolled down the list
@@ -6263,6 +6336,104 @@ function renderPanels(C){
   window.addEventListener("scroll",upd,{passive:true}); upd();
   b.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"});
 })();
+
+// ---- Summary cards: choose which show (per device) ----
+const STAT_CARDS=[["running","Running","ahead / behind on the shoot day"],["wrap","Calculated wrap","and how far over / under target"],["length","Day length",""],["setup","Setup total",""],["shooting","Shooting total",""],["breaks","Breaks / moves",""],["tech","Tech / turnaround","when the day has any"],["shots","Shots","shot, to go, cut"],["takes","Takes",""],["footage","Raw footage / Captured","timed takes"],["hero","Hero selects","Mocap"],["orig","Original wrap","when one is set"]];
+function statKey(label){ return ({"Running":"running","Calculated wrap":"wrap","Day length":"length","Setup total":"setup","Shooting total":"shooting","Breaks / moves":"breaks","Tech / turnaround":"tech","Shots":"shots","Takes":"takes","Raw footage":"footage","Captured":"footage","Hero selects":"hero","Original wrap":"orig"})[label]||label; }
+function statHidden(){ return Array.isArray(P.statHidden)?P.statHidden:[]; }
+function setStatShown(k,on){ const H=statHidden().filter(x=>x!==k); if(!on) H.push(k); P.statHidden=H; savePrefs(); }
+function statCardMenu(anchor){
+  $$(".locpop").forEach(x=>x.remove());
+  const pop=h("div",{class:"locpop seqmenu statmenu",role:"menu"});
+  const draw=()=>{ pop.replaceChildren(h("div",{class:"note",style:"margin:0 .3rem .3rem"},"Show these cards (this device)"));
+    for(const [k,label] of STAT_CARDS){ const cb=h("input",{type:"checkbox"}); cb.checked=!statHidden().includes(k);
+      cb.addEventListener("change",()=>{setStatShown(k,cb.checked);renderStats(compute())}); pop.append(h("label",{class:"mi"},cb," ",label)); }
+    const hb=h("input",{type:"checkbox"}); hb.checked=P.showHints!==false; hb.addEventListener("change",()=>{P.showHints=hb.checked;savePrefs();renderStats(compute())});
+    pop.append(h("label",{class:"mi",style:"border-top:1px solid var(--line);margin-top:.2rem;padding-top:.4rem"},hb," Hints under the cards"));
+    pop.append(h("button",{class:"mi",onclick:()=>{P.statHidden=[];P.showHints=true;savePrefs();renderStats(compute());draw();pop.prepend(statMenuTop())}},"Show all")); };
+  draw(); pop.prepend(statMenuTop()); document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); pop.style.top=Math.max(8,Math.min(b.bottom+6,innerHeight-pop.offsetHeight-8))+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)&&e.target.isConnected){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+
+// ---- Shoot-day focus, layouts by role, pace in the Running card, phone mini-bar ----
+const FOCUS_CARDS=["length","setup","shooting","breaks","tech","orig"], FOCUS_COLS=["orig","duration","heroUrl","safetyUrl"];
+function statHiddenEff(){ const H=statHidden().slice(); if(P.focus) for(const k of FOCUS_CARDS) if(!H.includes(k)) H.push(k); return H; }
+function hintsOn(){ return P.showHints!==false&&!P.focus; }
+function hiddenView(){ const H=hidden(); return P.focus?[...new Set([...H,...FOCUS_COLS])]:H; }
+function toggleFocus(on){ P.focus=on==null?!P.focus:!!on; savePrefs(); renderAll(); toast(P.focus?"Shoot-day focus on: planning cards, hints, planned timeline and planning columns tucked away":"Focus off: everything's back"); }
+
+// layouts: the built-in ones set cards, panels and focus; your own also keep your columns
+const LAYOUT_KEYS=["statHidden","showHints","showPace","paceMerge","showPlan","showTl","showActual","panelFold","focus"];
+const LAYOUTS_BUILTIN={
+  "1st AD":{statHidden:["takes","footage","hero"],showHints:true,showPace:true,paceMerge:true,showPlan:true,showTl:true,showActual:true,panelFold:{},focus:false},
+  "DIT / data":{statHidden:["wrap","length","setup","shooting","breaks","tech","orig"],showHints:false,showPace:false,paceMerge:true,showPlan:false,showTl:false,showActual:true,panelFold:{},focus:true},
+  "Director":{statHidden:["length","setup","shooting","breaks","tech","orig","takes","footage"],showHints:false,showPace:true,paceMerge:true,showPlan:false,showTl:true,showActual:false,panelFold:{},focus:true},
+  "Everything":{statHidden:[],showHints:true,showPace:true,paceMerge:false,showPlan:true,showTl:true,showActual:true,panelFold:{},focus:false}};
+function layoutSnap(withCols){ const o={}; for(const k of LAYOUT_KEYS) o[k]=clone(P[k]===undefined?null:P[k]); if(withCols){o.hiddenBy=clone(P.hiddenBy||{});o.colOrder=clone(P.colOrder||[])} return o; }
+function applyLayout(name){
+  const L=(P.layouts||{})[name]||LAYOUTS_BUILTIN[name]; if(!L) return;
+  for(const k of LAYOUT_KEYS){ if(L[k]===null||L[k]===undefined) delete P[k]; else P[k]=clone(L[k]); }
+  if(L.hiddenBy){ P.hiddenBy=clone(L.hiddenBy); P.colOrder=clone(L.colOrder||[]); if(typeof invalidateCols==="function") invalidateCols(); }
+  P.layout=name; savePrefs(); renderAll(); toast("Layout: "+name);
+}
+function layoutChanged(){ const n=P.layout; if(!n) return false; const L=(P.layouts||{})[n]||LAYOUTS_BUILTIN[n]; if(!L) return false; const now=layoutSnap(false);
+  const norm=v=>JSON.stringify(v==null?null:v); return LAYOUT_KEYS.some(k=>norm(now[k])!==norm(L[k]===undefined?null:L[k])); }
+function layoutChooser(after){
+  const box=h("div",{class:"layouts"});
+  const draw=()=>{ box.replaceChildren();
+    const row=h("div",{class:"laychips"});
+    const chip=(name,own)=>{ const on=P.layout===name; const b=h("button",{class:"laychip"+(on?" on":""),type:"button",title:own?"Your layout: cards, panels, focus and columns":"Built-in: cards, panels and focus (your columns stay as they are)",onclick:()=>{applyLayout(name);draw();after&&after()}},name+(on&&layoutChanged()?" *":""));
+      if(!own) return b;
+      return h("span",{class:"laychip-wrap"},b,h("button",{class:"laydel",type:"button",title:"Delete this layout","aria-label":"Delete layout "+name,onclick:async()=>{if(!await ask("Delete layout?",`"${name}" will be removed from this device.`,"Delete"))return;delete P.layouts[name];if(P.layout===name)P.layout="";savePrefs();draw()}},"×")); };
+    for(const n of Object.keys(LAYOUTS_BUILTIN)) row.append(chip(n,false));
+    for(const n of Object.keys(P.layouts||{})) row.append(chip(n,true));
+    box.append(row);
+    const inp=h("input",{type:"text",placeholder:"Save current as… e.g. Josh DIT",maxlength:"30","aria-label":"Name for this layout"});
+    const save=()=>{ const n=inp.value.trim(); if(!n) return inp.focus(); if(LAYOUTS_BUILTIN[n]){toast("Pick a different name from the built-in layouts");return}
+      P.layouts=Object.assign({},P.layouts,{[n]:layoutSnap(true)}); P.layout=n; savePrefs(); toast(`Saved layout "${n}" (cards, panels, focus and columns)`); draw(); after&&after(); };
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save()}});
+    box.append(h("div",{class:"laysave"},inp,h("button",{class:"btn small",type:"button",onclick:save},"Save")));
+    if(P.layout&&layoutChanged()) box.append(h("div",{class:"note"},`* changed since you picked "${P.layout}". Click it to go back, or save as a new layout.`));
+  };
+  draw(); return box;
+}
+// the ⋯ menu: layouts first, then the cards
+function statMenuTop(){
+  const top=h("div",{class:"statlay"},h("div",{class:"note",style:"margin:0 .3rem .3rem"},"Layout"),layoutChooser(()=>{}));
+  const fc=h("input",{type:"checkbox"}); fc.checked=!!P.focus; fc.addEventListener("change",()=>{P.focus=fc.checked;savePrefs();renderAll()});
+  top.append(h("label",{class:"mi",title:"tuck away planning cards, hints, the planned timeline and planning columns"},fc," Shoot-day focus"));
+  return top;
+}
+// pace inside the Running card: streak and won / lost on the card, tap it to open the full pace panel
+function paceMerged(){ return P.showPace!==false&&P.paceMerge!==false&&!statHiddenEff().includes("running"); }
+function runningPace(card,d,C){
+  if(!paceMerged()) return; const p=paceData(d,C); if(!p) return;
+  const open=!!P.paceOpen;
+  card.classList.add("haspace"); card.setAttribute("role","button"); card.tabIndex=0; card.setAttribute("aria-expanded",String(open));
+  card.append(h("div",{class:"sub pacesub"},`${p.streak} on pace · won ${dur(p.won)} · lost ${dur(p.lost)} `,h("span",{class:"pacechev"},open?"▴ pace":"▾ pace")));
+  const go=()=>{P.paceOpen=!P.paceOpen;savePrefs();const C2=compute();renderStats(C2);renderPanels(C2)};
+  card.onclick=go; card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}};
+}
+// phone: a thin bar pinned to the top once the cards scroll away
+function updateMiniBar(d,C,L){
+  const bar=$("#miniBar"); if(!bar) return;
+  if(!d){bar.replaceChildren();return}
+  if(L){ const s=L.slip, cur=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-")):"";
+    const ph={setup:"setting up",rolling:"● rolling",shooting:"shooting"}[L.phase]||"";
+    bar.replaceChildren(h("b",{class:"mbdelta "+(s>0?"bad":s<0?"ok":"")},s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s))),
+      h("span",{class:"mbcur"},cur?cur+(ph?" · "+ph:""):"every shot done"),h("span",{class:"mbwrap"},"wrap "+fmt(L.proj)),h("span",{class:"mbup","aria-hidden":"true"},"↑"));
+  } else {
+    const shots=d.rows.filter(r=>!isBlock(r)&&!r.cut), left=shots.filter(r=>!r.done).length;
+    bar.replaceChildren(h("b",{},d.name||"Day"),h("span",{class:"mbcur"},left+" to go"),h("span",{class:"mbwrap"},"wrap "+fmt(C.wrap)),h("span",{class:"mbup","aria-hidden":"true"},"↑"));
+  }
+  miniBarScroll();
+}
+function miniBarScroll(){ const bar=$("#miniBar"), st=$("#stats"); if(!bar||!st) return;
+  const show=window.innerWidth<=760&&!!S&&!!D()&&st.getBoundingClientRect().bottom<0&&!document.body.classList.contains("viewopen");
+  bar.classList.toggle("show",show); document.body.classList.toggle("hasminibar",show); }
+window.addEventListener("scroll",miniBarScroll,{passive:true}); window.addEventListener("resize",miniBarScroll);
+(function(){ const bar=$("#miniBar"); if(bar) bar.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"}); })();
 
 boot();
 

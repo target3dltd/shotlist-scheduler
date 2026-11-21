@@ -308,6 +308,9 @@ body.dayfrozen #grid td.jumpable{cursor:default}
 .field select.on{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
 .daybtns{display:flex;gap:.35rem;align-items:flex-end}
 .stats{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}
+.statcfg{align-self:center;background:none;border:1px dashed var(--line2);border-radius:8px;color:var(--muted);font:inherit;font-size:1.1rem;padding:.2rem .6rem;cursor:pointer;opacity:.55}
+.statcfg:hover,.statcfg:focus-visible{opacity:1;color:var(--ink)}
+.statmenu label.mi{display:flex;align-items:center;gap:.3rem;cursor:pointer}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.45rem .75rem;min-width:7.4rem}
 .stat .k{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .stat .v{font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums}
@@ -387,6 +390,29 @@ select.cell.prio{font-weight:700;border-radius:4px}
 .timeline.actual .seg.live{animation:actpulse 1.6s ease-in-out infinite}
 @keyframes actpulse{50%{opacity:.55}}
 body.calm .timeline.actual .seg.live{animation:none}
+.focusbtn{align-self:center;background:none;border:1px solid var(--line2);border-radius:999px;color:var(--muted);font:inherit;font-size:.82rem;padding:.25rem .7rem;cursor:pointer}
+.focusbtn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#fff)}
+.stat.haspace{cursor:pointer} .stat.haspace:hover{border-color:var(--line2)}
+.pacesub .pacechev{color:var(--muted);margin-left:.3rem;white-space:nowrap}
+.plan.calm{border-left-width:3px} .plan.calm .planhead{padding:.3rem .7rem;font-size:.88rem}
+.statlay{border-bottom:1px solid var(--line);margin-bottom:.3rem;padding-bottom:.4rem}
+.laychips{display:flex;flex-wrap:wrap;gap:.3rem;margin:.1rem .3rem .4rem}
+.laychip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:.25rem .65rem;font:inherit;font-size:.85rem;color:var(--ink);cursor:pointer}
+.laychip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#fff)}
+.laychip-wrap{display:inline-flex;align-items:center} .laychip-wrap .laychip{border-radius:999px 0 0 999px}
+.laydel{border:1px solid var(--line);border-left:none;border-radius:0 999px 999px 0;background:var(--panel2);color:var(--muted);padding:.25rem .45rem;cursor:pointer;font:inherit;font-size:.85rem}
+.laysave{display:flex;gap:.3rem;margin:0 .3rem .3rem} .laysave input{flex:1;min-width:0}
+.statmenu{max-height:min(80vh,40rem);overflow:auto;max-width:min(24rem,calc(100vw - 1rem))}
+.minibar{display:none}
+@media (max-width:760px){
+  .minibar{display:flex;position:fixed;left:0;right:0;top:0;z-index:45;gap:.6rem;align-items:baseline;padding:.45rem .8rem calc(.45rem);padding-top:max(.45rem,env(safe-area-inset-top));background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 4px 14px -8px rgba(0,0,0,.35);font-size:.88rem;transform:translateY(-110%);transition:transform .2s;cursor:pointer}
+  .minibar.show{transform:none}
+  .minibar .mbcur{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+  .minibar .mbwrap{white-space:nowrap} .minibar .mbup{color:var(--muted)}
+  .minibar .mbdelta.bad{color:var(--bad)} .minibar .mbdelta.ok{color:var(--ok)}
+  body.hasminibar #grid th{top:2.4rem}
+  body.viewopen .minibar{display:none}
+}
 .topbtn{position:fixed;right:max(.8rem,env(safe-area-inset-right));bottom:max(.8rem,env(safe-area-inset-bottom));z-index:50;width:2.6rem;height:2.6rem;border-radius:50%;border:1px solid var(--line2);background:var(--panel);color:var(--ink);font:700 1.15rem/1 inherit;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px -4px rgba(0,0,0,.35);opacity:0;pointer-events:none;transform:translateY(.6rem);transition:opacity .2s,transform .2s}
 .topbtn.show{opacity:1;pointer-events:auto;transform:none}
 body.viewopen .topbtn{display:none}
@@ -394,6 +420,8 @@ body.viewopen .topbtn{display:none}
 
 main{padding:.9rem 1.4rem 4.5rem}
 .tablewrap{overflow:auto;max-height:88vh;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+/* touch screens (iPad, phones): no scroll box inside the page, or a swipe bounces off the end of the table instead of scrolling the page. The table only scrolls sideways. */
+@media (pointer:coarse){.tablewrap{max-height:none;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}}
 #grid{font-size:var(--tbl);border-collapse:separate;border-spacing:0;table-layout:fixed}
 #grid th,#grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:.46em;overflow:hidden}
 body.compact #grid th,body.compact #grid td{padding:.2em .35em}
@@ -610,7 +638,7 @@ header.top .toolbar{align-items:center;gap:.5rem}
 @media (max-width:600px){
   header.top .toolbar{flex-wrap:nowrap;gap:.35rem;width:100%}
   .tgroup+.tgroup,.tgroup+.onsetgroup{padding-left:0;border-left:none}
-  #colBtn,#ditBtn,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
+  #colBtn,#docMenu,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
   .fl-desk{display:none} .fl-phone{display:inline}
   .pop.menu .mi.phoneonly{display:flex} .pop.menu hr.phoneonly{display:block}
   .onsetgroup{margin-left:auto}
@@ -829,7 +857,17 @@ body.nosteps .mins.timing input{width:4.5em}
       </span>
       <span class="tgroup">
         <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
-        <button class="btn small" id="ditBtn" title="Shot names with take numbers, ready to copy">DIT names</button>
+        <div class="colmenu" id="docMenu"><button class="btn small" id="docBtn" aria-haspopup="true" aria-expanded="false" title="Call sheet, running order, wrap report, takes and DIT names for this day">Documents ▾</button>
+          <div class="pop menu" id="docPop" role="menu">
+            <button class="mi" id="callSheetBtn" role="menuitem">Call sheet <small>one page for the day, to print or share</small></button>
+            <button class="mi" id="runOrderBtn" role="menuitem">Running order <small>times, shots, sequences</small></button>
+            <button class="mi" id="wrapRepBtn" role="menuitem">Wrap report <small>shots done, takes, seconds, what carries over</small></button>
+            <hr>
+            <button class="mi" id="ditBtn" role="menuitem">DIT names <small>shot names with take numbers, to copy</small></button>
+            <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
+            <hr>
+            <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
+          </div></div>
         <div class="colmenu" id="fileMenu"><button class="btn small" id="fileBtn" aria-haspopup="true" aria-expanded="false" title="Import, export, print and activity"><span class="fl-desk">File ▾</span><span class="fl-phone" aria-hidden="true">☰ Menu</span></button>
           <div class="pop menu" id="filePop" role="menu">
             <!-- on a phone the toolbar folds into this menu -->
@@ -837,7 +875,12 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi phoneonly" data-proxy="helpBtn" role="menuitem">Help</button>
             <button class="mi phoneonly" data-proxy="shareBtn" role="menuitem">Share <small>invite someone to this project</small></button>
             <button class="mi phoneonly" data-proxy="colBtn" role="menuitem">Columns <small>show or hide columns</small></button>
+            <button class="mi phoneonly" data-proxy="callSheetBtn" role="menuitem">Call sheet</button>
+            <button class="mi phoneonly" data-proxy="runOrderBtn" role="menuitem">Running order</button>
+            <button class="mi phoneonly" data-proxy="wrapRepBtn" role="menuitem">Wrap report</button>
             <button class="mi phoneonly" data-proxy="ditBtn" role="menuitem">DIT names</button>
+            <button class="mi phoneonly" data-proxy="takesBtn" role="menuitem">Export takes</button>
+            <button class="mi phoneonly" data-proxy="readyBtn" role="menuitem">Shoot-ready check</button>
             <button class="mi phoneonly" data-proxy="themeBtn" role="menuitem">Light / dark</button>
             <hr class="phoneonly">
             <button class="mi" id="impBtn" role="menuitem" title="Bring in shots from an .xlsx or .csv (Google Sheets, Excel, Numbers, Shotlist Builder), or storyboard pictures from a shot tracker PDF">Import… <small>sheet, CSV or storyboard PDF</small></button>
@@ -845,11 +888,8 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi" id="xlsxBtn" role="menuitem" title="Tracker workbook for Google Sheets / Excel, one row per take, live Shot ID formulas">Export .xlsx <small>tracker for Sheets / Excel</small></button>
             <button class="mi" id="csvBtn" role="menuitem">Export CSV <small>every day, one row per shot</small></button>
             <button class="mi" id="printBtn" role="menuitem">Print / PDF <small>this day</small></button>
-            <button class="mi" id="runOrderBtn" role="menuitem">Running order <small>one page for the day: times, shots, sequences</small></button>
-            <button class="mi" id="takesBtn" role="menuitem">Export takes <small>for the edit or DIT: timecode, marks, notes</small></button>
             <hr>
             <button class="mi" id="dedupeBtn" role="menuitem">Remove duplicate pictures <small>the same storyboard frame twice on a shot</small></button>
-            <button class="mi" id="readyBtn" role="menuitem">Shoot-ready check <small>the night before: backup, sound, dropout test</small></button>
             <hr>
             <button class="mi" id="actBtn" role="menuitem" title="Who changed what">Activity <small>who changed what</small></button>
           </div></div>
@@ -882,8 +922,6 @@ body.nosteps .mins.timing input{width:4.5em}
     <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="nocut">Hide cut shots</option><option value="todo">Not yet shot (no cuts)</option></select></div>
     <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
-      <button class="btn small" id="callSheetBtn" title="One-page call sheet for this day, to print or share">Call sheet</button>
-      <button class="btn small" id="wrapRepBtn" title="End-of-day summary: shots done, takes, seconds, hero selects and what carries over">Wrap report</button>
       <button class="btn small" id="freezeBtn" aria-pressed="false" title="Lock this day's timings and running order once you're rolling. Ticks, takes, notes and cuts still work.">Freeze timings</button>
       <button class="btn small" id="dupDayBtn" title="Copy this day as a new day">Copy day</button>
       <button class="btn small" id="archDayBtn" title="Put this day away. Nothing is deleted: restore it from the Archived tab">Archive day</button>
@@ -1020,6 +1058,7 @@ body.nosteps .mins.timing input{width:4.5em}
 </div></div>
 
 <div class="whopop" id="whoPop" role="dialog" aria-label="Who's online"></div>
+<div class="minibar noprint" id="miniBar" role="button" tabindex="-1" title="Back to the top"></div>
 <button class="topbtn noprint" id="topBtn" type="button" title="Back to the top" aria-label="Back to the top">↑</button>
 <button class="fbbtn noprint" id="fbBtn" type="button" aria-haspopup="dialog" aria-expanded="false" title="Report a bug, request a feature or ask a question" aria-label="Feedback and help">?<i id="fbDot" hidden></i></button>
 <div class="fbpanel noprint" id="fbPanel" role="dialog" aria-label="Feedback"></div>

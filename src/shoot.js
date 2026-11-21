@@ -392,11 +392,13 @@ function videoCell(r){
 /* ---------- Status in the first column: To do / Setting up / Rolling / Shooting / Shot / Cut ---------- */
 let NOWCUR=null;
 // the shot (or sequence's first shot) we're on: the live one on the shoot day, otherwise only one picked by hand
-function nowCurId(d,C){ const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
+function nowCurId(d,C){ if(d&&d.onRow==="none") return null; const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
 function rowStatus(r,cur){
   if(r.cut) return "cut"; if(r.done) return "shot";
   const t=r.seq&&R(r.seq)?seqAnchor(r):r; if(rollingTake(t)) return "rolling";
-  if(cur&&t.id===cur) return takeList(t).some(x=>x.at&&Date.now()-x.at<16*3600e3)?"shooting":"setup";
+  if(cur&&t.id===cur){ const tk=takeList(t).filter(x=>x.at&&Date.now()-x.at<16*3600e3); if(!tk.length) return "setup";
+    // set back to Setting up after takes (a reset or re-rig): setting up again until the next take rolls
+    const d=D(), last=Math.max(...tk.map(x=>x.at+(x.ms||0))); return d&&d.onRow===t.id&&d.onSince>last?"setup":"shooting"; }
   return "todo";
 }
 const STATUS_LABEL={todo:"To do",setup:"Setting up",rolling:"● Rolling",shooting:"Shooting",shot:"Shot ✓",cut:"Cut"};
@@ -411,8 +413,10 @@ function statusMenu(anchor,id){
   const undone=x=>{x.done=false;x.doneAt=null};
   pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},(t.seq?seqTitle(t)+" · shot ":"Shot ")+(r.shot||"-")));
   pop.append(
-    item("To do",()=>{const x=R(id);undone(x);x.cut=false;t.setupAt=null;if(d.onRow===t.id){d.onRow="";d.onSince=null}afterStatus()},"",st==="todo"),
-    item("Setting up",()=>{const x=R(id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();t.setupAt=Date.now();afterStatus();toast("Setting up: ahead / behind counts from now until you roll")},"we're on it, not rolling yet",st==="setup"),
+    item("To do",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);undone(x);x.cut=false;t.setupAt=null;
+      // step back: nobody's on this one now (so it doesn't show Setting up just because it's next)
+      if(d.onRow===t.id||st==="setup"||st==="shooting"||st==="rolling"){d.onRow="none";d.onSince=null}afterStatus()},st==="todo"?"":"not started, step back",st==="todo"),
+    item("Setting up",()=>{const x=R(id);const had=takeList(t).length>0;if(rollingTake(t))cutTake(t.id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();if(!had||!t.setupAt)t.setupAt=Date.now();afterStatus();toast(had?"Setting up again (reset): back to Shooting when the next take rolls":"Setting up: ahead / behind counts from now until you roll")},st==="shooting"||st==="rolling"?"reset between takes, not rolling":"we're on it, not rolling yet",st==="setup"),
     rolling?item("■ Cut take",()=>{cutTake(t.id);afterStatus()},"end take "+rolling.n+" (timecode out)")
            :item("● Roll",()=>{const x=R(id);undone(x);x.cut=false;logTake(t.id,t.seq&&d.kind!=="capture"?{caught:[]}:{});afterStatus()},"start take "+nextTake(t,d)+(t.seq?" of the sequence":""),st==="rolling"),
     item("Shot ✓",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);x.done=true;x.doneAt=dayClock(d);x.cut=false;afterStatus()},t.seq?"just this shot (Sequence done ticks them all)":"",st==="shot"),
@@ -938,9 +942,10 @@ function renderPanels(C){
   for(const key of Object.keys(PANELS)){
     const head=$(`.phead[data-panel="${key}"]`); if(!head) continue;
     const body=key==="pace"?$("#pace"):$(`.pbody[data-panel="${key}"]`);
-    const on=key==="pace"?(P.showPace!==false&&body.classList.contains("on")):key==="timeline"?(P.showTl!==false&&!!d):(nAct>0);
-    const fold=!!P.panelFold[key];
-    head.hidden=!on; if(key!=="pace") body.hidden=!on;
+    const on=key==="pace"?(P.showPace!==false&&body.classList.contains("on")):key==="timeline"?(P.showTl!==false&&!P.focus&&!!d):(nAct>0);
+    const merged=key==="pace"&&on&&paceMerged()&&!!$("#stats .stat.live");
+    const fold=merged?!P.paceOpen:!!P.panelFold[key];
+    head.hidden=!on||merged; if(key!=="pace") body.hidden=!on;
     body.classList.toggle("pfold",on&&fold);
     let sum="";
     if(key==="pace"&&on){ const n=$(".pacenum",body), wd=$(".pacewords b",body); sum=(n?n.textContent:"")+(wd?" · "+wd.textContent:""); }
@@ -948,7 +953,7 @@ function renderPanels(C){
     if(key==="actual"&&on) sum=ACT_SUM;
     head.replaceChildren(h("b",{},PANELS[key]),h("span",{class:"note"},sum),h("span",{class:"chev"},fold?"▾ show":"▴ hide"));
     head.setAttribute("aria-expanded",String(!fold));
-    head.onclick=()=>{ P.panelFold[key]=!P.panelFold[key]; savePrefs(); const C2=compute(); if(key==="timeline"&&!P.panelFold[key]) renderTimeline(C2); renderPanels(C2); };
+    head.onclick=()=>{ if(merged){P.paceOpen=!P.paceOpen;savePrefs();const C2=compute();renderStats(C2);renderPanels(C2);return} P.panelFold[key]=!P.panelFold[key]; savePrefs(); const C2=compute(); if(key==="timeline"&&!P.panelFold[key]) renderTimeline(C2); renderPanels(C2); };
   }
 }
 // back to the top: a round button bottom right once you've scrolled down the list
@@ -957,3 +962,101 @@ function renderPanels(C){
   window.addEventListener("scroll",upd,{passive:true}); upd();
   b.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"});
 })();
+
+// ---- Summary cards: choose which show (per device) ----
+const STAT_CARDS=[["running","Running","ahead / behind on the shoot day"],["wrap","Calculated wrap","and how far over / under target"],["length","Day length",""],["setup","Setup total",""],["shooting","Shooting total",""],["breaks","Breaks / moves",""],["tech","Tech / turnaround","when the day has any"],["shots","Shots","shot, to go, cut"],["takes","Takes",""],["footage","Raw footage / Captured","timed takes"],["hero","Hero selects","Mocap"],["orig","Original wrap","when one is set"]];
+function statKey(label){ return ({"Running":"running","Calculated wrap":"wrap","Day length":"length","Setup total":"setup","Shooting total":"shooting","Breaks / moves":"breaks","Tech / turnaround":"tech","Shots":"shots","Takes":"takes","Raw footage":"footage","Captured":"footage","Hero selects":"hero","Original wrap":"orig"})[label]||label; }
+function statHidden(){ return Array.isArray(P.statHidden)?P.statHidden:[]; }
+function setStatShown(k,on){ const H=statHidden().filter(x=>x!==k); if(!on) H.push(k); P.statHidden=H; savePrefs(); }
+function statCardMenu(anchor){
+  $$(".locpop").forEach(x=>x.remove());
+  const pop=h("div",{class:"locpop seqmenu statmenu",role:"menu"});
+  const draw=()=>{ pop.replaceChildren(h("div",{class:"note",style:"margin:0 .3rem .3rem"},"Show these cards (this device)"));
+    for(const [k,label] of STAT_CARDS){ const cb=h("input",{type:"checkbox"}); cb.checked=!statHidden().includes(k);
+      cb.addEventListener("change",()=>{setStatShown(k,cb.checked);renderStats(compute())}); pop.append(h("label",{class:"mi"},cb," ",label)); }
+    const hb=h("input",{type:"checkbox"}); hb.checked=P.showHints!==false; hb.addEventListener("change",()=>{P.showHints=hb.checked;savePrefs();renderStats(compute())});
+    pop.append(h("label",{class:"mi",style:"border-top:1px solid var(--line);margin-top:.2rem;padding-top:.4rem"},hb," Hints under the cards"));
+    pop.append(h("button",{class:"mi",onclick:()=>{P.statHidden=[];P.showHints=true;savePrefs();renderStats(compute());draw();pop.prepend(statMenuTop())}},"Show all")); };
+  draw(); pop.prepend(statMenuTop()); document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); pop.style.top=Math.max(8,Math.min(b.bottom+6,innerHeight-pop.offsetHeight-8))+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)&&e.target.isConnected){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+
+// ---- Shoot-day focus, layouts by role, pace in the Running card, phone mini-bar ----
+const FOCUS_CARDS=["length","setup","shooting","breaks","tech","orig"], FOCUS_COLS=["orig","duration","heroUrl","safetyUrl"];
+function statHiddenEff(){ const H=statHidden().slice(); if(P.focus) for(const k of FOCUS_CARDS) if(!H.includes(k)) H.push(k); return H; }
+function hintsOn(){ return P.showHints!==false&&!P.focus; }
+function hiddenView(){ const H=hidden(); return P.focus?[...new Set([...H,...FOCUS_COLS])]:H; }
+function toggleFocus(on){ P.focus=on==null?!P.focus:!!on; savePrefs(); renderAll(); toast(P.focus?"Shoot-day focus on: planning cards, hints, planned timeline and planning columns tucked away":"Focus off: everything's back"); }
+
+// layouts: the built-in ones set cards, panels and focus; your own also keep your columns
+const LAYOUT_KEYS=["statHidden","showHints","showPace","paceMerge","showPlan","showTl","showActual","panelFold","focus"];
+const LAYOUTS_BUILTIN={
+  "1st AD":{statHidden:["takes","footage","hero"],showHints:true,showPace:true,paceMerge:true,showPlan:true,showTl:true,showActual:true,panelFold:{},focus:false},
+  "DIT / data":{statHidden:["wrap","length","setup","shooting","breaks","tech","orig"],showHints:false,showPace:false,paceMerge:true,showPlan:false,showTl:false,showActual:true,panelFold:{},focus:true},
+  "Director":{statHidden:["length","setup","shooting","breaks","tech","orig","takes","footage"],showHints:false,showPace:true,paceMerge:true,showPlan:false,showTl:true,showActual:false,panelFold:{},focus:true},
+  "Everything":{statHidden:[],showHints:true,showPace:true,paceMerge:false,showPlan:true,showTl:true,showActual:true,panelFold:{},focus:false}};
+function layoutSnap(withCols){ const o={}; for(const k of LAYOUT_KEYS) o[k]=clone(P[k]===undefined?null:P[k]); if(withCols){o.hiddenBy=clone(P.hiddenBy||{});o.colOrder=clone(P.colOrder||[])} return o; }
+function applyLayout(name){
+  const L=(P.layouts||{})[name]||LAYOUTS_BUILTIN[name]; if(!L) return;
+  for(const k of LAYOUT_KEYS){ if(L[k]===null||L[k]===undefined) delete P[k]; else P[k]=clone(L[k]); }
+  if(L.hiddenBy){ P.hiddenBy=clone(L.hiddenBy); P.colOrder=clone(L.colOrder||[]); if(typeof invalidateCols==="function") invalidateCols(); }
+  P.layout=name; savePrefs(); renderAll(); toast("Layout: "+name);
+}
+function layoutChanged(){ const n=P.layout; if(!n) return false; const L=(P.layouts||{})[n]||LAYOUTS_BUILTIN[n]; if(!L) return false; const now=layoutSnap(false);
+  const norm=v=>JSON.stringify(v==null?null:v); return LAYOUT_KEYS.some(k=>norm(now[k])!==norm(L[k]===undefined?null:L[k])); }
+function layoutChooser(after){
+  const box=h("div",{class:"layouts"});
+  const draw=()=>{ box.replaceChildren();
+    const row=h("div",{class:"laychips"});
+    const chip=(name,own)=>{ const on=P.layout===name; const b=h("button",{class:"laychip"+(on?" on":""),type:"button",title:own?"Your layout: cards, panels, focus and columns":"Built-in: cards, panels and focus (your columns stay as they are)",onclick:()=>{applyLayout(name);draw();after&&after()}},name+(on&&layoutChanged()?" *":""));
+      if(!own) return b;
+      return h("span",{class:"laychip-wrap"},b,h("button",{class:"laydel",type:"button",title:"Delete this layout","aria-label":"Delete layout "+name,onclick:async()=>{if(!await ask("Delete layout?",`"${name}" will be removed from this device.`,"Delete"))return;delete P.layouts[name];if(P.layout===name)P.layout="";savePrefs();draw()}},"×")); };
+    for(const n of Object.keys(LAYOUTS_BUILTIN)) row.append(chip(n,false));
+    for(const n of Object.keys(P.layouts||{})) row.append(chip(n,true));
+    box.append(row);
+    const inp=h("input",{type:"text",placeholder:"Save current as… e.g. Josh DIT",maxlength:"30","aria-label":"Name for this layout"});
+    const save=()=>{ const n=inp.value.trim(); if(!n) return inp.focus(); if(LAYOUTS_BUILTIN[n]){toast("Pick a different name from the built-in layouts");return}
+      P.layouts=Object.assign({},P.layouts,{[n]:layoutSnap(true)}); P.layout=n; savePrefs(); toast(`Saved layout "${n}" (cards, panels, focus and columns)`); draw(); after&&after(); };
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save()}});
+    box.append(h("div",{class:"laysave"},inp,h("button",{class:"btn small",type:"button",onclick:save},"Save")));
+    if(P.layout&&layoutChanged()) box.append(h("div",{class:"note"},`* changed since you picked "${P.layout}". Click it to go back, or save as a new layout.`));
+  };
+  draw(); return box;
+}
+// the ⋯ menu: layouts first, then the cards
+function statMenuTop(){
+  const top=h("div",{class:"statlay"},h("div",{class:"note",style:"margin:0 .3rem .3rem"},"Layout"),layoutChooser(()=>{}));
+  const fc=h("input",{type:"checkbox"}); fc.checked=!!P.focus; fc.addEventListener("change",()=>{P.focus=fc.checked;savePrefs();renderAll()});
+  top.append(h("label",{class:"mi",title:"tuck away planning cards, hints, the planned timeline and planning columns"},fc," Shoot-day focus"));
+  return top;
+}
+// pace inside the Running card: streak and won / lost on the card, tap it to open the full pace panel
+function paceMerged(){ return P.showPace!==false&&P.paceMerge!==false&&!statHiddenEff().includes("running"); }
+function runningPace(card,d,C){
+  if(!paceMerged()) return; const p=paceData(d,C); if(!p) return;
+  const open=!!P.paceOpen;
+  card.classList.add("haspace"); card.setAttribute("role","button"); card.tabIndex=0; card.setAttribute("aria-expanded",String(open));
+  card.append(h("div",{class:"sub pacesub"},`${p.streak} on pace · won ${dur(p.won)} · lost ${dur(p.lost)} `,h("span",{class:"pacechev"},open?"▴ pace":"▾ pace")));
+  const go=()=>{P.paceOpen=!P.paceOpen;savePrefs();const C2=compute();renderStats(C2);renderPanels(C2)};
+  card.onclick=go; card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}};
+}
+// phone: a thin bar pinned to the top once the cards scroll away
+function updateMiniBar(d,C,L){
+  const bar=$("#miniBar"); if(!bar) return;
+  if(!d){bar.replaceChildren();return}
+  if(L){ const s=L.slip, cur=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-")):"";
+    const ph={setup:"setting up",rolling:"● rolling",shooting:"shooting"}[L.phase]||"";
+    bar.replaceChildren(h("b",{class:"mbdelta "+(s>0?"bad":s<0?"ok":"")},s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s))),
+      h("span",{class:"mbcur"},cur?cur+(ph?" · "+ph:""):"every shot done"),h("span",{class:"mbwrap"},"wrap "+fmt(L.proj)),h("span",{class:"mbup","aria-hidden":"true"},"↑"));
+  } else {
+    const shots=d.rows.filter(r=>!isBlock(r)&&!r.cut), left=shots.filter(r=>!r.done).length;
+    bar.replaceChildren(h("b",{},d.name||"Day"),h("span",{class:"mbcur"},left+" to go"),h("span",{class:"mbwrap"},"wrap "+fmt(C.wrap)),h("span",{class:"mbup","aria-hidden":"true"},"↑"));
+  }
+  miniBarScroll();
+}
+function miniBarScroll(){ const bar=$("#miniBar"), st=$("#stats"); if(!bar||!st) return;
+  const show=window.innerWidth<=760&&!!S&&!!D()&&st.getBoundingClientRect().bottom<0&&!document.body.classList.contains("viewopen");
+  bar.classList.toggle("show",show); document.body.classList.toggle("hasminibar",show); }
+window.addEventListener("scroll",miniBarScroll,{passive:true}); window.addEventListener("resize",miniBarScroll);
+(function(){ const bar=$("#miniBar"); if(bar) bar.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"}); })();

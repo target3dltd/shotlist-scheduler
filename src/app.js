@@ -1,7 +1,11 @@
 "use strict";
-const VERSION = "2.33.0";
+const VERSION = "2.35.1";
 const CHANGELOG = [
-  ["2.33.0","2026-11-21","Actual timeline under the planned one, on the same scale: how long each shot or sequence really took to set up (from Setting up, or from the last shot finishing) and to shoot (first take to Shot ✓), with a running total against the plan. Pace, Recovery plan and both timelines can each be turned off in Display settings and folded with their header bar. A round ↑ button bottom right takes you back to the top once you scroll down."],
+  ["2.35.1","2026-11-21","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
+  ["2.35.0","","Tidier dashboard. Layouts: one click for 1st AD, DIT / data, Director or Everything, or save your own (cards, panels, focus and columns), from the ⋯ at the end of the cards or Display settings. Shoot-day focus (the Focus button by the cards) tucks away planning cards, hints, the planned timeline and planning columns. Pace sits inside the Running card: tap the card for the details. The Recovery plan is one line while you're on target and opens itself at amber or red. Call sheet, Running order, Wrap report, DIT names, Export takes and the Shoot-ready check are together in a Documents menu. On phones, a thin bar with the delta, the shot you're on and the wrap pins to the top once you scroll past the cards (tap it to go back up)."],
+  ["2.34.0","","Choose which summary cards show along the top (Running, Calculated wrap, Day length, totals, Shots, Takes and so on): tap the ⋯ at the end of the cards, or Display settings > Summary cards. The hint pills under the cards can be turned off too. Per device."],
+  ["2.33.1","","Status steps backwards: To do now really goes back (the shot no longer shows Setting up just because it is next, and a rolling take is cut first), and Setting up after takes means a reset, so it shows Setting up until the next take rolls."],
+  ["2.33.0","","Actual timeline under the planned one, on the same scale: how long each shot or sequence really took to set up (from Setting up, or from the last shot finishing) and to shoot (first take to Shot ✓), with a running total against the plan. Pace, Recovery plan and both timelines can each be turned off in Display settings and folded with their header bar. A round ↑ button bottom right takes you back to the top once you scroll down."],
   ["2.32.0","","The Shot tick in the first column is now Status: To do, Setting up, Rolling, Shooting, Shot ✓ or Cut. Click it to set up (we're on it), roll or cut a take, mark it shot, or cut the shot; the live ahead / behind, Note View and the slate follow."],
   ["2.31.0","","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
   ["2.30.2","","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
@@ -709,7 +713,7 @@ function colW(k){if(P.widths&&P.widths[k])return P.widths[k];if(DEFAULT_WIDTHS[k
 // print: squeeze columns so the table fits an A4 landscape page (about 1060px), notes columns give way first
 const PRINT_W={handle:20,shot:32,seq:56,vcs:24,priority:40,shotId:96,duration:28,setup:30,start:42,shoot:30,end:50,orig:40,takes:28,perfCount:24,body:24,face:24,glove:24,hero:30,safety:30,refs:84,actions:0};
 function printWidths(){
-  if(!S) return; const hid=hidden(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
+  if(!S) return; const hid=hiddenView(), PAGE=1060; const list=cols().filter(c=>!hid.includes(c.key)&&c.key!=="actions");
   const w={}, flex=[];
   for(const c of list){ if(PRINT_W[c.key]!=null) w[c.key]=PRINT_W[c.key]; else if(c.type==="flag") w[c.key]=24; else if(c.type==="number") w[c.key]=30; else flex.push(c.key); }
   // text and notes columns share what's left, in proportion to their on-screen widths
@@ -727,7 +731,7 @@ function printWidths(){
   $("#grid").style.width=total+"px";
 }
 function applyWidths(){
-  let total=0; const hid=hidden();
+  let total=0; const hid=hiddenView();
   for(const c of cols()){const col=$(`#cols col[data-col="${c.key}"]`);if(!col)continue;const hd=hid.includes(c.key);col.style.width=hd?"0px":colW(c.key)+"px";col.style.display=hd?"none":"";if(!hd)total+=colW(c.key);}
   $("#grid").style.width=total+"px";
 }
@@ -759,7 +763,7 @@ function filterText(r,key,C){
 const COLLATE=new Intl.Collator(undefined,{numeric:true,sensitivity:"base"});
 function visibleRows(C){
   const d=D(); if(!d) return [];
-  const f=P.filters||{}; const hid=hidden(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
+  const f=P.filters||{}; const hid=hiddenView(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
   let list=d.rows.filter(r=>{
     if((P.view==="todo"||P.view==="nocut")&&r.cut&&!isBlock(r)) return false;
     if(P.view==="todo"&&r.done) return false;
@@ -793,7 +797,7 @@ function setSort(key){
 }
 function renderViewbar(shown){
   const vb=$("#viewbar"); vb.innerHTML=""; const d=D();
-  const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hidden().includes(k)).length;
+  const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hiddenView().includes(k)).length;
   const sorted=!!(P.sort&&P.sort.key);
   $("#grid").classList.toggle("sorted",sorted);
   if(!d||(!sorted&&!fcount&&(P.view||"all")==="all"&&!P.prioFilter)){vb.classList.remove("show");return}
@@ -813,11 +817,11 @@ function applySortAsOrder(){
   d.rows=[...shown,...rest]; P.sort=null; commit(); renderHead(); renderBody(); toast("Running order updated - Undo to go back");
 }
 function renderHead(){
-  $("#grid").style.setProperty("--stick-shot",(hidden().includes("handle")?0:colW("handle"))+"px");
+  $("#grid").style.setProperty("--stick-shot",(hiddenView().includes("handle")?0:colW("handle"))+"px");
   const cg=$("#cols"); cg.innerHTML="";
   for(const c of cols()) cg.append(h("col",{"data-col":c.key}));
   const thead=$("#grid thead"); thead.innerHTML="";
-  const tr=h("tr",{class:"labels"}), fr=h("tr",{class:"filters"}); const hid=hidden();
+  const tr=h("tr",{class:"labels"}), fr=h("tr",{class:"filters"}); const hid=hiddenView();
   for(const c of cols()){
     const hc=hid.includes(c.key)?" hide-col":"";
     const sortable=!NO_SORT.includes(c.key);
@@ -1018,7 +1022,7 @@ function refreshNames(id){
 function renderBody(){
   const tb=$("#grid tbody"); tb.innerHTML=""; const d=D();
   if(!d){renderViewbar(0);tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"No days yet. Use + Day to add one.")));return}
-  const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
+  const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hiddenView();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
   const seenSeq=new Set(); NOWCUR=nowCurId(d,C);
   shown.forEach(r=>{
@@ -1106,12 +1110,13 @@ function renderStats(C){
   const wrapT=wrapMin(d), callT=toMin(d.call||"09:00"); const over=C.wrap-wrapT;
   const shots=d.rows.filter(r=>!isBlock(r)); const done=shots.filter(r=>r.done).length;
   const takes=shots.reduce((a,r)=>a+(Number(r.takes)||0),0);
-  const card=(k,v,sub,cls="")=>h("div",{class:"stat"},h("div",{class:"k"},k),h("div",{class:"v "+cls},v),sub?h("div",{class:"sub"},sub):null);
+  const card=(k,v,sub,cls="")=>h("div",{class:"stat","data-k":statKey(k)},h("div",{class:"k"},k),h("div",{class:"v "+cls},v),sub?h("div",{class:"sub"},sub):null);
   const L=liveStatus(d,C);
   if(L){ const s=L.slip, po=Math.round(L.proj-wrapT), g=cfg();
     const cls=s<=0?"ok":po>=(Number(g.gateRed)||30)?"bad":po>=(Number(g.gateAmber)||10)?"warn":"";
     const now=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
-    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis; st.append(c); }
+    const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis;
+    runningPace(c,d,C); st.append(c); }
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
@@ -1119,6 +1124,12 @@ function renderStats(C){
     card("Shots",String(shots.length-shots.filter(r=>r.cut).length),(done?done+" shot, "+(shots.length-done-shots.filter(r=>r.cut&&!r.done).length)+" to go":"none marked shot")+(shots.some(r=>r.cut)?" · "+shots.filter(r=>r.cut).length+" cut":"")),
     ...takeCards(d,card));
   if(d.origWrap) st.append(card("Original wrap",fmt(toMin(d.origWrap)),"as planned"));
+  // cards you've chosen not to see (Display settings > Summary cards, or the ⋯ at the end of the cards)
+  const hid=statHiddenEff(); $$(".stat",st).forEach(c=>{if(hid.includes(c.dataset.k))c.remove()});
+  if(P.focus||dayClock(d)!=null) st.append(h("button",{class:"focusbtn noprint"+(P.focus?" on":""),type:"button","aria-pressed":String(!!P.focus),title:P.focus?"Shoot-day focus is on: planning cards, hints, the planned timeline and planning columns are tucked away. Click to show everything.":"Shoot-day focus: tuck away planning-only cards, hints, the planned timeline and planning columns",onclick:()=>toggleFocus()},P.focus?"◉ Focus":"○ Focus"));
+  st.append(h("button",{class:"statcfg noprint",type:"button",title:"Choose which cards show here, and layouts","aria-label":"Choose summary cards and layout",onclick:e=>{e.stopPropagation();statCardMenu(e.currentTarget)}},"⋯"));
+  w.style.display=hintsOn()?"":"none";
+  updateMiniBar(d,C,L);
   if(C.shootT>0&&!d.rows.some(r=>isBlock(r)&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
   if(dayStatus(d)==="wrapped"){const miss=linkNeeds(d).filter(n=>!isUrl(n.r[n.k])).length;if(miss)w.append(h("span",{class:"pill",style:"cursor:pointer",onclick:()=>{P.linksOpen=true;renderLinks();$("#links").scrollIntoView({behavior:"smooth",block:"center"})}},`${miss} hero / safety link${miss>1?"s":""} still needed`))}
   const zero=shots.filter(r=>effSetup(r,d)===0).length;
@@ -1224,7 +1235,7 @@ function liveStatus(d,C){
 // "We're on this shot": what the live ahead / behind works from (shared with the team); setting up until a take rolls
 function setOnNow(id){ const d=D(); if(!d) return; const r=R(id); if(!r) return; const t=r.seq&&R(r.seq)?seqAnchor(r):r;
   d.onRow=t.id; d.onSince=Date.now(); t.setupAt=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
-function isOnNow(r){ const d=D(); if(!d||!r) return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
+function isOnNow(r){ const d=D(); if(!d||!r||d.onRow==="none") return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
 function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
 function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
 function buildPlan(d,C){
@@ -1266,9 +1277,10 @@ function renderPlan(C){
   if(!show) return;
   const head={green:p.spare>0?`${dur(p.spare)} in hand`:"On target",slight:`${dur(p.need)} over target wrap`,amber:`Amber gate: ${dur(p.need)} over target wrap`,red:`Red gate: ${dur(p.need)} over target wrap`}[p.gate];
   const sub={green:"Nothing needs cutting.",slight:"Within the amber gate. Keep an eye on it.",amber:"Worth deciding now what could go.",red:"Cut something to wrap on time."}[p.gate];
-  const open=P.planOpen!==false;
-  box.className="plan noprint gate-"+p.gate;
-  const tg=h("button",{class:"planhead",onclick:()=>{P.planOpen=!open;savePrefs();renderPlan(compute())}},h("b",{},"Recovery plan · "+head),h("span",{class:"note"},(p.L?"Live: ":"Plan: ")+sub),h("span",{},open?"▴":"▾"));
+  // calm (on target or only slightly over): one line until you open it; amber / red open by themselves
+  const calm=p.gate==="green"||p.gate==="slight", open=calm?!!P.planOpenCalm:P.planOpen!==false;
+  box.className="plan noprint gate-"+p.gate+(calm&&!open?" calm":"");
+  const tg=h("button",{class:"planhead",onclick:()=>{if(calm)P.planOpenCalm=!open;else P.planOpen=!open;savePrefs();renderPlan(compute())}},h("b",{},"Recovery plan · "+head),h("span",{class:"note"},(p.L?"Live: ":"Plan: ")+sub),h("span",{},open?"▴":"▾"));
   box.append(tg); if(!open) return;
   const body=h("div",{class:"planbody"}); box.append(body);
   const shotBtn=r=>h("a",{href:"#",onclick:e=>{e.preventDefault();jump(r.id)}},rowLabel(r));
@@ -2186,9 +2198,15 @@ function renderSetTab(){
       h("div",{class:"dswitches",style:"margin-top:.5rem"},
         sw("Stripe alternate rows","easier to follow a row across",()=>!!P.zebra,v=>P.zebra=v),
         sw("Reduce motion","no flashing or fades",()=>!!P.calm,v=>P.calm=v)));
+    sec("Layouts",h("div",{class:"note",style:"margin-bottom:.4rem"},"One click sets the cards, panels and focus for a role. Save your own to keep your columns too."),layoutChooser(()=>{if($("#setModal").classList.contains("open")&&setTab==="display")renderSetTab()})),
+    sec("Summary cards",h("div",{class:"note",style:"margin-bottom:.4rem"},"Which cards show along the top of the day. Cards only appear when they have something to say (Running on the shoot day, Takes once takes are logged)."),
+      h("div",{class:"dswitches"},...STAT_CARDS.map(([k,label,sub])=>sw(label,sub,()=>!statHidden().includes(k),v=>{setStatShown(k,v);setTimeout(()=>renderStats(compute()),0)})),
+        sw("Hints under the cards","e.g. no lunch scheduled, shots with no setup time",()=>P.showHints!==false,v=>{P.showHints=v;setTimeout(()=>renderStats(compute()),0)}))),
     sec("Table and on-set tools",h("div",{class:"dswitches"},
       sw("− / + buttons on Setup and Shoot","turn off to just type the minutes",()=>P.steppers!==false,v=>P.steppers=v),
-      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>{const C=compute();renderPace(C);renderPanels(C)},0)}),
+      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>{const C=compute();renderStats(C);renderPace(C);renderPanels(C)},0)}),
+      sw("Pace inside the Running card","tap the Running card to open the pace details",()=>P.paceMerge!==false,v=>{P.paceMerge=v;setTimeout(()=>{const C=compute();renderStats(C);renderPanels(C)},0)}),
+      sw("Shoot-day focus","tuck away planning cards, hints, the planned timeline and planning columns",()=>!!P.focus,v=>{P.focus=v;setTimeout(()=>renderAll(),0)}),
       sw("Recovery plan","what to cut or move when the day runs over",()=>P.showPlan!==false,v=>{P.showPlan=v;setTimeout(()=>renderPanels(compute()),0)}),
       sw("Planned timeline","the day's plan as a bar, with the target wrap",()=>P.showTl!==false,v=>{P.showTl=v;setTimeout(()=>renderPanels(compute()),0)}),
       sw("Actual timeline","how long setting up and shooting really took, under the plan",()=>P.showActual!==false,v=>{P.showActual=v;setTimeout(()=>renderPanels(compute()),0)}),
@@ -2597,10 +2615,12 @@ $("#helpBtn").onclick=()=>$("#helpModal").classList.add("open");
 $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("open"));
 $$(".modal").forEach(m=>m.addEventListener("click",e=>{if((e.target===m&&!["joinModal","askModal"].includes(m.id))||m.id==="lightbox")m.classList.remove("open")}));
 $("#colBtn").onclick=e=>{e.stopPropagation();renderCols();$("#colMenu").classList.toggle("open")};
-document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
+document.addEventListener("click",e=>{if(e.target.isConnected&&!$("#colMenu").contains(e.target))$("#colMenu").classList.remove("open");if(!$("#docBtn").contains(e.target)){$("#docMenu").classList.remove("open");$("#docBtn").setAttribute("aria-expanded","false")}if(!$("#fileBtn").contains(e.target)){$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false")}});
 // phone menu items stand in for the toolbar buttons that fold away
 $$("#filePop [data-proxy]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();$("#fileMenu").classList.remove("open");$("#fileBtn").setAttribute("aria-expanded","false");const t=$("#"+b.dataset.proxy);if(t)t.click()}));
-$("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open")};
+$("#fileBtn").onclick=e=>{e.stopPropagation();const o=$("#fileMenu").classList.toggle("open");$("#fileBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open");$("#docMenu").classList.remove("open")};
+$("#docBtn").onclick=e=>{e.stopPropagation();const o=$("#docMenu").classList.toggle("open");$("#docBtn").setAttribute("aria-expanded",o);$("#colMenu").classList.remove("open");$("#fileMenu").classList.remove("open")};
+$$("#docPop .mi").forEach(b=>b.addEventListener("click",()=>{$("#docMenu").classList.remove("open");$("#docBtn").setAttribute("aria-expanded","false")}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#fileMenu").classList.contains("open")){$("#fileMenu").classList.remove("open");$("#fileBtn").focus()}});
 $("#addShot").onclick=addShot; $("#addBreak").onclick=()=>D()&&insertBreakAt(D().rows.length); $("#addTech").onclick=()=>D()&&insertBreakAt(D().rows.length,"tech");
 $("#pasteBtn").onclick=()=>{if(frozenNo())return;$("#pasteText").value="";$("#pasteModal").classList.add("open");$("#pasteText").focus()};
