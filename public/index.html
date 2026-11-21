@@ -147,6 +147,16 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .seqhd .mins2{display:inline-flex;gap:.25rem;align-items:center} .seqhd .mins2 input{width:3.6rem;padding:.15rem .3rem;border:1px solid var(--line);border-radius:5px;font:inherit;background:var(--field,var(--bg));color:var(--ink)}
 .seqhd .lnk{background:none;border:none;color:var(--accent,#2f6fb0);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .seqhd .seqtime{border:none;background:none;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);cursor:pointer;padding:.05rem .3rem;border-radius:5px;text-decoration:underline dotted;text-underline-offset:3px} .seqhd .seqtime:hover{background:var(--panel2)}
+.stchip{border:1px solid var(--line2);background:var(--panel);color:var(--muted);border-radius:999px;padding:.12rem .5rem;font:inherit;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;line-height:1.3}
+.stchip:hover{border-color:var(--ink);color:var(--ink)}
+.stchip.st-setup{background:#d39b2222;border-color:#d39b22;color:#8a5a00}
+.stchip.st-rolling{background:#c2412d;border-color:#c2412d;color:#fff;animation:stpulse 1.4s ease-in-out infinite}
+.stchip.st-shooting{background:#2f6fb01f;border-color:#2f6fb0;color:#22558a}
+.stchip.st-shot{background:#2e9d5b;border-color:#2e9d5b;color:#fff}
+.stchip.st-cut{text-decoration:line-through;color:var(--muted)}
+@keyframes stpulse{50%{opacity:.65}} body.calm .stchip.st-rolling{animation:none}
+.seqmenu .mi.on{font-weight:700} .seqmenu .mi.on::after{content:"  ✓";color:#2e9d5b}
+@media print{.stchip{border:none;background:none!important;color:#000!important;padding:0;animation:none}}
 .onnow{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:999px;padding:.15rem .6rem;font:inherit;font-size:.8rem;cursor:pointer;white-space:nowrap} .onnow:hover{background:var(--panel2)}
 .onnow.on{border-color:#2e9d5b;color:#2e7d4f;background:#2e9d5b14;cursor:default;font-weight:600}
 #slateView .onnow{font-size:1rem;padding:.4rem .9rem}
@@ -760,6 +770,7 @@ body.nosteps .mins.timing input{width:4.5em}
   .daytabs .tg.wrapped{border-left:none;padding-left:0;margin-left:0}
   /* first column: just the tick box, fully visible */
   #grid td[data-col=handle] .chk{font-size:0;gap:0}
+  #grid td[data-col=handle] .stchip{font-size:0;padding:0;width:1.45rem;height:1.45rem;line-height:1.3rem;text-align:center} #grid td[data-col=handle] .stchip::before{content:attr(data-short);font-size:.85rem}
   #grid td[data-col=handle] input[type=checkbox]{width:11px;height:11px;margin:1px 0 0;display:inline-block}
   #grid td[data-col=handle]{padding:.25em .2em!important;overflow:visible}
   /* keep rows whole on a page (a row taller than a page still splits), with a cell line at every page edge */
@@ -1094,6 +1105,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <h3>Slate View and Note View</h3>
   <ul>
     <li>In Slate View, tap the <b>shot number</b> to open that shot in Note View.</li>
+    <li><b>Status</b> (first column): <b>To do</b>, <b>Setting up</b> (you're on it, not rolling yet), <b>● Rolling</b>, <b>Shooting</b> (takes logged, between takes), <b>Shot ✓</b> or <b>Cut</b>. Click it to change: Setting up, ● Roll / ■ Cut take, Shot ✓, To do, or Cut shot. On the shoot day the next shot shows Setting up on its own until you roll; a sequence's shots show the sequence's status.</li>
     <li><b>Which shot you're on</b>: the live ahead / behind (the Running card, and the pill in Note View) works from the shot or sequence you're on. Rolling a take puts you on it; when you shoot out of order, press <b>We're on this</b> in Note View, Sequence View or the slate. Until a take rolls you're <b>setting up</b>: you go behind once its setup should have finished. Once rolling you're <b>shooting</b>: it times from the first take and you go behind once the shot should have finished. Ticking it done moves you on to the next. Hover the Running card to see how it's worked out.</li>
     <li><b>Takes</b>: <b>✕</b> removes a take and shows <b>Undo</b> straight away (Ctrl/Cmd+Z works too). <b>Double-click the take number</b> (T3) to renumber it, for example to match what's on the physical slate (the next take then follows on), or to give it its own clip name; leave the name empty to keep the automatic one. A renamed clip name goes into the takes export. <b>Fix the timecode</b>: double-click a take's TC (or its number) and change <b>in</b> or <b>out</b>, as HH:MM:SS:FF, if you rolled late or cut early; the take's length and the captured / raw seconds follow. Undo puts it back.</li>
     <li><b>Arrange Note View</b>: drag a panel by its <b>⠿</b> (top right) to move it, or focus the ⠿ and use the arrow keys. Drag the corner at its bottom right to make it wider (in whole columns) and taller; double-click the corner to put that panel back to its usual size. <b>Reset layout</b> in the header puts everything back. The layout is kept on each device, so a laptop and a phone can be arranged differently. A playing video carries on while you rearrange.</li>
@@ -1352,9 +1364,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.31.0";
+const VERSION = "2.32.0";
 const CHANGELOG = [
-  ["2.31.0","2026-11-21","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
+  ["2.32.0","2026-11-21","The Shot tick in the first column is now Status: To do, Setting up, Rolling, Shooting, Shot ✓ or Cut. Click it to set up (we're on it), roll or cut a take, mark it shot, or cut the shot; the live ahead / behind, Note View and the slate follow."],
+  ["2.31.0","","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
   ["2.30.2","","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
   ["2.30.1","","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
   ["2.30.0","","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
@@ -1743,7 +1756,7 @@ const GROUP_OF={shot:"id",priority:"id",seq:"id",vcs:"look",shotId:"id",duration
   location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs",video:"refs"};
 function groupOf(c){return c.custom?(c.group||""):(GROUP_OF[c.key]||"")}
 const BASE_COLS=[
-  {key:"handle",label:"",fixed:true},
+  {key:"handle",label:"Status",fixed:true},
   {key:"shot",label:"Shot #",fixed:true},
   {key:"priority",label:"Priority",type:"list"},
   {key:"seq",label:"Sequence"},
@@ -1821,7 +1834,7 @@ function moveColumn(key,beforeKey){
 }
 function colMap(){ return Object.fromEntries(cols().map(c=>[c.key,c])); }
 function invalidateCols(){ _cols=null; }
-const DEFAULT_WIDTHS={seq:130,vcs:56,lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
+const DEFAULT_WIDTHS={seq:130,vcs:56,lighting:170,handle:118,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
 const NO_SORT=["handle","refs","actions"];
 function partLabel(key){ if(String(key).startsWith("c_")){const c=colMap()[key];return c?c.label+(c.type==="flag"?" (tag when ticked)":""):null} return ID_PART_LABELS[key]||key; }
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
@@ -2641,7 +2654,7 @@ function renderBody(){
   if(!d){renderViewbar(0);tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"No days yet. Use + Day to add one.")));return}
   const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
-  const seenSeq=new Set();
+  const seenSeq=new Set(); NOWCUR=nowCurId(d,C);
   shown.forEach(r=>{
     // a sequence gets a header row above its first shot; folded, its shots are hidden under it
     if(r.seq&&!isBlock(r)&&R(r.seq)){ if(!seenSeq.has(r.seq)){ seenSeq.add(r.seq); tb.append(seqHeadRow(r.seq,C,d,seenSeq.size===1)); } if(seqFolded(r.seq)) return; }
@@ -2657,9 +2670,7 @@ function renderBody(){
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(isBreak) hd.append(h("button",{class:"kindtag",title:r.type==="tech"?"Tech / turnaround time. Click to make it a break.":"A break or move. Click to make it tech / turnaround time.",onclick:()=>{const x=R(r.id);if(!x)return;const was=x.type;x.type=was==="tech"?"break":"tech";const c=cfg();if(!x.label||x.label===(was==="tech"?c.techLabel:c.breakLabel)||x.label===(was==="tech"?"Tech / turnaround":"Break"))x.label=x.type==="tech"?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break");commit();renderBody()}},r.type==="tech"?"Tech":"Break"));
-        if(!isBreak){const cb=h("input",{type:"checkbox",title:"Mark as shot","data-k":"done"});cb.checked=!!r.done;
-          cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;x.doneAt=cb.checked?dayClock(D()):null;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute());renderDayTabs()});
-          hd.append(h("label",{class:"chk"},cb,"Shot"))}
+        if(!isBreak) hd.append(statusChip(r,NOWCUR));
         td.append(hd);
       }
       else if(k==="shot"){ td.append(isBreak?textCell(r,"label",false):textCell(r,"shot",false,{ph:"-"})); }
@@ -5651,6 +5662,40 @@ function videoCell(r){
   i.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.video=videoLinks({video:i.value}).join("\n");commit();renderBody()});
   w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Note View",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
   return w;
+}
+
+/* ---------- Status in the first column: To do / Setting up / Rolling / Shooting / Shot / Cut ---------- */
+let NOWCUR=null;
+// the shot (or sequence's first shot) we're on: the live one on the shoot day, otherwise only one picked by hand
+function nowCurId(d,C){ const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
+function rowStatus(r,cur){
+  if(r.cut) return "cut"; if(r.done) return "shot";
+  const t=r.seq&&R(r.seq)?seqAnchor(r):r; if(rollingTake(t)) return "rolling";
+  if(cur&&t.id===cur) return takeList(t).some(x=>x.at&&Date.now()-x.at<16*3600e3)?"shooting":"setup";
+  return "todo";
+}
+const STATUS_LABEL={todo:"To do",setup:"Setting up",rolling:"● Rolling",shooting:"Shooting",shot:"Shot ✓",cut:"Cut"};
+function statusChip(r,cur){ const st=rowStatus(r,cur);
+  return h("button",{class:"stchip st-"+st,"data-k":"status","data-status":st,"data-short":{todo:"○",setup:"◐",rolling:"●",shooting:"◑",shot:"✓",cut:"✕"}[st],title:"Status: "+STATUS_LABEL[st].replace("● ","")+". Click to change","aria-label":"Status "+STATUS_LABEL[st].replace("● ",""),onclick:e=>{e.stopPropagation();statusMenu(e.currentTarget,r.id)}},STATUS_LABEL[st]); }
+function afterStatus(){ commit(); renderBody(); renderStats(compute()); renderDayTabs(); refreshViews(); }
+function statusMenu(anchor,id){
+  $$(".locpop").forEach(x=>x.remove()); const r=R(id); if(!r) return; const d=D(); const t=r.seq&&R(r.seq)?seqAnchor(r):r;
+  const st=rowStatus(r,nowCurId(d,compute())), rolling=rollingTake(t);
+  const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+  const item=(label,fn,sub,on)=>h("button",{class:"mi"+(on?" on":""),role:"menuitem",onclick:()=>{close();fn()}},label,sub?h("small",{}," "+sub):null);
+  const undone=x=>{x.done=false;x.doneAt=null};
+  pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},(t.seq?seqTitle(t)+" · shot ":"Shot ")+(r.shot||"-")));
+  pop.append(
+    item("To do",()=>{const x=R(id);undone(x);x.cut=false;if(d.onRow===t.id){d.onRow="";d.onSince=null}afterStatus()},"",st==="todo"),
+    item("Setting up",()=>{const x=R(id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();afterStatus();toast("Setting up: ahead / behind counts from now until you roll")},"we're on it, not rolling yet",st==="setup"),
+    rolling?item("■ Cut take",()=>{cutTake(t.id);afterStatus()},"end take "+rolling.n+" (timecode out)")
+           :item("● Roll",()=>{const x=R(id);undone(x);x.cut=false;logTake(t.id,t.seq&&d.kind!=="capture"?{caught:[]}:{});afterStatus()},"start take "+nextTake(t,d)+(t.seq?" of the sequence":""),st==="rolling"),
+    item("Shot ✓",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);x.done=true;x.doneAt=dayClock(d);x.cut=false;afterStatus()},t.seq?"just this shot (Sequence done ticks them all)":"",st==="shot"),
+    item(r.cut?"Not cut":"Cut shot",()=>{setCut([id],!r.cut);renderStats(compute());refreshViews()},r.cut?"back in the schedule":"out of the schedule (Undo brings it back)",false));
+  document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); const top=b.bottom+6+pop.offsetHeight>innerHeight?Math.max(8,b.top-pop.offsetHeight-6):b.bottom+6;
+  pop.style.top=top+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
 }
 
 /* ---------- "We're on this shot": the live ahead / behind works from it ---------- */

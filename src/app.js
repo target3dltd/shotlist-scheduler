@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.31.0";
+const VERSION = "2.32.0";
 const CHANGELOG = [
-  ["2.31.0","2026-11-21","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
+  ["2.32.0","2026-11-21","The Shot tick in the first column is now Status: To do, Setting up, Rolling, Shooting, Shot ✓ or Cut. Click it to set up (we're on it), roll or cut a take, mark it shot, or cut the shot; the live ahead / behind, Note View and the slate follow."],
+  ["2.31.0","","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
   ["2.30.2","","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
   ["2.30.1","","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
   ["2.30.0","","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
@@ -120,7 +121,7 @@ const GROUP_OF={shot:"id",priority:"id",seq:"id",vcs:"look",shotId:"id",duration
   location:"place",description:"story",script:"story",shotType:"look",camera:"look",lighting:"look",vfx:"notes",director:"notes",props:"notes",refs:"refs",video:"refs"};
 function groupOf(c){return c.custom?(c.group||""):(GROUP_OF[c.key]||"")}
 const BASE_COLS=[
-  {key:"handle",label:"",fixed:true},
+  {key:"handle",label:"Status",fixed:true},
   {key:"shot",label:"Shot #",fixed:true},
   {key:"priority",label:"Priority",type:"list"},
   {key:"seq",label:"Sequence"},
@@ -198,7 +199,7 @@ function moveColumn(key,beforeKey){
 }
 function colMap(){ return Object.fromEntries(cols().map(c=>[c.key,c])); }
 function invalidateCols(){ _cols=null; }
-const DEFAULT_WIDTHS={seq:130,vcs:56,lighting:170,handle:92,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
+const DEFAULT_WIDTHS={seq:130,vcs:56,lighting:170,handle:118,shot:92,shotId:230,duration:70,setup:120,start:82,shoot:120,end:82,orig:84,takes:96,action:150,performers:130,perfCount:66,genre:100,body:58,face:58,glove:58,hero:70,safety:70,priority:86,location:130,description:210,script:280,shotType:120,camera:190,vfx:160,director:220,props:180,refs:322,actions:112};
 const NO_SORT=["handle","refs","actions"];
 function partLabel(key){ if(String(key).startsWith("c_")){const c=colMap()[key];return c?c.label+(c.type==="flag"?" (tag when ticked)":""):null} return ID_PART_LABELS[key]||key; }
 const ID_PART_LABELS={shot:"Shot #",take:"Take #",prod:"Production ID",day:"Shoot day #",perfCount:"# Of performers",props:"Prop",performers:"Performer(s)",genre:"Genre",action:"Action",body:"Body (tag when ticked)",face:"Face (tag when ticked)",glove:"Glove (tag when ticked)",hero:"Hero",shotType:"Shot type",location:"Location / Setup"};
@@ -1018,7 +1019,7 @@ function renderBody(){
   if(!d){renderViewbar(0);tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"No days yet. Use + Day to add one.")));return}
   const C=compute(); const shown=visibleRows(C); renderViewbar(shown.length); const hid=hidden();
   if(!d.rows.length) tb.append(h("tr",{},h("td",{colspan:cols().length,class:"empty-day"},"Nothing on this day yet. Add a shot, a break or paste a list of actions below.")));
-  const seenSeq=new Set();
+  const seenSeq=new Set(); NOWCUR=nowCurId(d,C);
   shown.forEach(r=>{
     // a sequence gets a header row above its first shot; folded, its shots are hidden under it
     if(r.seq&&!isBlock(r)&&R(r.seq)){ if(!seenSeq.has(r.seq)){ seenSeq.add(r.seq); tb.append(seqHeadRow(r.seq,C,d,seenSeq.size===1)); } if(seqFolded(r.seq)) return; }
@@ -1034,9 +1035,7 @@ function renderBody(){
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(isBreak) hd.append(h("button",{class:"kindtag",title:r.type==="tech"?"Tech / turnaround time. Click to make it a break.":"A break or move. Click to make it tech / turnaround time.",onclick:()=>{const x=R(r.id);if(!x)return;const was=x.type;x.type=was==="tech"?"break":"tech";const c=cfg();if(!x.label||x.label===(was==="tech"?c.techLabel:c.breakLabel)||x.label===(was==="tech"?"Tech / turnaround":"Break"))x.label=x.type==="tech"?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break");commit();renderBody()}},r.type==="tech"?"Tech":"Break"));
-        if(!isBreak){const cb=h("input",{type:"checkbox",title:"Mark as shot","data-k":"done"});cb.checked=!!r.done;
-          cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.done=cb.checked;x.doneAt=cb.checked?dayClock(D()):null;tr.classList.toggle("done",x.done);commit();if(P.view==="todo")renderBody();renderStats(compute());renderDayTabs()});
-          hd.append(h("label",{class:"chk"},cb,"Shot"))}
+        if(!isBreak) hd.append(statusChip(r,NOWCUR));
         td.append(hd);
       }
       else if(k==="shot"){ td.append(isBreak?textCell(r,"label",false):textCell(r,"shot",false,{ph:"-"})); }

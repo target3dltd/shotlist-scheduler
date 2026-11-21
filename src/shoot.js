@@ -389,6 +389,40 @@ function videoCell(r){
   return w;
 }
 
+/* ---------- Status in the first column: To do / Setting up / Rolling / Shooting / Shot / Cut ---------- */
+let NOWCUR=null;
+// the shot (or sequence's first shot) we're on: the live one on the shoot day, otherwise only one picked by hand
+function nowCurId(d,C){ const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
+function rowStatus(r,cur){
+  if(r.cut) return "cut"; if(r.done) return "shot";
+  const t=r.seq&&R(r.seq)?seqAnchor(r):r; if(rollingTake(t)) return "rolling";
+  if(cur&&t.id===cur) return takeList(t).some(x=>x.at&&Date.now()-x.at<16*3600e3)?"shooting":"setup";
+  return "todo";
+}
+const STATUS_LABEL={todo:"To do",setup:"Setting up",rolling:"● Rolling",shooting:"Shooting",shot:"Shot ✓",cut:"Cut"};
+function statusChip(r,cur){ const st=rowStatus(r,cur);
+  return h("button",{class:"stchip st-"+st,"data-k":"status","data-status":st,"data-short":{todo:"○",setup:"◐",rolling:"●",shooting:"◑",shot:"✓",cut:"✕"}[st],title:"Status: "+STATUS_LABEL[st].replace("● ","")+". Click to change","aria-label":"Status "+STATUS_LABEL[st].replace("● ",""),onclick:e=>{e.stopPropagation();statusMenu(e.currentTarget,r.id)}},STATUS_LABEL[st]); }
+function afterStatus(){ commit(); renderBody(); renderStats(compute()); renderDayTabs(); refreshViews(); }
+function statusMenu(anchor,id){
+  $$(".locpop").forEach(x=>x.remove()); const r=R(id); if(!r) return; const d=D(); const t=r.seq&&R(r.seq)?seqAnchor(r):r;
+  const st=rowStatus(r,nowCurId(d,compute())), rolling=rollingTake(t);
+  const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+  const item=(label,fn,sub,on)=>h("button",{class:"mi"+(on?" on":""),role:"menuitem",onclick:()=>{close();fn()}},label,sub?h("small",{}," "+sub):null);
+  const undone=x=>{x.done=false;x.doneAt=null};
+  pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},(t.seq?seqTitle(t)+" · shot ":"Shot ")+(r.shot||"-")));
+  pop.append(
+    item("To do",()=>{const x=R(id);undone(x);x.cut=false;if(d.onRow===t.id){d.onRow="";d.onSince=null}afterStatus()},"",st==="todo"),
+    item("Setting up",()=>{const x=R(id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();afterStatus();toast("Setting up: ahead / behind counts from now until you roll")},"we're on it, not rolling yet",st==="setup"),
+    rolling?item("■ Cut take",()=>{cutTake(t.id);afterStatus()},"end take "+rolling.n+" (timecode out)")
+           :item("● Roll",()=>{const x=R(id);undone(x);x.cut=false;logTake(t.id,t.seq&&d.kind!=="capture"?{caught:[]}:{});afterStatus()},"start take "+nextTake(t,d)+(t.seq?" of the sequence":""),st==="rolling"),
+    item("Shot ✓",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);x.done=true;x.doneAt=dayClock(d);x.cut=false;afterStatus()},t.seq?"just this shot (Sequence done ticks them all)":"",st==="shot"),
+    item(r.cut?"Not cut":"Cut shot",()=>{setCut([id],!r.cut);renderStats(compute());refreshViews()},r.cut?"back in the schedule":"out of the schedule (Undo brings it back)",false));
+  document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); const top=b.bottom+6+pop.offsetHeight>innerHeight?Math.max(8,b.top-pop.offsetHeight-6):b.bottom+6;
+  pop.style.top=top+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+
 /* ---------- "We're on this shot": the live ahead / behind works from it ---------- */
 function onNowBtn(r){
   const d=D(); const L=d&&liveStatus(d,compute());

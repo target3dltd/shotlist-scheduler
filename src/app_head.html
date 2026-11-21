@@ -147,6 +147,16 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .seqhd .mins2{display:inline-flex;gap:.25rem;align-items:center} .seqhd .mins2 input{width:3.6rem;padding:.15rem .3rem;border:1px solid var(--line);border-radius:5px;font:inherit;background:var(--field,var(--bg));color:var(--ink)}
 .seqhd .lnk{background:none;border:none;color:var(--accent,#2f6fb0);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .seqhd .seqtime{border:none;background:none;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);cursor:pointer;padding:.05rem .3rem;border-radius:5px;text-decoration:underline dotted;text-underline-offset:3px} .seqhd .seqtime:hover{background:var(--panel2)}
+.stchip{border:1px solid var(--line2);background:var(--panel);color:var(--muted);border-radius:999px;padding:.12rem .5rem;font:inherit;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;line-height:1.3}
+.stchip:hover{border-color:var(--ink);color:var(--ink)}
+.stchip.st-setup{background:#d39b2222;border-color:#d39b22;color:#8a5a00}
+.stchip.st-rolling{background:#c2412d;border-color:#c2412d;color:#fff;animation:stpulse 1.4s ease-in-out infinite}
+.stchip.st-shooting{background:#2f6fb01f;border-color:#2f6fb0;color:#22558a}
+.stchip.st-shot{background:#2e9d5b;border-color:#2e9d5b;color:#fff}
+.stchip.st-cut{text-decoration:line-through;color:var(--muted)}
+@keyframes stpulse{50%{opacity:.65}} body.calm .stchip.st-rolling{animation:none}
+.seqmenu .mi.on{font-weight:700} .seqmenu .mi.on::after{content:"  ✓";color:#2e9d5b}
+@media print{.stchip{border:none;background:none!important;color:#000!important;padding:0;animation:none}}
 .onnow{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:999px;padding:.15rem .6rem;font:inherit;font-size:.8rem;cursor:pointer;white-space:nowrap} .onnow:hover{background:var(--panel2)}
 .onnow.on{border-color:#2e9d5b;color:#2e7d4f;background:#2e9d5b14;cursor:default;font-weight:600}
 #slateView .onnow{font-size:1rem;padding:.4rem .9rem}
@@ -760,6 +770,7 @@ body.nosteps .mins.timing input{width:4.5em}
   .daytabs .tg.wrapped{border-left:none;padding-left:0;margin-left:0}
   /* first column: just the tick box, fully visible */
   #grid td[data-col=handle] .chk{font-size:0;gap:0}
+  #grid td[data-col=handle] .stchip{font-size:0;padding:0;width:1.45rem;height:1.45rem;line-height:1.3rem;text-align:center} #grid td[data-col=handle] .stchip::before{content:attr(data-short);font-size:.85rem}
   #grid td[data-col=handle] input[type=checkbox]{width:11px;height:11px;margin:1px 0 0;display:inline-block}
   #grid td[data-col=handle]{padding:.25em .2em!important;overflow:visible}
   /* keep rows whole on a page (a row taller than a page still splits), with a cell line at every page edge */
