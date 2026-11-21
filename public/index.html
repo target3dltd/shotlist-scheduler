@@ -154,6 +154,10 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .stchip.st-shooting{background:#2f6fb01f;border-color:#2f6fb0;color:#22558a}
 .stchip.st-shot{background:#2e9d5b;border-color:#2e9d5b;color:#fff}
 .stchip.st-cut{text-decoration:line-through;color:var(--muted)}
+.stchip.st-bon{background:color-mix(in srgb,var(--break) 25%,transparent);border-color:var(--break);color:var(--ink);animation:stpulse 2.4s ease-in-out infinite}
+.stchip.st-bdone{background:color-mix(in srgb,var(--break) 12%,transparent);border-color:var(--line2);color:var(--muted)}
+body.calm .stchip.st-bon{animation:none}
+.breakbtn{margin-top:.3rem}
 @keyframes stpulse{50%{opacity:.65}} body.calm .stchip.st-rolling{animation:none}
 .seqmenu .mi.on{font-weight:700} .seqmenu .mi.on::after{content:"  ✓";color:#2e9d5b}
 @media print{.stchip{border:none;background:none!important;color:#000!important;padding:0;animation:none}}
@@ -1198,6 +1202,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <h3>On the day: ahead / behind</h3>
   <ul>
     <li><b>Running card</b>: on the day itself (the day's Shoot date is today) a card shows how far ahead (<b>-</b>, green) or behind (<b>+</b>) you are. It uses the time each shot was ticked as shot, against when the schedule had it finishing. If the shot you're on runs past its planned finish, the delta keeps growing until you tick it. Hover the card to see what it's based on. The card also shows the projected wrap, and a blue line marks now on the timeline. It updates every 30 seconds.</li>
+    <li><b>Breaks, lunch and tech</b> have their own status chip on the row: <b>Not yet</b>, <b>On now</b> or <b>Done ✓</b>. When the last shot before lunch is done, the Running card shows <b>Start Lunch</b>; while it's on, it counts down ("20m left", or "5m over") with an <b>End Lunch</b> button. Ahead / behind then runs from when the break should end, setting up for the next shot starts when you end it, and the actual timeline draws the break at its real times. Starting a break cuts any take still rolling. Marking breaks is optional: if you don't, the planned break length is counted before the next setup, so the delta holds steady over lunch instead of drifting towards ahead.</li>
     <li>Tick shots as they finish, so the delta is accurate. Shots ticked before this version, or on another day, have no time recorded, so the delta falls back to the clock.</li>
     <li><b>Actual timeline</b> sits under the planned timeline, on the same time scale, so you can see where the day went. For each shot or sequence it shows <b>setting up</b> (from when its Status was set to Setting up, or else from when the last shot finished) and <b>shooting</b> (from the first take to when it was marked Shot ✓). Breaks and tech rows between two shots are drawn at their planned length. A shot ticked with no takes logged shows striped, as setup and shooting can't be split. The one you're on pulses and grows with the clock. Its header totals setting up and shooting for the shots done so far against the plan. Hover a bar for its times, click it to jump to the shot.</li>
     <li><b>Choosing the summary cards</b>: tap the faint <b>⋯</b> at the end of the cards along the top (or Display settings &gt; Summary cards) and untick any you don't need, such as Day length or Breaks. You can also turn off the hint pills under the cards (no lunch scheduled, shots with no setup time). <b>Show all</b> brings everything back. Per device, so the DIT and the 1st AD can each have their own.</li>
@@ -1440,9 +1445,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.35.1";
+const VERSION = "2.36.0";
 const CHANGELOG = [
-  ["2.35.1","2026-11-21","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
+  ["2.36.0","2026-11-21","Breaks, lunch and tech rows have a status too: Not yet, On now or Done. Start and end them from the chip on the row, or the Start / End button on the Running card when one is up next. While one is on, the Running card counts down (or shows how far over it is) and ahead / behind follows its real end; the actual timeline draws it at its real times. Even unmarked, the planned break now counts before the next setup, so the delta no longer drifts towards ahead over lunch."],
+  ["2.35.1","","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
   ["2.35.0","","Tidier dashboard. Layouts: one click for 1st AD, DIT / data, Director or Everything, or save your own (cards, panels, focus and columns), from the ⋯ at the end of the cards or Display settings. Shoot-day focus (the Focus button by the cards) tucks away planning cards, hints, the planned timeline and planning columns. Pace sits inside the Running card: tap the card for the details. The Recovery plan is one line while you're on target and opens itself at amber or red. Call sheet, Running order, Wrap report, DIT names, Export takes and the Shoot-ready check are together in a Documents menu. On phones, a thin bar with the delta, the shot you're on and the wrap pins to the top once you scroll past the cards (tap it to go back up)."],
   ["2.34.0","","Choose which summary cards show along the top (Running, Calculated wrap, Day length, totals, Shots, Takes and so on): tap the ⋯ at the end of the cards, or Display settings > Summary cards. The hint pills under the cards can be turned off too. Per device."],
   ["2.33.1","","Status steps backwards: To do now really goes back (the shot no longer shows Setting up just because it is next, and a rolling take is cut first), and Setting up after takes means a reset, so it shows Setting up until the next take rolls."],
@@ -2751,7 +2757,7 @@ function renderBody(){
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(isBreak) hd.append(h("button",{class:"kindtag",title:r.type==="tech"?"Tech / turnaround time. Click to make it a break.":"A break or move. Click to make it tech / turnaround time.",onclick:()=>{const x=R(r.id);if(!x)return;const was=x.type;x.type=was==="tech"?"break":"tech";const c=cfg();if(!x.label||x.label===(was==="tech"?c.techLabel:c.breakLabel)||x.label===(was==="tech"?"Tech / turnaround":"Break"))x.label=x.type==="tech"?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break");commit();renderBody()}},r.type==="tech"?"Tech":"Break"));
-        if(!isBreak) hd.append(statusChip(r,NOWCUR));
+        hd.append(isBreak?blockChip(r):statusChip(r,NOWCUR));
         td.append(hd);
       }
       else if(k==="shot"){ td.append(isBreak?textCell(r,"label",false):textCell(r,"shot",false,{ph:"-"})); }
@@ -2825,9 +2831,9 @@ function renderStats(C){
   const L=liveStatus(d,C);
   if(L){ const s=L.slip, po=Math.round(L.proj-wrapT), g=cfg();
     const cls=s<=0?"ok":po>=(Number(g.gateRed)||30)?"bad":po>=(Number(g.gateAmber)||10)?"warn":"";
-    const now=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
+    const now=L.phase==="break"?blockName(L.block)+" · "+(L.blockLeft>=0?dur(L.blockLeft)+" left":dur(-L.blockLeft)+" over"):L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
     const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis;
-    runningPace(c,d,C); st.append(c); }
+    runningPace(c,d,C); runningBreakBtn(c,d,C,L); st.append(c); }
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
@@ -2921,6 +2927,15 @@ function liveStatus(d,C){
   // the shot we're on: the one picked ("We're on this shot", or the last one rolled on), else the next one not done
   const picked=d.onRow&&rows.find(r=>r.id===d.onRow&&!isBlock(r)&&!r.done);
   const cur=picked||next;
+  // on a break / tech row now (started, not ended): the delta runs from when it should end
+  { const onB=d.rows.find(r=>isBlock(r)&&!r.cut&&r.setupAt&&!r.done);
+    if(onB&&C.rows[onB.id]&&!(cur&&rollingTake(cur.seq&&R(cur.seq)?seqAnchor(cur):cur))){
+      const atB=ms=>now-(Date.now()-ms)/60000, c=C.rows[onB.id], began=atB(onB.setupAt), len=c.sh, projEnd=Math.max(now,began+len);
+      const bi=rows.indexOf(onB), ci=cur?rows.indexOf(cur):rows.length, s0=last&&last.doneAt!=null?last.doneAt-C.rows[last.id].end:0;
+      // in its planned place: against its planned end; taken early or late: whatever you had, plus any overrun
+      const slip=Math.round(bi>li&&bi<ci?projEnd-c.end:s0+Math.max(0,now-(began+len)));
+      return {slip,basis:`${blockName(onB)}: since ${fmt(began)}, back about ${fmt(projEnd)} (planned ${fmt(c.start)} to ${fmt(c.end)})`,now,next,cur,phase:"break",block:onB,blockLeft:Math.round(began+len-now),proj:C.wrap+slip};
+    } }
   if(!cur) return {slip:last&&last.doneAt!=null?Math.round(last.doneAt-C.rows[last.id].end):0,basis:"every shot is ticked",now,next:null,cur:null,phase:"done",proj:C.wrap};
   // a sequence is planned and shot as one
   const tk=cur.seq&&R(cur.seq)?seqAnchor(cur):cur, mem=tk.seq?seqMembers(tk,d).filter(x=>!x.cut):[cur];
@@ -2937,6 +2952,12 @@ function liveStatus(d,C){
   } else {
     // not rolling yet: setting up, since we moved on to it (or the last shot finished, or the planned time)
     let began=picked&&d.onSince?at(d.onSince):last&&last.doneAt!=null?last.doneAt:Math.min(now,pSet); if(began>now) began=now;
+    if(!(picked&&d.onSince)){
+      // a break or tech row marked done since: setting up starts when it ended
+      for(const b of rows) if(isBlock(b)&&b.done&&b.doneAt!=null&&b.doneAt<=now&&b.doneAt>began) began=Number(b.doneAt);
+      // breaks between the last shot and this one that nobody marked: count their planned length first
+      if(last&&last.doneAt!=null){ const ci=rows.indexOf(cur); for(const b of rows.slice(li+1,ci)) if(isBlock(b)&&!b.done&&!b.setupAt) began+=(C.rows[b.id]||{}).sh||0; }
+    }
     const projStart=Math.max(now,began+su); slip=projStart-pStart; phase="setup";
     basis=`${label}: setting up since ${fmt(began)}, ready to roll about ${fmt(projStart)} (planned ${fmt(pStart)})`;
   }
@@ -2946,7 +2967,7 @@ function liveStatus(d,C){
 // "We're on this shot": what the live ahead / behind works from (shared with the team); setting up until a take rolls
 function setOnNow(id){ const d=D(); if(!d) return; const r=R(id); if(!r) return; const t=r.seq&&R(r.seq)?seqAnchor(r):r;
   d.onRow=t.id; d.onSince=Date.now(); t.setupAt=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
-function isOnNow(r){ const d=D(); if(!d||!r||d.onRow==="none") return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
+function isOnNow(r){ const d=D(); if(!d||!r||d.onRow==="none") return false; const L=liveStatus(d,compute()); if(!L||!L.cur||L.phase==="break") return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
 function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
 function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
 function buildPlan(d,C){
@@ -5766,7 +5787,7 @@ function videoCell(r){
 /* ---------- Status in the first column: To do / Setting up / Rolling / Shooting / Shot / Cut ---------- */
 let NOWCUR=null;
 // the shot (or sequence's first shot) we're on: the live one on the shoot day, otherwise only one picked by hand
-function nowCurId(d,C){ if(d&&d.onRow==="none") return null; const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
+function nowCurId(d,C){ if(d&&d.onRow==="none") return null; const L=liveStatus(d,C); if(L&&L.phase==="break") return null; const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
 function rowStatus(r,cur){
   if(r.cut) return "cut"; if(r.done) return "shot";
   const t=r.seq&&R(r.seq)?seqAnchor(r):r; if(rollingTake(t)) return "rolling";
@@ -6238,7 +6259,12 @@ function actualUnits(d,C){
   const ok=m=>m!=null&&isFinite(m)&&m>-720&&m<2880;
   const units=[], seen=new Set();
   d.rows.forEach((r,idx)=>{
-    if(isBlock(r)||r.cut) return;
+    if(r.cut) return;
+    if(isBlock(r)){ // a break / tech row that was marked: its real times
+      const c=C.rows[r.id]||{}, sA=r.setupAt&&ok(dayMinOf(d,r.setupAt))?dayMinOf(d,r.setupAt):null, eA=r.done&&ok(r.doneAt)?Number(r.doneAt):null;
+      if(sA==null&&eA==null) return;
+      const s=sA!=null?sA:eA-(c.sh||0), e=eA!=null?eA:(now!=null?Math.max(s,now):null); if(e==null) return;
+      units.push({blockU:true,a:r,idx,name:blockName(r),blk:[s,e],live:eA==null,est:sA==null,pLen:c.sh||0,first:s}); return; }
     const a=r.seq&&R(r.seq)?seqAnchor(r):r; if(seen.has(a.id)) return; seen.add(a.id);
     const mem=a.seq?seqMembers(a,d).filter(x=>!x.cut):[r];
     const takes=takeList(a).filter(t=>t.at&&ok(dayMinOf(d,t.at)));
@@ -6260,12 +6286,13 @@ function actualUnits(d,C){
   units.sort((x,y)=>(x.first??1e9)-(y.first??1e9));
   let prev=null;
   for(const u of units){
+    if(u.blockU){ u.end=u.blk[1]; prev=u; continue; }
     const setupE=u.shootS!=null?u.shootS:(u.isCur?now:null);
     let s=u.setupAt;
     if(s==null&&prev&&prev.end!=null&&setupE!=null){
       // set up from when the last one finished, less any break / tech rows that sit between them in the list
       s=prev.end;
-      if(u.idx>prev.idx){ const blk=d.rows.slice(prev.idx+1,u.idx).filter(isBlock).reduce((t,b)=>t+((C.rows[b.id]||{}).sh||0),0);
+      if(u.idx>prev.idx){ const blk=d.rows.slice(prev.idx+1,u.idx).filter(b=>isBlock(b)&&!b.cut&&!b.setupAt&&!b.done).reduce((t,b)=>t+((C.rows[b.id]||{}).sh||0),0);
         if(blk>0){ const be=Math.min(setupE,s+blk); u.brk=[s,be]; s=be; } }
     }
     if(s!=null&&setupE!=null&&s<=setupE) u.setup=[s,setupE];
@@ -6274,7 +6301,7 @@ function actualUnits(d,C){
     u.end=u.shoot?u.shoot[1]:u.nolog?u.nolog[1]:u.setup?u.setup[1]:null;
     u.idx=Math.max(u.idx,prev?prev.idx:0); prev=u.end!=null?u:prev;
   }
-  return units.filter(u=>u.setup||u.shoot||u.nolog);
+  return units.filter(u=>u.blockU||u.setup||u.shoot||u.nolog);
 }
 // the timelines share one scale: call to the later of the planned wrap, target wrap and what's actually happened
 function tlRange(d,C){
@@ -6294,6 +6321,7 @@ function renderActual(C){
   let su=0, sh=0, pSu=0, pSh=0, nDone=0;
   for(const u of units){
     const go=()=>jump(u.a.id), live=u.isCur&&!u.done;
+    if(u.blockU){ const s=h("div",{class:"seg "+(u.a.type==="tech"?"tech":"break")+(u.live?" live":""),style:`left:${pct(u.blk[0])};width:${w(...u.blk)};border-left:1px solid var(--panel)`,title:`${u.name} - ${u.est?"ended":fmt(u.blk[0])+" to"} ${fmt(u.blk[1])}${u.live?" (so far)":""}: ${mins(u.blk)} min, planned ${Math.round(u.pLen)}${u.est?" (start not marked, drawn at its planned length)":""}`}); s.onclick=go; tl.append(s); continue; }
     if(u.brk) tl.append(h("div",{class:"seg break",style:`left:${pct(u.brk[0])};width:${w(...u.brk)}`,title:`Break / tech before ${u.name}, at its planned length (${mins(u.brk)} min)`}));
     if(u.setup){ const s=h("div",{class:"seg setup"+(live&&!u.shoot?" live":""),style:`left:${pct(u.setup[0])};width:${w(...u.setup)}`,title:`${u.name} - setting up ${fmt(u.setup[0])} to ${fmt(u.setup[1])}${live&&!u.shoot?" (so far)":""}: ${mins(u.setup)} min, planned ${Math.round(u.pSu)}`}); s.onclick=go; tl.append(s); }
     if(u.shoot){ const s=h("div",{class:"seg shoot"+(live?" live":""),style:`left:${pct(u.shoot[0])};width:${w(...u.shoot)};border-left:1px solid var(--panel)`,title:`${u.name} - shooting ${fmt(u.shoot[0])} to ${fmt(u.shoot[1])}${live?" (so far)":""}: ${mins(u.shoot)} min, planned ${Math.round(u.pSh)}`}); s.onclick=go; tl.append(s); }
@@ -6421,6 +6449,7 @@ function updateMiniBar(d,C,L){
   if(!d){bar.replaceChildren();return}
   if(L){ const s=L.slip, cur=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-")):"";
     const ph={setup:"setting up",rolling:"● rolling",shooting:"shooting"}[L.phase]||"";
+    if(L.phase==="break"){ bar.replaceChildren(h("b",{class:"mbdelta "+(s>0?"bad":s<0?"ok":"")},s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s))),h("span",{class:"mbcur"},blockName(L.block)+" · "+(L.blockLeft>=0?dur(L.blockLeft)+" left":dur(-L.blockLeft)+" over")),h("span",{class:"mbwrap"},"wrap "+fmt(L.proj)),h("span",{class:"mbup","aria-hidden":"true"},"↑")); miniBarScroll(); return; }
     bar.replaceChildren(h("b",{class:"mbdelta "+(s>0?"bad":s<0?"ok":"")},s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s))),
       h("span",{class:"mbcur"},cur?cur+(ph?" · "+ph:""):"every shot done"),h("span",{class:"mbwrap"},"wrap "+fmt(L.proj)),h("span",{class:"mbup","aria-hidden":"true"},"↑"));
   } else {
@@ -6434,6 +6463,40 @@ function miniBarScroll(){ const bar=$("#miniBar"), st=$("#stats"); if(!bar||!st)
   bar.classList.toggle("show",show); document.body.classList.toggle("hasminibar",show); }
 window.addEventListener("scroll",miniBarScroll,{passive:true}); window.addEventListener("resize",miniBarScroll);
 (function(){ const bar=$("#miniBar"); if(bar) bar.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"}); })();
+
+// ---- breaks and tech rows: Not yet / On now / Done, so lunch running long shows straight away ----
+function blockStatus(r){ return r.done?"bdone":r.setupAt?"bon":"btodo"; }
+const BLOCK_LABEL={btodo:"Not yet",bon:"On now",bdone:"Done ✓"};
+function blockChip(r){ const st=blockStatus(r), L=BLOCK_LABEL[st];
+  return h("button",{class:"stchip st-"+st,"data-k":"status","data-status":st,"data-short":{btodo:"○",bon:"◐",bdone:"✓"}[st],title:`${blockName(r)}: ${L}. Click to start or end it, so ahead / behind and the actual timeline use the real times`,"aria-label":"Status "+L,onclick:e=>{e.stopPropagation();blockMenu(e.currentTarget,r.id)}},L); }
+function startBlock(id){ const d=D(), b=R(id); if(!d||!b) return;
+  for(const x of d.rows) if(x!==b&&isBlock(x)&&x.setupAt&&!x.done){ x.done=true; x.doneAt=dayClock(d); }
+  for(const x of d.rows){ const t=!isBlock(x)&&rollingTake(x); if(t) cutTake(x.id); }
+  b.setupAt=Date.now(); b.done=false; b.doneAt=null; if(d.onRow&&d.onRow!=="none"){ d.onRow=""; d.onSince=null; }
+  afterStatus(); toast(`${blockName(b)} started: back about ${fmt(dayClock(d)+((compute().rows[b.id]||{}).sh||0))}`); }
+function endBlock(id){ const d=D(), b=R(id); if(!d||!b) return; b.done=true; b.doneAt=dayClock(d); afterStatus(); toast(`${blockName(b)} over: setting up from now`); }
+function blockMenu(anchor,id){
+  $$(".locpop").forEach(x=>x.remove()); const r=R(id); if(!r) return; const st=blockStatus(r);
+  const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+  const item=(label,fn,sub,on)=>h("button",{class:"mi"+(on?" on":""),role:"menuitem",onclick:()=>{close();fn()}},label,sub?h("small",{}," "+sub):null);
+  pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},blockName(r)+" · planned "+dur((compute().rows[id]||{}).sh||0)),
+    item("Not yet",()=>{const x=R(id);x.setupAt=null;x.done=false;x.doneAt=null;afterStatus()},"",st==="btodo"),
+    item("On now",()=>startBlock(id),"started now",st==="bon"),
+    item("Done ✓",()=>endBlock(id),st==="bon"?"ended now":"ended now (start not marked)",st==="bdone"));
+  document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); const top=b.bottom+6+pop.offsetHeight>innerHeight?Math.max(8,b.top-pop.offsetHeight-6):b.bottom+6;
+  pop.style.top=top+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+// the Running card: End lunch while it's on, Start lunch when it's next up
+function runningBreakBtn(card,d,C,L){
+  let b=null, start=false;
+  if(L.phase==="break") b=L.block;
+  else { const rows=d.rows.filter(r=>!r.cut); let li=-1; rows.forEach((r,i)=>{if(!isBlock(r)&&r.done)li=i});
+    const nx=rows.slice(li+1).find(r=>!isBlock(r)?!r.done:true); if(nx&&isBlock(nx)&&!nx.done&&!nx.setupAt&&!(L.cur&&L.phase!=="setup")){ b=nx; start=true; } }
+  if(!b) return;
+  card.append(h("div",{class:"sub"},h("button",{class:"btn small breakbtn",type:"button",title:start?`Mark ${blockName(b)} as started now`:`Mark ${blockName(b)} as over now`,onclick:e=>{e.stopPropagation();start?startBlock(b.id):endBlock(b.id)}},(start?"Start ":"End ")+blockName(b))));
+}
 
 boot();
 

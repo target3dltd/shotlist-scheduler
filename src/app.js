@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.35.1";
+const VERSION = "2.36.0";
 const CHANGELOG = [
-  ["2.35.1","2026-11-21","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
+  ["2.36.0","2026-11-21","Breaks, lunch and tech rows have a status too: Not yet, On now or Done. Start and end them from the chip on the row, or the Start / End button on the Running card when one is up next. While one is on, the Running card counts down (or shows how far over it is) and ahead / behind follows its real end; the actual timeline draws it at its real times. Even unmarked, the planned break now counts before the next setup, so the delta no longer drifts towards ahead over lunch."],
+  ["2.35.1","","iPad and phones: scrolling down no longer sticks and bounces part way. The shot list was its own scroll box inside the page; on touch screens it now scrolls with the page (and sideways on its own)."],
   ["2.35.0","","Tidier dashboard. Layouts: one click for 1st AD, DIT / data, Director or Everything, or save your own (cards, panels, focus and columns), from the ⋯ at the end of the cards or Display settings. Shoot-day focus (the Focus button by the cards) tucks away planning cards, hints, the planned timeline and planning columns. Pace sits inside the Running card: tap the card for the details. The Recovery plan is one line while you're on target and opens itself at amber or red. Call sheet, Running order, Wrap report, DIT names, Export takes and the Shoot-ready check are together in a Documents menu. On phones, a thin bar with the delta, the shot you're on and the wrap pins to the top once you scroll past the cards (tap it to go back up)."],
   ["2.34.0","","Choose which summary cards show along the top (Running, Calculated wrap, Day length, totals, Shots, Takes and so on): tap the ⋯ at the end of the cards, or Display settings > Summary cards. The hint pills under the cards can be turned off too. Per device."],
   ["2.33.1","","Status steps backwards: To do now really goes back (the shot no longer shows Setting up just because it is next, and a rolling take is cut first), and Setting up after takes means a reset, so it shows Setting up until the next take rolls."],
@@ -1040,7 +1041,7 @@ function renderBody(){
         g.addEventListener("dragend",()=>{tr.classList.remove("dragging");$$("tr.dropbefore").forEach(x=>x.classList.remove("dropbefore"))});
         hd.append(g);
         if(isBreak) hd.append(h("button",{class:"kindtag",title:r.type==="tech"?"Tech / turnaround time. Click to make it a break.":"A break or move. Click to make it tech / turnaround time.",onclick:()=>{const x=R(r.id);if(!x)return;const was=x.type;x.type=was==="tech"?"break":"tech";const c=cfg();if(!x.label||x.label===(was==="tech"?c.techLabel:c.breakLabel)||x.label===(was==="tech"?"Tech / turnaround":"Break"))x.label=x.type==="tech"?(c.techLabel||"Tech / turnaround"):(c.breakLabel||"Break");commit();renderBody()}},r.type==="tech"?"Tech":"Break"));
-        if(!isBreak) hd.append(statusChip(r,NOWCUR));
+        hd.append(isBreak?blockChip(r):statusChip(r,NOWCUR));
         td.append(hd);
       }
       else if(k==="shot"){ td.append(isBreak?textCell(r,"label",false):textCell(r,"shot",false,{ph:"-"})); }
@@ -1114,9 +1115,9 @@ function renderStats(C){
   const L=liveStatus(d,C);
   if(L){ const s=L.slip, po=Math.round(L.proj-wrapT), g=cfg();
     const cls=s<=0?"ok":po>=(Number(g.gateRed)||30)?"bad":po>=(Number(g.gateAmber)||10)?"warn":"";
-    const now=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
+    const now=L.phase==="break"?blockName(L.block)+" · "+(L.blockLeft>=0?dur(L.blockLeft)+" left":dur(-L.blockLeft)+" over"):L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-"))+" · "+({setup:"setting up",rolling:"rolling",shooting:"shooting"}[L.phase]||""):"";
     const c=card("Running",s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s)),(now?now+" · ":"")+(s>0?"behind":s<0?"ahead":"on time")+" · wrap about "+fmt(L.proj)+(po>0?" ("+dur(po)+" over)":""),cls); c.classList.add("live"); c.title=L.basis;
-    runningPace(c,d,C); st.append(c); }
+    runningPace(c,d,C); runningBreakBtn(c,d,C,L); st.append(c); }
   st.append(card("Calculated wrap",fmt(C.wrap),over>0?dur(over)+" over target":dur(-over)+" spare",over>0?"bad":"ok"),
     card("Day length",dur(C.wrap-callT),"call "+fmt(callT)+" → wrap"),
     card("Setup total",dur(C.setupT),Math.round(100*C.setupT/Math.max(1,C.setupT+C.shootT))+"% of working time"),
@@ -1210,6 +1211,15 @@ function liveStatus(d,C){
   // the shot we're on: the one picked ("We're on this shot", or the last one rolled on), else the next one not done
   const picked=d.onRow&&rows.find(r=>r.id===d.onRow&&!isBlock(r)&&!r.done);
   const cur=picked||next;
+  // on a break / tech row now (started, not ended): the delta runs from when it should end
+  { const onB=d.rows.find(r=>isBlock(r)&&!r.cut&&r.setupAt&&!r.done);
+    if(onB&&C.rows[onB.id]&&!(cur&&rollingTake(cur.seq&&R(cur.seq)?seqAnchor(cur):cur))){
+      const atB=ms=>now-(Date.now()-ms)/60000, c=C.rows[onB.id], began=atB(onB.setupAt), len=c.sh, projEnd=Math.max(now,began+len);
+      const bi=rows.indexOf(onB), ci=cur?rows.indexOf(cur):rows.length, s0=last&&last.doneAt!=null?last.doneAt-C.rows[last.id].end:0;
+      // in its planned place: against its planned end; taken early or late: whatever you had, plus any overrun
+      const slip=Math.round(bi>li&&bi<ci?projEnd-c.end:s0+Math.max(0,now-(began+len)));
+      return {slip,basis:`${blockName(onB)}: since ${fmt(began)}, back about ${fmt(projEnd)} (planned ${fmt(c.start)} to ${fmt(c.end)})`,now,next,cur,phase:"break",block:onB,blockLeft:Math.round(began+len-now),proj:C.wrap+slip};
+    } }
   if(!cur) return {slip:last&&last.doneAt!=null?Math.round(last.doneAt-C.rows[last.id].end):0,basis:"every shot is ticked",now,next:null,cur:null,phase:"done",proj:C.wrap};
   // a sequence is planned and shot as one
   const tk=cur.seq&&R(cur.seq)?seqAnchor(cur):cur, mem=tk.seq?seqMembers(tk,d).filter(x=>!x.cut):[cur];
@@ -1226,6 +1236,12 @@ function liveStatus(d,C){
   } else {
     // not rolling yet: setting up, since we moved on to it (or the last shot finished, or the planned time)
     let began=picked&&d.onSince?at(d.onSince):last&&last.doneAt!=null?last.doneAt:Math.min(now,pSet); if(began>now) began=now;
+    if(!(picked&&d.onSince)){
+      // a break or tech row marked done since: setting up starts when it ended
+      for(const b of rows) if(isBlock(b)&&b.done&&b.doneAt!=null&&b.doneAt<=now&&b.doneAt>began) began=Number(b.doneAt);
+      // breaks between the last shot and this one that nobody marked: count their planned length first
+      if(last&&last.doneAt!=null){ const ci=rows.indexOf(cur); for(const b of rows.slice(li+1,ci)) if(isBlock(b)&&!b.done&&!b.setupAt) began+=(C.rows[b.id]||{}).sh||0; }
+    }
     const projStart=Math.max(now,began+su); slip=projStart-pStart; phase="setup";
     basis=`${label}: setting up since ${fmt(began)}, ready to roll about ${fmt(projStart)} (planned ${fmt(pStart)})`;
   }
@@ -1235,7 +1251,7 @@ function liveStatus(d,C){
 // "We're on this shot": what the live ahead / behind works from (shared with the team); setting up until a take rolls
 function setOnNow(id){ const d=D(); if(!d) return; const r=R(id); if(!r) return; const t=r.seq&&R(r.seq)?seqAnchor(r):r;
   d.onRow=t.id; d.onSince=Date.now(); t.setupAt=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
-function isOnNow(r){ const d=D(); if(!d||!r||d.onRow==="none") return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
+function isOnNow(r){ const d=D(); if(!d||!r||d.onRow==="none") return false; const L=liveStatus(d,compute()); if(!L||!L.cur||L.phase==="break") return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
 function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
 function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
 function buildPlan(d,C){

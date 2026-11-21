@@ -392,7 +392,7 @@ function videoCell(r){
 /* ---------- Status in the first column: To do / Setting up / Rolling / Shooting / Shot / Cut ---------- */
 let NOWCUR=null;
 // the shot (or sequence's first shot) we're on: the live one on the shoot day, otherwise only one picked by hand
-function nowCurId(d,C){ if(d&&d.onRow==="none") return null; const L=liveStatus(d,C); const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
+function nowCurId(d,C){ if(d&&d.onRow==="none") return null; const L=liveStatus(d,C); if(L&&L.phase==="break") return null; const c=L?L.cur:(d.onRow&&R(d.onRow)); if(!c||c.done) return null; return c.seq&&R(c.seq)?seqAnchor(c).id:c.id; }
 function rowStatus(r,cur){
   if(r.cut) return "cut"; if(r.done) return "shot";
   const t=r.seq&&R(r.seq)?seqAnchor(r):r; if(rollingTake(t)) return "rolling";
@@ -864,7 +864,12 @@ function actualUnits(d,C){
   const ok=m=>m!=null&&isFinite(m)&&m>-720&&m<2880;
   const units=[], seen=new Set();
   d.rows.forEach((r,idx)=>{
-    if(isBlock(r)||r.cut) return;
+    if(r.cut) return;
+    if(isBlock(r)){ // a break / tech row that was marked: its real times
+      const c=C.rows[r.id]||{}, sA=r.setupAt&&ok(dayMinOf(d,r.setupAt))?dayMinOf(d,r.setupAt):null, eA=r.done&&ok(r.doneAt)?Number(r.doneAt):null;
+      if(sA==null&&eA==null) return;
+      const s=sA!=null?sA:eA-(c.sh||0), e=eA!=null?eA:(now!=null?Math.max(s,now):null); if(e==null) return;
+      units.push({blockU:true,a:r,idx,name:blockName(r),blk:[s,e],live:eA==null,est:sA==null,pLen:c.sh||0,first:s}); return; }
     const a=r.seq&&R(r.seq)?seqAnchor(r):r; if(seen.has(a.id)) return; seen.add(a.id);
     const mem=a.seq?seqMembers(a,d).filter(x=>!x.cut):[r];
     const takes=takeList(a).filter(t=>t.at&&ok(dayMinOf(d,t.at)));
@@ -886,12 +891,13 @@ function actualUnits(d,C){
   units.sort((x,y)=>(x.first??1e9)-(y.first??1e9));
   let prev=null;
   for(const u of units){
+    if(u.blockU){ u.end=u.blk[1]; prev=u; continue; }
     const setupE=u.shootS!=null?u.shootS:(u.isCur?now:null);
     let s=u.setupAt;
     if(s==null&&prev&&prev.end!=null&&setupE!=null){
       // set up from when the last one finished, less any break / tech rows that sit between them in the list
       s=prev.end;
-      if(u.idx>prev.idx){ const blk=d.rows.slice(prev.idx+1,u.idx).filter(isBlock).reduce((t,b)=>t+((C.rows[b.id]||{}).sh||0),0);
+      if(u.idx>prev.idx){ const blk=d.rows.slice(prev.idx+1,u.idx).filter(b=>isBlock(b)&&!b.cut&&!b.setupAt&&!b.done).reduce((t,b)=>t+((C.rows[b.id]||{}).sh||0),0);
         if(blk>0){ const be=Math.min(setupE,s+blk); u.brk=[s,be]; s=be; } }
     }
     if(s!=null&&setupE!=null&&s<=setupE) u.setup=[s,setupE];
@@ -900,7 +906,7 @@ function actualUnits(d,C){
     u.end=u.shoot?u.shoot[1]:u.nolog?u.nolog[1]:u.setup?u.setup[1]:null;
     u.idx=Math.max(u.idx,prev?prev.idx:0); prev=u.end!=null?u:prev;
   }
-  return units.filter(u=>u.setup||u.shoot||u.nolog);
+  return units.filter(u=>u.blockU||u.setup||u.shoot||u.nolog);
 }
 // the timelines share one scale: call to the later of the planned wrap, target wrap and what's actually happened
 function tlRange(d,C){
@@ -920,6 +926,7 @@ function renderActual(C){
   let su=0, sh=0, pSu=0, pSh=0, nDone=0;
   for(const u of units){
     const go=()=>jump(u.a.id), live=u.isCur&&!u.done;
+    if(u.blockU){ const s=h("div",{class:"seg "+(u.a.type==="tech"?"tech":"break")+(u.live?" live":""),style:`left:${pct(u.blk[0])};width:${w(...u.blk)};border-left:1px solid var(--panel)`,title:`${u.name} - ${u.est?"ended":fmt(u.blk[0])+" to"} ${fmt(u.blk[1])}${u.live?" (so far)":""}: ${mins(u.blk)} min, planned ${Math.round(u.pLen)}${u.est?" (start not marked, drawn at its planned length)":""}`}); s.onclick=go; tl.append(s); continue; }
     if(u.brk) tl.append(h("div",{class:"seg break",style:`left:${pct(u.brk[0])};width:${w(...u.brk)}`,title:`Break / tech before ${u.name}, at its planned length (${mins(u.brk)} min)`}));
     if(u.setup){ const s=h("div",{class:"seg setup"+(live&&!u.shoot?" live":""),style:`left:${pct(u.setup[0])};width:${w(...u.setup)}`,title:`${u.name} - setting up ${fmt(u.setup[0])} to ${fmt(u.setup[1])}${live&&!u.shoot?" (so far)":""}: ${mins(u.setup)} min, planned ${Math.round(u.pSu)}`}); s.onclick=go; tl.append(s); }
     if(u.shoot){ const s=h("div",{class:"seg shoot"+(live?" live":""),style:`left:${pct(u.shoot[0])};width:${w(...u.shoot)};border-left:1px solid var(--panel)`,title:`${u.name} - shooting ${fmt(u.shoot[0])} to ${fmt(u.shoot[1])}${live?" (so far)":""}: ${mins(u.shoot)} min, planned ${Math.round(u.pSh)}`}); s.onclick=go; tl.append(s); }
@@ -1047,6 +1054,7 @@ function updateMiniBar(d,C,L){
   if(!d){bar.replaceChildren();return}
   if(L){ const s=L.slip, cur=L.cur?(L.cur.seq&&R(L.cur.seq)?seqTitle(seqAnchor(L.cur)):"Shot "+(L.cur.shot||"-")):"";
     const ph={setup:"setting up",rolling:"● rolling",shooting:"shooting"}[L.phase]||"";
+    if(L.phase==="break"){ bar.replaceChildren(h("b",{class:"mbdelta "+(s>0?"bad":s<0?"ok":"")},s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s))),h("span",{class:"mbcur"},blockName(L.block)+" · "+(L.blockLeft>=0?dur(L.blockLeft)+" left":dur(-L.blockLeft)+" over")),h("span",{class:"mbwrap"},"wrap "+fmt(L.proj)),h("span",{class:"mbup","aria-hidden":"true"},"↑")); miniBarScroll(); return; }
     bar.replaceChildren(h("b",{class:"mbdelta "+(s>0?"bad":s<0?"ok":"")},s===0?"On time":(s>0?"+":"-")+dur(Math.abs(s))),
       h("span",{class:"mbcur"},cur?cur+(ph?" · "+ph:""):"every shot done"),h("span",{class:"mbwrap"},"wrap "+fmt(L.proj)),h("span",{class:"mbup","aria-hidden":"true"},"↑"));
   } else {
@@ -1060,3 +1068,37 @@ function miniBarScroll(){ const bar=$("#miniBar"), st=$("#stats"); if(!bar||!st)
   bar.classList.toggle("show",show); document.body.classList.toggle("hasminibar",show); }
 window.addEventListener("scroll",miniBarScroll,{passive:true}); window.addEventListener("resize",miniBarScroll);
 (function(){ const bar=$("#miniBar"); if(bar) bar.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"}); })();
+
+// ---- breaks and tech rows: Not yet / On now / Done, so lunch running long shows straight away ----
+function blockStatus(r){ return r.done?"bdone":r.setupAt?"bon":"btodo"; }
+const BLOCK_LABEL={btodo:"Not yet",bon:"On now",bdone:"Done ✓"};
+function blockChip(r){ const st=blockStatus(r), L=BLOCK_LABEL[st];
+  return h("button",{class:"stchip st-"+st,"data-k":"status","data-status":st,"data-short":{btodo:"○",bon:"◐",bdone:"✓"}[st],title:`${blockName(r)}: ${L}. Click to start or end it, so ahead / behind and the actual timeline use the real times`,"aria-label":"Status "+L,onclick:e=>{e.stopPropagation();blockMenu(e.currentTarget,r.id)}},L); }
+function startBlock(id){ const d=D(), b=R(id); if(!d||!b) return;
+  for(const x of d.rows) if(x!==b&&isBlock(x)&&x.setupAt&&!x.done){ x.done=true; x.doneAt=dayClock(d); }
+  for(const x of d.rows){ const t=!isBlock(x)&&rollingTake(x); if(t) cutTake(x.id); }
+  b.setupAt=Date.now(); b.done=false; b.doneAt=null; if(d.onRow&&d.onRow!=="none"){ d.onRow=""; d.onSince=null; }
+  afterStatus(); toast(`${blockName(b)} started: back about ${fmt(dayClock(d)+((compute().rows[b.id]||{}).sh||0))}`); }
+function endBlock(id){ const d=D(), b=R(id); if(!d||!b) return; b.done=true; b.doneAt=dayClock(d); afterStatus(); toast(`${blockName(b)} over: setting up from now`); }
+function blockMenu(anchor,id){
+  $$(".locpop").forEach(x=>x.remove()); const r=R(id); if(!r) return; const st=blockStatus(r);
+  const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
+  const item=(label,fn,sub,on)=>h("button",{class:"mi"+(on?" on":""),role:"menuitem",onclick:()=>{close();fn()}},label,sub?h("small",{}," "+sub):null);
+  pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},blockName(r)+" · planned "+dur((compute().rows[id]||{}).sh||0)),
+    item("Not yet",()=>{const x=R(id);x.setupAt=null;x.done=false;x.doneAt=null;afterStatus()},"",st==="btodo"),
+    item("On now",()=>startBlock(id),"started now",st==="bon"),
+    item("Done ✓",()=>endBlock(id),st==="bon"?"ended now":"ended now (start not marked)",st==="bdone"));
+  document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); const top=b.bottom+6+pop.offsetHeight>innerHeight?Math.max(8,b.top-pop.offsetHeight-6):b.bottom+6;
+  pop.style.top=top+"px"; pop.style.left=Math.max(8,Math.min(b.left,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+// the Running card: End lunch while it's on, Start lunch when it's next up
+function runningBreakBtn(card,d,C,L){
+  let b=null, start=false;
+  if(L.phase==="break") b=L.block;
+  else { const rows=d.rows.filter(r=>!r.cut); let li=-1; rows.forEach((r,i)=>{if(!isBlock(r)&&r.done)li=i});
+    const nx=rows.slice(li+1).find(r=>!isBlock(r)?!r.done:true); if(nx&&isBlock(nx)&&!nx.done&&!nx.setupAt&&!(L.cur&&L.phase!=="setup")){ b=nx; start=true; } }
+  if(!b) return;
+  card.append(h("div",{class:"sub"},h("button",{class:"btn small breakbtn",type:"button",title:start?`Mark ${blockName(b)} as started now`:`Mark ${blockName(b)} as over now`,onclick:e=>{e.stopPropagation();start?startBlock(b.id):endBlock(b.id)}},(start?"Start ":"End ")+blockName(b))));
+}

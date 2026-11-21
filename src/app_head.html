@@ -154,6 +154,10 @@ body.viewopen .fbbtn,body.viewopen .fbpanel{display:none}
 .stchip.st-shooting{background:#2f6fb01f;border-color:#2f6fb0;color:#22558a}
 .stchip.st-shot{background:#2e9d5b;border-color:#2e9d5b;color:#fff}
 .stchip.st-cut{text-decoration:line-through;color:var(--muted)}
+.stchip.st-bon{background:color-mix(in srgb,var(--break) 25%,transparent);border-color:var(--break);color:var(--ink);animation:stpulse 2.4s ease-in-out infinite}
+.stchip.st-bdone{background:color-mix(in srgb,var(--break) 12%,transparent);border-color:var(--line2);color:var(--muted)}
+body.calm .stchip.st-bon{animation:none}
+.breakbtn{margin-top:.3rem}
 @keyframes stpulse{50%{opacity:.65}} body.calm .stchip.st-rolling{animation:none}
 .seqmenu .mi.on{font-weight:700} .seqmenu .mi.on::after{content:"  ✓";color:#2e9d5b}
 @media print{.stchip{border:none;background:none!important;color:#000!important;padding:0;animation:none}}
