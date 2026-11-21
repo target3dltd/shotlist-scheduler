@@ -440,6 +440,7 @@ body.calm .timeline.actual .seg.live{animation:none}
 .rchip .mono{font-size:.75rem;color:var(--muted)} .rchip.m-hero{border-color:#c9a227;background:color-mix(in srgb,#c9a227 18%,var(--panel2))} .rchip.m-good{border-color:var(--ok)} .rchip.m-ng{opacity:.6;text-decoration:line-through}
 .rchip.m-safety{border-color:var(--accent)} .rchip .rmk{font-weight:700}
 .btn.resetb:not(:disabled){border-color:#d0882a;color:#b86f12} .slate .resetb{border-color:#d0882a!important}
+.field.fieldchk{justify-content:flex-end} .field.fieldchk label.inline{display:inline-flex;flex-direction:row;align-items:center;gap:.35rem;cursor:pointer;white-space:nowrap;min-height:2rem;color:var(--ink)}
 td.hasgo{position:relative} td.hasgo .shotno{padding-right:1.3rem}
 .togo{position:absolute;right:.15rem;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.15rem .25rem;border-radius:4px;opacity:.45}
 tr:hover .togo,.togo:focus-visible{opacity:1} .togo:hover{color:var(--accent);background:var(--panel2)}
@@ -996,7 +997,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="controls noprint" id="dayControls">
     <button id="bandToggle" type="button" aria-expanded="false"><span>Day settings <small id="bandSummary"></small></span><span id="bandArrow">▾</span></button>
     <div class="field"><label>Day name</label><input type="text" id="dayName" style="width:11rem"></div>
-    <div class="field"><label>Status</label><select id="dayStatus"><option value="">Auto</option><option value="ready">Ready to roll</option><option value="wrapped">Wrapped</option></select></div>
+    <div class="field"><label>Day status</label><select id="dayStatus" title="The day's status (not a shot's): Auto, Ready to roll or Wrapped"><option value="">Auto</option><option value="ready">Ready to roll</option><option value="wrapped">Wrapped</option></select></div>
     <div class="field"><label>Kind</label><select id="dayKind"><option value="schedule">Live Action</option><option value="capture">Mocap</option></select></div>
     <div class="field"><label>Day #</label><input type="number" id="dayNo" min="1" step="1" style="width:4.2rem"></div>
     <div class="field"><label>Shoot date</label><input type="date" id="shootDate"></div>
@@ -1005,7 +1006,8 @@ body.nosteps .mins.timing input{width:4.5em}
     <div class="field"><label title="Scales every setup time">Setup buffer %</label><input type="number" id="setupPct" min="50" max="400" step="5"></div>
     <div class="field"><label title="Scales every shoot time">Shoot buffer %</label><input type="number" id="shootPct" min="50" max="400" step="5"></div>
     <div class="field"><label>Min setup (min)</label><input type="number" id="minSetup" min="0" max="120" step="5"></div>
-    <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="nocut">Hide cut shots</option><option value="todo">Not yet shot (no cuts)</option></select></div>
+    <div class="field keep"><label>Show</label><select id="viewMode"><option value="all">All rows</option><option value="todo">Not yet shot</option></select></div>
+    <div class="field keep fieldchk"><label class="inline" title="Leave shots marked Cut out of the list"><input type="checkbox" id="hideCut"> Hide cut shots</label></div>
     <div class="field keep"><label>Priority</label><select id="prioFilter"></select></div>
     <div class="daybtns">
       <button class="btn small" id="freezeBtn" aria-pressed="false" title="Lock this day's timings and running order once you're rolling. Ticks, takes, notes and cuts still work.">Freeze timings</button>

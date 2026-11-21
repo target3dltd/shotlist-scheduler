@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.41.0";
+const VERSION = "2.41.1";
 const CHANGELOG = [
-  ["2.41.0","2026-11-21","Reset: go again without cutting. While a take rolls, ↺ Reset (or E) in Slate View, Sequence View and Details marks R1, R2... with their timecode on the take. Each reset shows under the take; click one to mark it Hero, Good, NG or Safety (a hero reset fills the Hero column as T3 R4). Resets go in Export takes, and in the Edit tool a reset comes in at its own timecode (Swap in latest takes picks up hero resets). + Take in Details and Sequence View (and T) now only adds a take you forgot to roll on: the next take number, no timecode, nothing rolling. ● Roll is still how you start one."],
+  ["2.41.1","2026-11-21","The day banner's Status is now Day status, so it isn't mixed up with a shot's Status. Hide cut shots is its own tick box next to Show (Show is All rows or Not yet shot)."],
+  ["2.41.0","","Reset: go again without cutting. While a take rolls, ↺ Reset (or E) in Slate View, Sequence View and Details marks R1, R2... with their timecode on the take. Each reset shows under the take; click one to mark it Hero, Good, NG or Safety (a hero reset fills the Hero column as T3 R4). Resets go in Export takes, and in the Edit tool a reset comes in at its own timecode (Swap in latest takes picks up hero resets). + Take in Details and Sequence View (and T) now only adds a take you forgot to roll on: the next take number, no timecode, nothing rolling. ● Roll is still how you start one."],
   ["2.40.0","","Note View is now called Details. Open any shot in Details from the list with the ↗ at the end of its Shot #. The description can be edited in Details (click it and type; it saves for the whole team)."],
   ["2.39.1","","Slate: the clap flash (the picture sync point) now always shows. With Log take on clap turned on, the redraw used to wipe it before it was seen. It's also held back by the device's audio delay, so the flash and the clap sound land together, even through Bluetooth or an external speaker."],
   ["2.39.0","","Edit / animatic (Edit in the header): build a cut from the shotlist, starting with storyboard frames and swapping in takes from the take log or video links (rushes, previz) as they arrive. Drag to reorder, drag an edge to trim, set in points, split at the playhead. Play it through in the browser with a music or VO track (a link, or a file on your device). Several cuts per project, shared with the team. Export a CMX3600 EDL or FCP XML (take clip names and timecode in, shot names and notes as comments and markers) for Premiere, Resolve or Avid."],
@@ -444,7 +445,7 @@ function goToPerson(p){
   P.activeByProject[pid()]=day.id; savePrefs(); renderAll();
   const label=presenceRow(p);
   let tr=p.row&&$(`#grid tbody tr[data-id="${p.row}"]`);
-  if(p.row&&!tr&&day.rows.some(r=>r.id===p.row)){ P.view="all"; P.prioFilter=""; P.filters={}; savePrefs(); renderAll(); tr=$(`#grid tbody tr[data-id="${p.row}"]`); if(tr) toast("Filters cleared so you can see "+(p.name||"their")+"'s row"); }
+  if(p.row&&!tr&&day.rows.some(r=>r.id===p.row)){ P.view="all"; P.hideCut=false; P.prioFilter=""; P.filters={}; savePrefs(); renderAll(); tr=$(`#grid tbody tr[data-id="${p.row}"]`); if(tr) toast("Filters cleared so you can see "+(p.name||"their")+"'s row"); }
   if(tr){ tr.scrollIntoView({block:"center"}); tr.style.setProperty("--peer",colorFor(p.name||p.cid)); tr.classList.remove("peerjump"); void tr.offsetWidth; tr.classList.add("peerjump"); setTimeout(()=>tr.classList.remove("peerjump"),3200);
     if(!/Filters cleared/.test(($("#toast")||{}).textContent||"")) toast(`${p.name||"They"}: ${day.name}${label?" · "+label:""}`); }
   else toast(`${p.name||"They"} ${p.name?"is":"are"} on ${day.name}${p.row?"":" (no shot picked yet)"}`);
@@ -772,7 +773,7 @@ function visibleRows(C){
   const d=D(); if(!d) return [];
   const f=P.filters||{}; const hid=hiddenView(); const keys=Object.keys(f).filter(k=>(f[k]||"").trim()&&!hid.includes(k)&&colMap()[k]);
   let list=d.rows.filter(r=>{
-    if((P.view==="todo"||P.view==="nocut")&&r.cut&&!isBlock(r)) return false;
+    if((P.view==="todo"||P.hideCut)&&r.cut&&!isBlock(r)) return false;
     if(P.view==="todo"&&r.done) return false;
     if(!prioFilterOk(r)) return false;
     return keys.every(k=>{
@@ -807,7 +808,7 @@ function renderViewbar(shown){
   const fcount=Object.entries(P.filters||{}).filter(([k,v])=>(v||"").trim()&&!hiddenView().includes(k)).length;
   const sorted=!!(P.sort&&P.sort.key);
   $("#grid").classList.toggle("sorted",sorted);
-  if(!d||(!sorted&&!fcount&&(P.view||"all")==="all"&&!P.prioFilter)){vb.classList.remove("show");return}
+  if(!d||(!sorted&&!fcount&&(P.view||"all")==="all"&&!P.prioFilter&&!P.hideCut)){vb.classList.remove("show");return}
   vb.classList.add("show");
   vb.append(h("span",{},`Showing ${shown} of ${d.rows.length} rows`));
   if(sorted){
@@ -817,6 +818,7 @@ function renderViewbar(shown){
     vb.append(h("button",{class:"btn small",title:"Reorder the actual schedule to match this sort (filtered-out rows go to the end)",onclick:applySortAsOrder},"Make this the running order"));
   }
   if(P.prioFilter){ const s=$("#prioFilter"); const lab=s&&s.selectedOptions[0]?s.selectedOptions[0].textContent:""; vb.append(h("span",{},"· priority: "+lab),h("button",{class:"btn small",onclick:()=>{P.prioFilter="";savePrefs();renderPrioFilter();renderBody()}},"Show all priorities")); }
+  if(P.hideCut&&P.view!=="todo"){ const n=d.rows.filter(r=>r.cut&&!isBlock(r)).length; if(n) vb.append(h("span",{},`· ${n} cut shot${n===1?"":"s"} hidden`),h("button",{class:"btn small",onclick:()=>{P.hideCut=false;savePrefs();renderAll()}},"Show cut shots")); }
   if(fcount) vb.append(h("button",{class:"btn small",onclick:()=>{P.filters={};savePrefs();renderHead();renderBody()}},`Clear ${fcount} filter${fcount>1?"s":""}`));
 }
 function applySortAsOrder(){
@@ -1558,7 +1560,7 @@ function renderSettingsRow(){
   const set=(id,v)=>{const el=$("#"+id);if(document.activeElement!==el)el.value=v??""};
   set("dayName",d.name); set("dayKind",d.kind||"schedule"); set("dayStatus",d.status||"");
   { const o=$("#dayStatus option[value='']"); if(o) o.textContent="Auto ("+(dayStatus(Object.assign({},d,{status:""}))==="wrapped"?"Wrapped":"Ready to roll")+")"; } set("dayNo",d.dayNo||(dayIndex(d)+1)); set("shootDate",d.date);
-  set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); set("viewMode",P.view||"all"); renderPrioFilter();
+  set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); if(P.view==="nocut"){P.view="all";P.hideCut=true;savePrefs();} set("viewMode",P.view||"all"); $("#hideCut").checked=!!P.hideCut; renderPrioFilter();
   $("#bandSummary").textContent=`${d.name||"Day"} · call ${fmt(toMin(d.call||"09:00"))} · wrap ${fmt(toMin(d.wrap||"18:00"))}`;
   $("#projTitle").textContent=S.project.name||"Untitled project";
   if(!syncProjectName._t) syncProjectName._t=setTimeout(()=>{syncProjectName._t=null;syncProjectName(false)},1500); document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
@@ -2579,6 +2581,7 @@ function bindDay(id,key,num){const el=$("#"+id);el.addEventListener("input",()=>
 bindDay("dayName","name");bindDay("dayKind","kind");bindDay("dayStatus","status");bindDay("dayNo","dayNo",true);bindDay("shootDate","date");bindDay("callTime","call");bindDay("wrapTime","wrap");
 bindDay("setupPct","setupPct",true);bindDay("shootPct","shootPct",true);bindDay("minSetup","minSetup",true);
 $("#viewMode").addEventListener("change",e=>{P.view=e.target.value;savePrefs();renderBody()});
+$("#hideCut").addEventListener("change",e=>{P.hideCut=e.target.checked;savePrefs();renderBody()});
 $("#prioFilter").addEventListener("change",e=>{P.prioFilter=e.target.value;e.target.classList.toggle("on",!!P.prioFilter);savePrefs();renderBody()});
 $("#dupDayBtn").onclick=()=>{commit();const c=clone(D());c.id=uid("d");c.name=(c.name||"Day")+" (copy)";c.frozen=false;c.wrapNotes="";c.rows.forEach(r=>{r.id=uid("r");r.done=false;r.takes=0});delete c.pos;S.days.splice(S.days.indexOf(D())+1,0,c);P.activeByProject[pid()]=c.id;commit();renderAll();toast("Copied day")};
 $("#tlColours").onclick=e=>{e.preventDefault();openSettings("display");setTimeout(()=>{const f=$("#colourForm");if(f)f.scrollIntoView({block:"start"})},50)};
