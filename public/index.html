@@ -1091,7 +1091,7 @@ body.nosteps .mins.timing input{width:4.5em}
   <h3>Slate View and Note View</h3>
   <ul>
     <li>In Slate View, tap the <b>shot number</b> to open that shot in Note View.</li>
-    <li><b>Takes</b>: <b>✕</b> removes a take and shows <b>Undo</b> straight away (Ctrl/Cmd+Z works too). <b>Double-click the take number</b> (T3) to renumber it, for example to match what's on the physical slate (the next take then follows on), or to give it its own clip name; leave the name empty to keep the automatic one. A renamed clip name goes into the takes export.</li>
+    <li><b>Takes</b>: <b>✕</b> removes a take and shows <b>Undo</b> straight away (Ctrl/Cmd+Z works too). <b>Double-click the take number</b> (T3) to renumber it, for example to match what's on the physical slate (the next take then follows on), or to give it its own clip name; leave the name empty to keep the automatic one. A renamed clip name goes into the takes export. <b>Fix the timecode</b>: double-click a take's TC (or its number) and change <b>in</b> or <b>out</b>, as HH:MM:SS:FF, if you rolled late or cut early; the take's length and the captured / raw seconds follow. Undo puts it back.</li>
     <li><b>Arrange Note View</b>: drag a panel by its <b>⠿</b> (top right) to move it, or focus the ⠿ and use the arrow keys. Drag the corner at its bottom right to make it wider (in whole columns) and taller; double-click the corner to put that panel back to its usual size. <b>Reset layout</b> in the header puts everything back. The layout is kept on each device, so a laptop and a phone can be arranged differently. A playing video carries on while you rearrange.</li>
     <li>Reloading the page keeps you where you were: Slate View or Note View opens again on the same shot (in that browser tab). Close the view to go back to the table.</li>
     <li><b>Slate</b> (the red button at the end of the header) opens a full-screen slate for the next shot in the running order: the first shot on the open day not yet ticked as shot. ‹ › (or the arrow keys) step through the shots. It keeps the screen awake while open, and ⛶ makes it truly full screen where the browser allows.</li>
@@ -1348,9 +1348,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.30.1";
+const VERSION = "2.30.2";
 const CHANGELOG = [
-  ["2.30.1","2026-11-21","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
+  ["2.30.2","2026-11-21","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
+  ["2.30.1","","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
   ["2.30.0","","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
   ["2.29.2","","Double-click a sequence's name (header row, Sequence column or Sequence View) to rename it. Each shot's ▾ in the Sequence column moves it to another sequence, takes it out, or starts a new sequence with it; + puts a shot into one."],
   ["2.29.1","","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
@@ -3560,7 +3561,7 @@ function renderNotes(){
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.mark=it.mark===m?"":m;setTakeList(x,a);syncMarks(x);commit();renderNotes()}}},l));
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.note=note.value;setTakeList(x,a);commit()}});
     takes.append(h("div",{class:"nvtake"+(!t.out&&t.at&&Date.now()-t.at<4*3600e3&&t===list[0]?" live":"")},takeLabel(r.id,t,()=>renderNotes()),
-      h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),marks,note,
+      tcEditable(h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"no TC in",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),r.id,t.n,()=>renderNotes()),marks,note,
       h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(r.id,t.n,()=>renderNotes())},"✕")));
   }
   // notes, saved straight onto the shot for the whole team
@@ -5635,20 +5636,31 @@ function takeLabel(rowId,t,redraw){
   b.addEventListener("dblclick",e=>{e.stopPropagation();editTake(b,rowId,t.n,redraw)});
   return b;
 }
-function editTake(el,rowId,n,redraw){
+function editTake(el,rowId,n,redraw,focus){
   const x=R(rowId); if(!x) return; const t=takeList(x).find(z=>z.n===n); if(!t) return; const f=findRow(rowId);
-  const auto=shotName(x,f&&f.d,n)||"";
+  const auto=shotName(x,f&&f.d,n)||"", fps=slateFps();
   const num=h("input",{type:"number",min:"1",step:"1",value:String(n),style:"width:4.2rem","aria-label":"Take number"});
   const nm=h("input",{type:"text",value:t.name||"",placeholder:auto||"Clip name",style:"width:min(22rem,60vw)","aria-label":"Clip name (leave empty for the automatic name)"});
-  const box=h("span",{class:"takeedit"},"T",num,nm,h("button",{class:"btn small primary",onclick:()=>save()},"Save"),h("button",{class:"btn small",onclick:()=>redraw&&redraw()},"Cancel"));
+  // timecode in / out: fix a late roll or an early cut (HH:MM:SS:FF; the length is worked out again)
+  const tin=h("input",{type:"text",value:t.tc||"",placeholder:"TC in 10:00:00:00",style:"width:8.6rem",class:"mono","aria-label":"Timecode in"});
+  const tout=h("input",{type:"text",value:t.out||"",placeholder:"TC out",style:"width:8.6rem",class:"mono","aria-label":"Timecode out"});
+  const box=h("span",{class:"takeedit"},"T",num,nm,h("span",{class:"note"},"in"),tin,h("span",{class:"note"},"out"),tout,h("button",{class:"btn small primary",onclick:()=>save()},"Save"),h("button",{class:"btn small",onclick:()=>redraw&&redraw()},"Cancel"));
   const save=()=>{ const y=R(rowId); if(!y) return; const l=takeList(y); const it=l.find(z=>z.n===n); if(!it) return;
     const nn=Math.max(1,Math.round(Number(num.value)||n));
     if(nn!==n&&l.some(z=>z.n===nn)){ toast("There's already a take "+nn+" on this "+(y.seq?"sequence":"shot")); num.focus(); return; }
+    const vi=tin.value.trim(), vo=tout.value.trim(), pi=vi?parseTc(vi,fps):null, po=vo?parseTc(vo,fps):null;
+    if(vi&&pi==null){ toast(`TC in should look like 10:00:00:00 (at ${Math.round(fps)} fps)`); tin.focus(); return; }
+    if(vo&&po==null){ toast(`TC out should look like 10:00:30:00 (at ${Math.round(fps)} fps)`); tout.focus(); return; }
+    const tcChanged=(vi?tcString(pi,fps):"")!==(it.tc||"")||(vo?tcString(po,fps):"")!==(it.out||"");
+    if(tcChanged){ it.tc=vi?tcString(pi,fps):""; if(vo){ it.out=tcString(po,fps); if(pi!=null){ let ms=po-pi; if(ms<0) ms+=864e5; it.ms=ms; it.len=fmtDur(ms); } } else { delete it.out; delete it.ms; delete it.len; } }
     it.n=nn; const v=nm.value.trim(); if(v&&v!==auto) it.name=v; else delete it.name;
-    l.sort((a,b)=>a.n-b.n); setTakeList(y,l); syncMarks(y); commit(); redraw&&redraw(); toast(nn!==n?`Take ${n} is now take ${nn}`:"Take renamed",{label:"Undo",fn:()=>undo()}); };
-  [num,nm].forEach(i=>i.addEventListener("keydown",e=>{e.stopPropagation(); if(e.key==="Enter"){e.preventDefault();save()} if(e.key==="Escape"){e.preventDefault();redraw&&redraw()}}));
-  el.replaceWith(box); num.focus(); num.select();
+    l.sort((a,b)=>a.n-b.n); setTakeList(y,l); syncMarks(y); commit(); redraw&&redraw(); toast(nn!==n?`Take ${n} is now take ${nn}`:tcChanged?`Take ${nn} timecode updated${it.len?" ("+it.len+")":""}`:"Take renamed",{label:"Undo",fn:()=>undo()}); };
+  [num,nm,tin,tout].forEach(i=>i.addEventListener("keydown",e=>{e.stopPropagation(); if(e.key==="Enter"){e.preventDefault();save()} if(e.key==="Escape"){e.preventDefault();redraw&&redraw()}}));
+  el.replaceWith(box); const first=focus==="tc"?tin:num; first.focus(); first.select();
 }
+// double-click a take's timecode to correct it
+function tcEditable(span,rowId,n,redraw){ span.title="Double-click to correct the timecode"; span.style.cursor="text";
+  span.addEventListener("dblclick",e=>{e.stopPropagation();const lab=span.closest(".nvtake")&&span.closest(".nvtake").querySelector(".takelab");if(lab)editTake(lab,rowId,n,redraw,"tc")}); return span; }
 
 /* ---------- sequences: shots grouped and shot in one go ----------
    A sequence is the shots sharing r.seq; its first shot (the anchor, whose id is the sequence id) carries the
@@ -5929,7 +5941,7 @@ function renderSeqView(){
   for(const t of list){
     const marks=h("span",{class:"nvmarks"});
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>edit(t.n,z=>{z.mark=z.mark===m?"":m})},l));
-    const row=h("div",{class:"nvtake"},takeLabel(a.id,t,()=>renderSeqView()),h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),marks);
+    const row=h("div",{class:"nvtake"},takeLabel(a.id,t,()=>renderSeqView()),tcEditable(h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),a.id,t.n,()=>renderSeqView()),marks);
     if(la){ const ticks=h("span",{class:"seqticks"},h("small",{class:"note"},"Caught:"));
       for(const m of mem){ const on=(t.caught||[]).includes(m.id); ticks.append(h("button",{class:"tick"+(on?" on":""),title:(on?"Caught":"Not caught")+": shot "+(m.shot||""),onclick:()=>edit(t.n,z=>{const c=new Set(z.caught||[]);c.has(m.id)?c.delete(m.id):c.add(m.id);z.caught=mem.map(y=>y.id).filter(id=>c.has(id))})},m.shot||"?")); }
       ticks.append(h("button",{class:"tick all",onclick:()=>edit(t.n,z=>{z.caught=(z.caught||[]).length===mem.length?[]:mem.map(y=>y.id)})},(t.caught||[]).length===mem.length?"None":"All"));

@@ -400,20 +400,31 @@ function takeLabel(rowId,t,redraw){
   b.addEventListener("dblclick",e=>{e.stopPropagation();editTake(b,rowId,t.n,redraw)});
   return b;
 }
-function editTake(el,rowId,n,redraw){
+function editTake(el,rowId,n,redraw,focus){
   const x=R(rowId); if(!x) return; const t=takeList(x).find(z=>z.n===n); if(!t) return; const f=findRow(rowId);
-  const auto=shotName(x,f&&f.d,n)||"";
+  const auto=shotName(x,f&&f.d,n)||"", fps=slateFps();
   const num=h("input",{type:"number",min:"1",step:"1",value:String(n),style:"width:4.2rem","aria-label":"Take number"});
   const nm=h("input",{type:"text",value:t.name||"",placeholder:auto||"Clip name",style:"width:min(22rem,60vw)","aria-label":"Clip name (leave empty for the automatic name)"});
-  const box=h("span",{class:"takeedit"},"T",num,nm,h("button",{class:"btn small primary",onclick:()=>save()},"Save"),h("button",{class:"btn small",onclick:()=>redraw&&redraw()},"Cancel"));
+  // timecode in / out: fix a late roll or an early cut (HH:MM:SS:FF; the length is worked out again)
+  const tin=h("input",{type:"text",value:t.tc||"",placeholder:"TC in 10:00:00:00",style:"width:8.6rem",class:"mono","aria-label":"Timecode in"});
+  const tout=h("input",{type:"text",value:t.out||"",placeholder:"TC out",style:"width:8.6rem",class:"mono","aria-label":"Timecode out"});
+  const box=h("span",{class:"takeedit"},"T",num,nm,h("span",{class:"note"},"in"),tin,h("span",{class:"note"},"out"),tout,h("button",{class:"btn small primary",onclick:()=>save()},"Save"),h("button",{class:"btn small",onclick:()=>redraw&&redraw()},"Cancel"));
   const save=()=>{ const y=R(rowId); if(!y) return; const l=takeList(y); const it=l.find(z=>z.n===n); if(!it) return;
     const nn=Math.max(1,Math.round(Number(num.value)||n));
     if(nn!==n&&l.some(z=>z.n===nn)){ toast("There's already a take "+nn+" on this "+(y.seq?"sequence":"shot")); num.focus(); return; }
+    const vi=tin.value.trim(), vo=tout.value.trim(), pi=vi?parseTc(vi,fps):null, po=vo?parseTc(vo,fps):null;
+    if(vi&&pi==null){ toast(`TC in should look like 10:00:00:00 (at ${Math.round(fps)} fps)`); tin.focus(); return; }
+    if(vo&&po==null){ toast(`TC out should look like 10:00:30:00 (at ${Math.round(fps)} fps)`); tout.focus(); return; }
+    const tcChanged=(vi?tcString(pi,fps):"")!==(it.tc||"")||(vo?tcString(po,fps):"")!==(it.out||"");
+    if(tcChanged){ it.tc=vi?tcString(pi,fps):""; if(vo){ it.out=tcString(po,fps); if(pi!=null){ let ms=po-pi; if(ms<0) ms+=864e5; it.ms=ms; it.len=fmtDur(ms); } } else { delete it.out; delete it.ms; delete it.len; } }
     it.n=nn; const v=nm.value.trim(); if(v&&v!==auto) it.name=v; else delete it.name;
-    l.sort((a,b)=>a.n-b.n); setTakeList(y,l); syncMarks(y); commit(); redraw&&redraw(); toast(nn!==n?`Take ${n} is now take ${nn}`:"Take renamed",{label:"Undo",fn:()=>undo()}); };
-  [num,nm].forEach(i=>i.addEventListener("keydown",e=>{e.stopPropagation(); if(e.key==="Enter"){e.preventDefault();save()} if(e.key==="Escape"){e.preventDefault();redraw&&redraw()}}));
-  el.replaceWith(box); num.focus(); num.select();
+    l.sort((a,b)=>a.n-b.n); setTakeList(y,l); syncMarks(y); commit(); redraw&&redraw(); toast(nn!==n?`Take ${n} is now take ${nn}`:tcChanged?`Take ${nn} timecode updated${it.len?" ("+it.len+")":""}`:"Take renamed",{label:"Undo",fn:()=>undo()}); };
+  [num,nm,tin,tout].forEach(i=>i.addEventListener("keydown",e=>{e.stopPropagation(); if(e.key==="Enter"){e.preventDefault();save()} if(e.key==="Escape"){e.preventDefault();redraw&&redraw()}}));
+  el.replaceWith(box); const first=focus==="tc"?tin:num; first.focus(); first.select();
 }
+// double-click a take's timecode to correct it
+function tcEditable(span,rowId,n,redraw){ span.title="Double-click to correct the timecode"; span.style.cursor="text";
+  span.addEventListener("dblclick",e=>{e.stopPropagation();const lab=span.closest(".nvtake")&&span.closest(".nvtake").querySelector(".takelab");if(lab)editTake(lab,rowId,n,redraw,"tc")}); return span; }
 
 /* ---------- sequences: shots grouped and shot in one go ----------
    A sequence is the shots sharing r.seq; its first shot (the anchor, whose id is the sequence id) carries the
@@ -694,7 +705,7 @@ function renderSeqView(){
   for(const t of list){
     const marks=h("span",{class:"nvmarks"});
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>edit(t.n,z=>{z.mark=z.mark===m?"":m})},l));
-    const row=h("div",{class:"nvtake"},takeLabel(a.id,t,()=>renderSeqView()),h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),marks);
+    const row=h("div",{class:"nvtake"},takeLabel(a.id,t,()=>renderSeqView()),tcEditable(h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),a.id,t.n,()=>renderSeqView()),marks);
     if(la){ const ticks=h("span",{class:"seqticks"},h("small",{class:"note"},"Caught:"));
       for(const m of mem){ const on=(t.caught||[]).includes(m.id); ticks.append(h("button",{class:"tick"+(on?" on":""),title:(on?"Caught":"Not caught")+": shot "+(m.shot||""),onclick:()=>edit(t.n,z=>{const c=new Set(z.caught||[]);c.has(m.id)?c.delete(m.id):c.add(m.id);z.caught=mem.map(y=>y.id).filter(id=>c.has(id))})},m.shot||"?")); }
       ticks.append(h("button",{class:"tick all",onclick:()=>edit(t.n,z=>{z.caught=(z.caught||[]).length===mem.length?[]:mem.map(y=>y.id)})},(t.caught||[]).length===mem.length?"None":"All"));

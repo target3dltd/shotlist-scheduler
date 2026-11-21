@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.30.1";
+const VERSION = "2.30.2";
 const CHANGELOG = [
-  ["2.30.1","2026-11-21","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
+  ["2.30.2","2026-11-21","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
+  ["2.30.1","","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
   ["2.30.0","","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
   ["2.29.2","","Double-click a sequence's name (header row, Sequence column or Sequence View) to rename it. Each shot's ▾ in the Sequence column moves it to another sequence, takes it out, or starts a new sequence with it; + puts a shot into one."],
   ["2.29.1","","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
@@ -1941,7 +1942,7 @@ function renderNotes(){
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.mark=it.mark===m?"":m;setTakeList(x,a);syncMarks(x);commit();renderNotes()}}},l));
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.note=note.value;setTakeList(x,a);commit()}});
     takes.append(h("div",{class:"nvtake"+(!t.out&&t.at&&Date.now()-t.at<4*3600e3&&t===list[0]?" live":"")},takeLabel(r.id,t,()=>renderNotes()),
-      h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),marks,note,
+      tcEditable(h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"no TC in",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),r.id,t.n,()=>renderNotes()),marks,note,
       h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(r.id,t.n,()=>renderNotes())},"✕")));
   }
   // notes, saved straight onto the shot for the whole team
