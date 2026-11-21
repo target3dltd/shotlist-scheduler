@@ -1,7 +1,9 @@
 "use strict";
-const VERSION = "2.41.1";
+const VERSION = "2.41.3";
 const CHANGELOG = [
-  ["2.41.1","2026-11-21","The day banner's Status is now Day status, so it isn't mixed up with a shot's Status. Hide cut shots is its own tick box next to Show (Show is All rows or Not yet shot)."],
+  ["2.41.3","2026-11-21","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
+  ["2.41.2","","Call sheet: Find nearest A&E, police, fire is more reliable. It tries several OpenStreetMap servers in turn when one is busy, waits longer, says what's happening next to the button, and no longer sits greyed out without a location: it uses a postcode from the address, or opens Set location."],
+  ["2.41.1","","The day banner's Status is now Day status, so it isn't mixed up with a shot's Status. Hide cut shots is its own tick box next to Show (Show is All rows or Not yet shot)."],
   ["2.41.0","","Reset: go again without cutting. While a take rolls, ↺ Reset (or E) in Slate View, Sequence View and Details marks R1, R2... with their timecode on the take. Each reset shows under the take; click one to mark it Hero, Good, NG or Safety (a hero reset fills the Hero column as T3 R4). Resets go in Export takes, and in the Edit tool a reset comes in at its own timecode (Swap in latest takes picks up hero resets). + Take in Details and Sequence View (and T) now only adds a take you forgot to roll on: the next take number, no timecode, nothing rolling. ● Roll is still how you start one."],
   ["2.40.0","","Note View is now called Details. Open any shot in Details from the list with the ↗ at the end of its Shot #. The description can be edited in Details (click it and type; it saves for the whole team)."],
   ["2.39.1","","Slate: the clap flash (the picture sync point) now always shows. With Log take on clap turned on, the redraw used to wipe it before it was seen. It's also held back by the device's audio delay, so the flash and the clap sound land together, even through Bluetooth or an external speaker."],
@@ -1867,7 +1869,7 @@ function slateCut(){ if(!SLV.id) return; const t=cutTake(SLV.id); const m=$("#sl
 function renderSlate(){ if($("#slateView").classList.contains("open")) rememberView("slate",SLV.id);
   renderSlate0(); }
 function renderSlate0(){
-  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme+(v.classList.contains("flash")?" flash":"");
+  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme+(v.classList.contains("flashon")?" flashon":"");
   v.innerHTML=""; const sh=c.show, fps=slateFps();
   const cell=(lab,val,cls="")=>h("div",{class:"slc "+cls},h("div",{class:"sll"},lab),h("div",{class:"slv"},val||"-"));
   const take=r?nextTake(r,d):"-";
@@ -1914,6 +1916,10 @@ function fitSlate(){ requestAnimationFrame(()=>{ for(const el of $$("#slateView 
 window.addEventListener("resize",()=>{ if($("#slateView").classList.contains("open")) fitSlate(); });
 function bumpRoll(v){const m=String(v||"A000").match(/^(.*?)(\d+)$/);return m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):String(v||"")+"2"}
 function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+"h ago"}
+// the clap flash: the whole slate inverted for at least 3 frames (and never under 120 ms). Not an animation,
+// so "reduce motion" (in Display settings or on the device) doesn't switch it off: it's the picture sync point
+function slateFlash(){ const v=$("#slateView"); if(!v) return; clearTimeout(SLV.flashT);
+  v.classList.add("flashon"); const hold=Math.max(120,3000/(slateFps()||25)); SLV.flashT=setTimeout(()=>v.classList.remove("flashon"),hold); }
 function clap(){
   const c=slateCfg();
   // log first: the redraw would otherwise wipe the flash before it showed
@@ -1921,7 +1927,7 @@ function clap(){
   playClap();
   // the flash is the picture sync point: hold it back by the device's audio delay so the camera sees it as the sound comes out
   let lag=0; try{ const ctx=sfx(); if((c.sound||"clap")!=="none"&&Number(c.volume)!==0) lag=((ctx.outputLatency||0)+(ctx.baseLatency||0)+0.005)*1000; }catch(e){}
-  const go=()=>{ const v=$("#slateView"); v.classList.remove("flash"); void v.offsetWidth; v.classList.add("flash"); };
+  const go=()=>{ if(c.flash!==false) slateFlash(); };
   lag>4?setTimeout(go,Math.min(lag,400)):go();
 }
 function slateSettings(){
@@ -1956,6 +1962,7 @@ function slateSettings(){
     h("div",{class:"slchecks"},tog("prod","Production"),tog("dir","Director"),tog("dop","Camera / DOP"),tog("shot","Shot"),tog("take","Take"),tog("roll","Roll"),tog("date","Date"),tog("day","Day"),tog("fps","FPS"),tog("name","Shot name"),tog("desc","Description"),tog("custom","Custom line"),tog("tc","Timecode")),
     h("div",{class:"form"},txt("dir","Director",S.project.lead||""),txt("dop","Camera / DOP"),txt("roll","Roll / card","A001"),txt("custom","Custom line","e.g. INT. TAVERN - NIGHT"),h("label",{},"Frame rate",fpsSel),h("label",{},"Look",theme)),
     h("label",{class:"inline"},logClap,"Clapping logs a take (with its timecode) on the shot"),
+    (()=>{const fl=h("input",{type:"checkbox"});fl.checked=c.flash!==false;fl.addEventListener("change",()=>{setSlate({flash:fl.checked})});return h("label",{class:"inline",title:"The whole slate inverts for at least 3 frames on the clap, for the editor to sync picture to sound. Works even with Reduce motion on."},fl,"Flash the screen on the clap (picture sync point)")})(),
     h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{$("#slSet").classList.remove("open")}},"Done")));
 }
 function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textContent=tcLabel()}

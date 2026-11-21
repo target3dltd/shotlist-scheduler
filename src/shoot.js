@@ -1139,7 +1139,8 @@ function emergencySection(d){
   // fill in: the nearest from the map, or copy another day's
   const tools=h("div",{class:"toolbar noprint",style:"margin-top:.4rem"});
   const has=d.lat!==""&&d.lat!=null;
-  tools.append(h("button",{class:"btn small",disabled:!has,title:has?"Look up the nearest A&E, police and fire station from this day's location (OpenStreetMap). Check them before you send the call sheet.":"Set the day's location first (under Weather and daylight)",onclick:e=>findNearest(d,e.currentTarget)},"Find nearest A&E, police, fire"));
+  tools.append(h("button",{class:"btn small",title:"Look up the nearest A&E, police and fire station from this day's location (OpenStreetMap). Check them before you send the call sheet.",onclick:e=>findNearest(d,e.currentTarget)},"Find nearest A&E, police, fire"));
+  tools.append(h("span",{class:"note csfindmsg",id:"csFindMsg"},has?"":"Uses the day's location: set it under Weather and daylight, or put a postcode in the address."));
   const empty=CS_EMERG.every(([k])=>!String(d[k]||"").trim());
   const other=S.days.filter(x=>x.id!==d.id&&!x.archived&&CS_EMERG.some(([k])=>String(x[k]||"").trim())).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
   if(other.length){ const same=other.find(x=>x.lat!==""&&x.lat!=null&&Math.abs(x.lat-d.lat)<0.002&&Math.abs(x.lon-d.lon)<0.002)||other[0];
@@ -1147,21 +1148,43 @@ function emergencySection(d){
   sec.append(tools);
   return sec;
 }
-// nearest A&E, police station and fire station, from OpenStreetMap (Overpass)
+// nearest A&E, police station and fire station, from OpenStreetMap (Overpass). The public servers are often busy, so try a few in turn.
+const OVERPASS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter","https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+async function overpass(q){
+  let last="";
+  for(const url of OVERPASS){
+    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),25000);
+    try{ const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:ctl.signal});
+      if(!r.ok){ last=new URL(url).host+" "+r.status; continue; }
+      const j=await r.json(); if(j.remark&&/error|timed out/i.test(j.remark)&&!(j.elements||[]).length){ last=new URL(url).host+": "+j.remark.slice(0,60); continue; }
+      return j.elements||[];
+    }catch(e){ last=new URL(url).host+(e.name==="AbortError"?" timed out":" unreachable"); }
+    finally{ clearTimeout(tm); }
+  }
+  throw new Error(last||"no server answered");
+}
 async function findNearest(d,btn){
-  const lat=Number(d.lat), lon=Number(d.lon); if(!isFinite(lat)||!isFinite(lon)) return;
-  const old=btn.textContent; btn.disabled=true; btn.textContent="Looking…";
-  const q=`[out:json][timeout:20];(nwr["amenity"="hospital"](around:20000,${lat},${lon});nwr["amenity"="police"](around:8000,${lat},${lon});nwr["amenity"="fire_station"](around:8000,${lat},${lon}););out center tags;`;
+  const msg=t=>{const m=$("#csFindMsg");if(m)m.textContent=t};
+  const x0=S.days.find(y=>y.id===d.id)||d;
+  let lat=Number(x0.lat), lon=Number(x0.lon);
+  if(x0.lat===""||x0.lat==null||!isFinite(lat)||!isFinite(lon)){
+    // no location yet: use a postcode from the address if there is one, and keep it as the day's location
+    const pc=String(x0.address||"").toUpperCase().match(/\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/);
+    if(pc){ msg("Finding "+pc[1]+" "+pc[2]+"…"); try{ const g=(await geocode(pc[1]+pc[2]))[0]; if(g){ x0.lat=Math.round(g.lat*1e4)/1e4; x0.lon=Math.round(g.lon*1e4)/1e4; x0.place=g.name; commit(); lat=x0.lat; lon=x0.lon; } }catch(e){} }
+    if(!isFinite(lat)||x0.lat===""||x0.lat==null){ msg("Set the day's location first (Weather and daylight > Set location), then press again."); openLocation(d,btn); return; }
+  }
+  const old=btn.textContent; btn.disabled=true; btn.textContent="Looking…"; msg("Asking OpenStreetMap (can take up to half a minute)…");
+  const q=`[out:json][timeout:25];(nwr["amenity"="hospital"](around:15000,${lat},${lon});nwr["healthcare"="hospital"](around:15000,${lat},${lon});nwr["amenity"="police"](around:6000,${lat},${lon});nwr["amenity"="fire_station"](around:6000,${lat},${lon}););out center tags;`;
   try{
-    const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"}});
-    if(!r.ok) throw new Error("lookup "+r.status);
-    const found=nearestPlaces((await r.json()).elements||[],lat,lon);
-    const x=S.days.find(y=>y.id===d.id); let n=0, filled=[];
+    const found=nearestPlaces(await overpass(q),lat,lon);
+    const x=S.days.find(y=>y.id===d.id); let n=0;
     for(const [k,f] of [["csHospital",found.hospital],["csPolice",found.police],["csFire",found.fire]]){
-      if(!f) continue; if(String(x[k]||"").trim()&&!await ask("Replace?",`Replace "${String(x[k]).split("\n")[0]}" with ${f.split("\n")[0]}?`,"Replace")) continue; x[k]=f; n++; filled.push(k); }
+      if(!f) continue; if(String(x[k]||"").trim()&&!await ask("Replace?",`Replace "${String(x[k]).split("\n")[0]}" with ${f.split("\n")[0]}?`,"Replace")) continue; x[k]=f; n++; }
     commit(); rebuildDoc();
-    toast(n?`Filled ${n} from OpenStreetMap: please check them (especially that the hospital has an A&E)`:"Nothing new found nearby");
-  }catch(e){ toast("Couldn't look them up just now ("+(e.message||e)+"). Type them in, or try again."); btn.disabled=false; btn.textContent=old; }
+    const miss=[["hospital","A&E"],["police","police station"],["fire","fire station"]].filter(([k])=>!found[k]).map(([,l])=>l);
+    toast(n?`Filled ${n} from OpenStreetMap: please check them (especially that the hospital has a 24-hour A&E)`:"Nothing new found nearby");
+    setTimeout(()=>msg(n?`Filled from OpenStreetMap: check before sending.${miss.length?" None found nearby for: "+miss.join(", ")+".":""}`:"Nothing found nearby: type them in."),50);
+  }catch(e){ btn.disabled=false; btn.textContent=old; msg("Couldn't reach OpenStreetMap just now ("+(e.message||e)+"). Try again in a minute, or type them in."); }
 }
 function nearestPlaces(els,lat,lon){
   const km=(a,b)=>{const R=6371,dl=(a.lat-lat)*Math.PI/180,dn=(a.lon-lon)*Math.PI/180,x=Math.sin(dl/2)**2+Math.cos(lat*Math.PI/180)*Math.cos(a.lat*Math.PI/180)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
@@ -1171,7 +1194,7 @@ function nearestPlaces(els,lat,lon){
     const addr=[[t["addr:housenumber"],t["addr:street"]].filter(Boolean).join(" "),t["addr:city"],t["addr:postcode"]].filter(Boolean).join(", ");
     const tel=t.phone||t["contact:phone"]||"";
     return [t.name+(note?" ("+note+")":""),addr,tel,`about ${p.km<1?Math.round(p.km*1000)+" m":p.km.toFixed(1)+" km"} away`].filter(Boolean).join("\n"); };
-  const isH=p=>p.t.amenity==="hospital", ae=best(p=>isH(p)&&(p.t.emergency==="yes"||/a\s*&\s*e|accident|emergency/i.test(p.t.name+" "+(p.t.healthcare_speciality||""))));
+  const isH=p=>p.t.amenity==="hospital"||p.t.healthcare==="hospital", ae=best(p=>isH(p)&&(p.t.emergency==="yes"||/a\s*&\s*e|accident|emergency/i.test(p.t.name+" "+(p.t.healthcare_speciality||""))));
   return {hospital:ae?fmtP(ae):fmtP(best(isH),"check it has an A&E"),police:fmtP(best(p=>p.t.amenity==="police")),fire:fmtP(best(p=>p.t.amenity==="fire_station"))};
 }
 // standard sections: shared by every call sheet in the project; untick to leave one off

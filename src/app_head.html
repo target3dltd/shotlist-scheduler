@@ -265,6 +265,7 @@ body.dayfrozen #grid td.jumpable{cursor:default}
 .csemerg{border:2px solid var(--bad);border-radius:8px;padding:.6rem .8rem}
 .csemerg h3{color:var(--bad)!important}
 .csdial{font-size:1.05rem;margin-bottom:.5rem} .csdial .csnum{font-size:1.3rem;color:var(--bad)} .csno{width:4.5rem;margin-left:.6rem;font-size:.85rem}
+.csfindmsg{margin-left:.4rem}
 .csgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.5rem .8rem}
 .csinc{float:right;font-size:.75rem;text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);cursor:pointer}
 .csoff h3{opacity:.55} .csshared{font-size:.75rem;margin-top:.15rem}
@@ -578,7 +579,7 @@ body.viewopen{overflow:hidden}
 .slate.theme-contrast{--sb:#000;--sf:#ffeb3b;--sm:#fff;--sline:#ffeb3b}
 .slate.theme-classic{--sb:#111;--sf:#f2f2f2;--sm:#aaa;--sline:#f2f2f2}
 .slbar{height:clamp(28px,7vh,64px);border-radius:6px;cursor:pointer;flex:0 0 auto;background:repeating-linear-gradient(135deg,var(--sf) 0 clamp(18px,4vw,40px),var(--sb) clamp(18px,4vw,40px) clamp(36px,8vw,80px));border:3px solid var(--sline)}
-.slate.flash{animation:slflash .25s steps(2) 1} @keyframes slflash{0%{filter:invert(1)}100%{filter:none}}
+.slate.flashon{filter:invert(1)!important}
 
 .slrow{display:flex;gap:0;border:2px solid var(--sline);border-radius:6px;flex-wrap:wrap}
 .slrow:empty{display:none}

@@ -265,6 +265,7 @@ body.dayfrozen #grid td.jumpable{cursor:default}
 .csemerg{border:2px solid var(--bad);border-radius:8px;padding:.6rem .8rem}
 .csemerg h3{color:var(--bad)!important}
 .csdial{font-size:1.05rem;margin-bottom:.5rem} .csdial .csnum{font-size:1.3rem;color:var(--bad)} .csno{width:4.5rem;margin-left:.6rem;font-size:.85rem}
+.csfindmsg{margin-left:.4rem}
 .csgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.5rem .8rem}
 .csinc{float:right;font-size:.75rem;text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);cursor:pointer}
 .csoff h3{opacity:.55} .csshared{font-size:.75rem;margin-top:.15rem}
@@ -578,7 +579,7 @@ body.viewopen{overflow:hidden}
 .slate.theme-contrast{--sb:#000;--sf:#ffeb3b;--sm:#fff;--sline:#ffeb3b}
 .slate.theme-classic{--sb:#111;--sf:#f2f2f2;--sm:#aaa;--sline:#f2f2f2}
 .slbar{height:clamp(28px,7vh,64px);border-radius:6px;cursor:pointer;flex:0 0 auto;background:repeating-linear-gradient(135deg,var(--sf) 0 clamp(18px,4vw,40px),var(--sb) clamp(18px,4vw,40px) clamp(36px,8vw,80px));border:3px solid var(--sline)}
-.slate.flash{animation:slflash .25s steps(2) 1} @keyframes slflash{0%{filter:invert(1)}100%{filter:none}}
+.slate.flashon{filter:invert(1)!important}
 
 .slrow{display:flex;gap:0;border:2px solid var(--sline);border-radius:6px;flex-wrap:wrap}
 .slrow:empty{display:none}
@@ -1265,7 +1266,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Arrange Details</b>: drag a panel by its <b>⠿</b> (top right) to move it, or focus the ⠿ and use the arrow keys. Drag the corner at its bottom right to make it wider (in whole columns) and taller; double-click the corner to put that panel back to its usual size. <b>Reset layout</b> in the header puts everything back. The layout is kept on each device, so a laptop and a phone can be arranged differently. A playing video carries on while you rearrange.</li>
     <li>Reloading the page keeps you where you were: Slate View or Details opens again on the same shot (in that browser tab). Close the view to go back to the table.</li>
     <li><b>Slate</b> (the red button at the end of the header) opens a full-screen slate for the next shot in the running order: the first shot on the open day not yet ticked as shot. ‹ › (or the arrow keys) step through the shots. It keeps the screen awake while open, and ⛶ makes it truly full screen where the browser allows.</li>
-    <li><b>Tap the striped bar</b> (or <b>Clap · log take</b>, or the space bar) to clap: the whole slate flashes (inverts for about an eighth of a second, 3 frames at 25 fps) as the clap sound plays, giving the editor a picture sync point to line up with the sound. The flash is held back by the device's audio delay so the two land together. The take is logged on the shot with its <b>timecode in</b>, so the take number moves on. While it rolls the slate shows the take, its timecode in and how long it's been going. <b>■ Cut</b> (or X) adds the <b>timecode out</b> and the length. Each take's in and out show in Details, and the .xlsx export fills its TC IN / TC OUT columns from them (tick the timing columns when exporting). Turn logging off in ⚙ if you only want the flash. It also plays a sound: a clap by default, or in ⚙ &gt; Sound choose clapper sticks, a 1 kHz sync beep (handy for lining up sound), <b>your own sound file</b> (MP3, WAV or M4A, kept on this device), or none, and set the volume. On an iPhone the ring / silent switch has to be on ring to hear it. <b>Shot done ✓</b> ticks the shot and moves to the next one.</li>
+    <li><b>Tap the striped bar</b> (or <b>Clap · log take</b>, or the space bar) to clap: the whole slate flashes (inverts for at least 3 frames, and never under 120 ms) as the clap sound plays, giving the editor a picture sync point to line up with the sound. The flash is held back by the device's audio delay so the two land together. It shows even with Reduce motion on; turn it off in the slate settings (⚙) under <b>Flash the screen on the clap</b>. The take is logged on the shot with its <b>timecode in</b>, so the take number moves on. While it rolls the slate shows the take, its timecode in and how long it's been going. <b>■ Cut</b> (or X) adds the <b>timecode out</b> and the length. Each take's in and out show in Details, and the .xlsx export fills its TC IN / TC OUT columns from them (tick the timing columns when exporting). Turn logging off in ⚙ if you only want the flash. It also plays a sound: a clap by default, or in ⚙ &gt; Sound choose clapper sticks, a 1 kHz sync beep (handy for lining up sound), <b>your own sound file</b> (MP3, WAV or M4A, kept on this device), or none, and set the volume. On an iPhone the ring / silent switch has to be on ring to hear it. <b>Shot done ✓</b> ticks the shot and moves to the next one.</li>
     <li><b>↺ Reset</b> (or the E key) is for going again without cutting. While a take is rolling, each Reset marks <b>R1</b>, <b>R2</b> and so on with its timecode. It's in Slate View (Clap / Reset / Cut), Sequence View and Details. The resets are listed under the take; click one to mark it <b>Hero</b>, <b>Good</b>, <b>NG</b> or <b>Safety</b>, or remove it. A hero reset fills the Hero column as, say, <b>T3 R4</b>. Resets are included in Export takes, and the Edit tool can cut a reset in at its own timecode (the T3·R4★ chips, or under Clip &gt; Source). Use it only when you don't cut; for a normal new take, cut and clap again.</li>
     <li><b>⚙ Settings:</b> choose what shows (production, director, camera / DOP, shot, take, roll, date, day, FPS, shot name, description, a custom line such as INT. TAVERN - NIGHT, timecode), the look (black, white, high contrast, classic), the roll / card (<b>Next roll</b> counts it on: A001, A002…) and the frame rate. Slate settings are kept on this device.</li>
     <li><b>Timecode:</b> <b>Time of day</b> uses this device's clock. <b>Jam from LTC</b> listens to the microphone input for linear timecode: plug a Tentacle Sync (or any LTC source) into the phone or tablet's mic input with a TRRS adaptor cable, set it to output audio timecode, and keep its level up. The slate locks on in a second or two, works out the frame rate (24, 25 or 30) from the signal, then free-runs from the device's clock like a hardware slate, so you can unplug. It's accurate to about a frame; jam again every few hours (the slate reminds you after 4). Or type a timecode and press <b>Jam now</b>. A jam is <b>shared with the team</b> (untick in ⚙ if you don't want that): every device on the project, e.g. the script supervisor's phone in Details, then logs takes on the same timecode for the next 12 hours, as long as its clock is set automatically. <b>Time of day</b> makes one device ignore it; <b>Team jam</b> goes back to it. If the project's frame rate is a capture rate (e.g. 120), the timecode runs at 25 unless you pick a rate.</li>
@@ -1439,7 +1440,7 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Shoot-ready check</b> (Documents menu): a checklist for the night before. It checks the day is set up and the site is connected, shows who has joined, and has buttons to download a project backup, play the clap, open Slate View, practise a 30 second dropout (the status goes Offline, your changes wait, then send themselves), send a test feedback report and freeze timings. Ticks are kept on your device.</li>
     <li><b>Freeze timings</b> (day banner): once you're rolling, locks the day's setup and shoot minutes, the running order, call time and buffers, so nobody retimes or drags shots by accident. Ticking shots, takes, notes, text, marks and <b>Cut</b> still work for everyone. <b>Unfreeze</b> any time. A frozen day says so above the table.</li>
     <li><b>Call sheet</b> (Documents menu): one page with crew call, first shot, lunch and wrap, the location with weather and daylight, notes, cast and crew with phone numbers, and the running order. Type the address and notes straight into it; they're saved with the day and shared. <b>Print / PDF</b> prints just the call sheet (portrait), <b>Copy as text</b> is ready to paste into an email or message.</li>
-    <li><b>Call sheet: emergency and standard sections</b>. The red <b>Emergency</b> box has the emergency number (999; change it for shoots abroad), the nearest A&amp;E, police station and fire station, first aid (first aider or medic, where the kit is) and the fire assembly point. <b>Find nearest A&amp;E, police, fire</b> looks them up from the day's location on OpenStreetMap: always check them, especially that the hospital has a 24-hour A&amp;E. <b>Copy from</b> brings over another day's details (it picks a day at the same location if there is one). There's also <b>Call times</b> (one line per department), <b>Travel and parking</b>, and at the end the standard sections: <b>Health and safety</b>, <b>Confidentiality</b>, <b>Code of conduct</b> and <b>Green note</b> come pre-written; edit them once and every call sheet in the project uses your wording (<b>Back to the standard wording</b> undoes it). Add your <b>Invoicing</b> details and a <b>Company line</b> for under the title. Untick <b>include</b> to leave a section off. Anything left empty isn't printed. Everything here is shared with the team.</li>
+    <li><b>Call sheet: emergency and standard sections</b>. The red <b>Emergency</b> box has the emergency number (999; change it for shoots abroad), the nearest A&amp;E, police station and fire station, first aid (first aider or medic, where the kit is) and the fire assembly point. <b>Find nearest A&amp;E, police, fire</b> looks them up from the day's location on OpenStreetMap (no location yet? it uses a postcode from the address, or opens Set location; if one server is busy it tries others, and says what happened next to the button): always check them, especially that the hospital has a 24-hour A&amp;E. <b>Copy from</b> brings over another day's details (it picks a day at the same location if there is one). There's also <b>Call times</b> (one line per department), <b>Travel and parking</b>, and at the end the standard sections: <b>Health and safety</b>, <b>Confidentiality</b>, <b>Code of conduct</b> and <b>Green note</b> come pre-written; edit them once and every call sheet in the project uses your wording (<b>Back to the standard wording</b> undoes it). Add your <b>Invoicing</b> details and a <b>Company line</b> for under the title. Untick <b>include</b> to leave a section off. Anything left empty isn't printed. Everything here is shared with the team.</li>
     <li><b>Call sheet: kit and risk assessment</b>. <b>Kit, suppliers and deliveries</b> is a table for the day: supplier or department, what kit, contact, and delivery / collection times (<b>+ Add supplier</b>; <b>Copy from</b> another day when it's empty). <b>Risk assessment</b> starts with eight common film-set risks (slips and trips, electrical, falling stands, hot lights, manual handling, working at height, fire, welfare) with who may be harmed, the risk before and after, and the controls. Edit, add or remove rows to fit the shoot; it's shared by every call sheet in the project (<b>Back to the starter risks</b> resets it). Add a link to the full risk assessment underneath. Untick <b>include</b> to leave either off; empty rows aren't printed.</li>
     <li><b>Wrap report</b> (Documents menu): shots done out of planned, call and actual wrap against the target, takes, captured or raw seconds, hero selects, each shot's takes, marks and finish time against the plan, what carries over (with a button to move it to another day), cuts and your wrap notes.</li>
     <li><b>Running order</b> (Documents menu): one page for the day with times, each shot or sequence (one line per sequence, listing its shots), location and minutes, plus breaks and tech. Untick <b>One line per sequence</b> to list every shot. Print / PDF, Copy as text, or <b>Download CSV</b>.</li>
@@ -1545,9 +1546,11 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.41.1";
+const VERSION = "2.41.3";
 const CHANGELOG = [
-  ["2.41.1","2026-11-21","The day banner's Status is now Day status, so it isn't mixed up with a shot's Status. Hide cut shots is its own tick box next to Show (Show is All rows or Not yet shot)."],
+  ["2.41.3","2026-11-21","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
+  ["2.41.2","","Call sheet: Find nearest A&E, police, fire is more reliable. It tries several OpenStreetMap servers in turn when one is busy, waits longer, says what's happening next to the button, and no longer sits greyed out without a location: it uses a postcode from the address, or opens Set location."],
+  ["2.41.1","","The day banner's Status is now Day status, so it isn't mixed up with a shot's Status. Hide cut shots is its own tick box next to Show (Show is All rows or Not yet shot)."],
   ["2.41.0","","Reset: go again without cutting. While a take rolls, ↺ Reset (or E) in Slate View, Sequence View and Details marks R1, R2... with their timecode on the take. Each reset shows under the take; click one to mark it Hero, Good, NG or Safety (a hero reset fills the Hero column as T3 R4). Resets go in Export takes, and in the Edit tool a reset comes in at its own timecode (Swap in latest takes picks up hero resets). + Take in Details and Sequence View (and T) now only adds a take you forgot to roll on: the next take number, no timecode, nothing rolling. ● Roll is still how you start one."],
   ["2.40.0","","Note View is now called Details. Open any shot in Details from the list with the ↗ at the end of its Shot #. The description can be edited in Details (click it and type; it saves for the whole team)."],
   ["2.39.1","","Slate: the clap flash (the picture sync point) now always shows. With Log take on clap turned on, the redraw used to wipe it before it was seen. It's also held back by the device's audio delay, so the flash and the clap sound land together, even through Bluetooth or an external speaker."],
@@ -3683,7 +3686,7 @@ function slateCut(){ if(!SLV.id) return; const t=cutTake(SLV.id); const m=$("#sl
 function renderSlate(){ if($("#slateView").classList.contains("open")) rememberView("slate",SLV.id);
   renderSlate0(); }
 function renderSlate0(){
-  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme+(v.classList.contains("flash")?" flash":"");
+  const v=$("#slateView"), c=slateCfg(), d=D(), r=SLV.id&&R(SLV.id); v.className="viewer open slate theme-"+c.theme+(v.classList.contains("flashon")?" flashon":"");
   v.innerHTML=""; const sh=c.show, fps=slateFps();
   const cell=(lab,val,cls="")=>h("div",{class:"slc "+cls},h("div",{class:"sll"},lab),h("div",{class:"slv"},val||"-"));
   const take=r?nextTake(r,d):"-";
@@ -3730,6 +3733,10 @@ function fitSlate(){ requestAnimationFrame(()=>{ for(const el of $$("#slateView 
 window.addEventListener("resize",()=>{ if($("#slateView").classList.contains("open")) fitSlate(); });
 function bumpRoll(v){const m=String(v||"A000").match(/^(.*?)(\d+)$/);return m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):String(v||"")+"2"}
 function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+"h ago"}
+// the clap flash: the whole slate inverted for at least 3 frames (and never under 120 ms). Not an animation,
+// so "reduce motion" (in Display settings or on the device) doesn't switch it off: it's the picture sync point
+function slateFlash(){ const v=$("#slateView"); if(!v) return; clearTimeout(SLV.flashT);
+  v.classList.add("flashon"); const hold=Math.max(120,3000/(slateFps()||25)); SLV.flashT=setTimeout(()=>v.classList.remove("flashon"),hold); }
 function clap(){
   const c=slateCfg();
   // log first: the redraw would otherwise wipe the flash before it showed
@@ -3737,7 +3744,7 @@ function clap(){
   playClap();
   // the flash is the picture sync point: hold it back by the device's audio delay so the camera sees it as the sound comes out
   let lag=0; try{ const ctx=sfx(); if((c.sound||"clap")!=="none"&&Number(c.volume)!==0) lag=((ctx.outputLatency||0)+(ctx.baseLatency||0)+0.005)*1000; }catch(e){}
-  const go=()=>{ const v=$("#slateView"); v.classList.remove("flash"); void v.offsetWidth; v.classList.add("flash"); };
+  const go=()=>{ if(c.flash!==false) slateFlash(); };
   lag>4?setTimeout(go,Math.min(lag,400)):go();
 }
 function slateSettings(){
@@ -3772,6 +3779,7 @@ function slateSettings(){
     h("div",{class:"slchecks"},tog("prod","Production"),tog("dir","Director"),tog("dop","Camera / DOP"),tog("shot","Shot"),tog("take","Take"),tog("roll","Roll"),tog("date","Date"),tog("day","Day"),tog("fps","FPS"),tog("name","Shot name"),tog("desc","Description"),tog("custom","Custom line"),tog("tc","Timecode")),
     h("div",{class:"form"},txt("dir","Director",S.project.lead||""),txt("dop","Camera / DOP"),txt("roll","Roll / card","A001"),txt("custom","Custom line","e.g. INT. TAVERN - NIGHT"),h("label",{},"Frame rate",fpsSel),h("label",{},"Look",theme)),
     h("label",{class:"inline"},logClap,"Clapping logs a take (with its timecode) on the shot"),
+    (()=>{const fl=h("input",{type:"checkbox"});fl.checked=c.flash!==false;fl.addEventListener("change",()=>{setSlate({flash:fl.checked})});return h("label",{class:"inline",title:"The whole slate inverts for at least 3 frames on the clap, for the editor to sync picture to sound. Works even with Reduce motion on."},fl,"Flash the screen on the clap (picture sync point)")})(),
     h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:()=>{$("#slSet").classList.remove("open")}},"Done")));
 }
 function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textContent=tcLabel()}
@@ -6655,7 +6663,8 @@ function emergencySection(d){
   // fill in: the nearest from the map, or copy another day's
   const tools=h("div",{class:"toolbar noprint",style:"margin-top:.4rem"});
   const has=d.lat!==""&&d.lat!=null;
-  tools.append(h("button",{class:"btn small",disabled:!has,title:has?"Look up the nearest A&E, police and fire station from this day's location (OpenStreetMap). Check them before you send the call sheet.":"Set the day's location first (under Weather and daylight)",onclick:e=>findNearest(d,e.currentTarget)},"Find nearest A&E, police, fire"));
+  tools.append(h("button",{class:"btn small",title:"Look up the nearest A&E, police and fire station from this day's location (OpenStreetMap). Check them before you send the call sheet.",onclick:e=>findNearest(d,e.currentTarget)},"Find nearest A&E, police, fire"));
+  tools.append(h("span",{class:"note csfindmsg",id:"csFindMsg"},has?"":"Uses the day's location: set it under Weather and daylight, or put a postcode in the address."));
   const empty=CS_EMERG.every(([k])=>!String(d[k]||"").trim());
   const other=S.days.filter(x=>x.id!==d.id&&!x.archived&&CS_EMERG.some(([k])=>String(x[k]||"").trim())).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
   if(other.length){ const same=other.find(x=>x.lat!==""&&x.lat!=null&&Math.abs(x.lat-d.lat)<0.002&&Math.abs(x.lon-d.lon)<0.002)||other[0];
@@ -6663,21 +6672,43 @@ function emergencySection(d){
   sec.append(tools);
   return sec;
 }
-// nearest A&E, police station and fire station, from OpenStreetMap (Overpass)
+// nearest A&E, police station and fire station, from OpenStreetMap (Overpass). The public servers are often busy, so try a few in turn.
+const OVERPASS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter","https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+async function overpass(q){
+  let last="";
+  for(const url of OVERPASS){
+    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),25000);
+    try{ const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:ctl.signal});
+      if(!r.ok){ last=new URL(url).host+" "+r.status; continue; }
+      const j=await r.json(); if(j.remark&&/error|timed out/i.test(j.remark)&&!(j.elements||[]).length){ last=new URL(url).host+": "+j.remark.slice(0,60); continue; }
+      return j.elements||[];
+    }catch(e){ last=new URL(url).host+(e.name==="AbortError"?" timed out":" unreachable"); }
+    finally{ clearTimeout(tm); }
+  }
+  throw new Error(last||"no server answered");
+}
 async function findNearest(d,btn){
-  const lat=Number(d.lat), lon=Number(d.lon); if(!isFinite(lat)||!isFinite(lon)) return;
-  const old=btn.textContent; btn.disabled=true; btn.textContent="Looking…";
-  const q=`[out:json][timeout:20];(nwr["amenity"="hospital"](around:20000,${lat},${lon});nwr["amenity"="police"](around:8000,${lat},${lon});nwr["amenity"="fire_station"](around:8000,${lat},${lon}););out center tags;`;
+  const msg=t=>{const m=$("#csFindMsg");if(m)m.textContent=t};
+  const x0=S.days.find(y=>y.id===d.id)||d;
+  let lat=Number(x0.lat), lon=Number(x0.lon);
+  if(x0.lat===""||x0.lat==null||!isFinite(lat)||!isFinite(lon)){
+    // no location yet: use a postcode from the address if there is one, and keep it as the day's location
+    const pc=String(x0.address||"").toUpperCase().match(/\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/);
+    if(pc){ msg("Finding "+pc[1]+" "+pc[2]+"…"); try{ const g=(await geocode(pc[1]+pc[2]))[0]; if(g){ x0.lat=Math.round(g.lat*1e4)/1e4; x0.lon=Math.round(g.lon*1e4)/1e4; x0.place=g.name; commit(); lat=x0.lat; lon=x0.lon; } }catch(e){} }
+    if(!isFinite(lat)||x0.lat===""||x0.lat==null){ msg("Set the day's location first (Weather and daylight > Set location), then press again."); openLocation(d,btn); return; }
+  }
+  const old=btn.textContent; btn.disabled=true; btn.textContent="Looking…"; msg("Asking OpenStreetMap (can take up to half a minute)…");
+  const q=`[out:json][timeout:25];(nwr["amenity"="hospital"](around:15000,${lat},${lon});nwr["healthcare"="hospital"](around:15000,${lat},${lon});nwr["amenity"="police"](around:6000,${lat},${lon});nwr["amenity"="fire_station"](around:6000,${lat},${lon}););out center tags;`;
   try{
-    const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"}});
-    if(!r.ok) throw new Error("lookup "+r.status);
-    const found=nearestPlaces((await r.json()).elements||[],lat,lon);
-    const x=S.days.find(y=>y.id===d.id); let n=0, filled=[];
+    const found=nearestPlaces(await overpass(q),lat,lon);
+    const x=S.days.find(y=>y.id===d.id); let n=0;
     for(const [k,f] of [["csHospital",found.hospital],["csPolice",found.police],["csFire",found.fire]]){
-      if(!f) continue; if(String(x[k]||"").trim()&&!await ask("Replace?",`Replace "${String(x[k]).split("\n")[0]}" with ${f.split("\n")[0]}?`,"Replace")) continue; x[k]=f; n++; filled.push(k); }
+      if(!f) continue; if(String(x[k]||"").trim()&&!await ask("Replace?",`Replace "${String(x[k]).split("\n")[0]}" with ${f.split("\n")[0]}?`,"Replace")) continue; x[k]=f; n++; }
     commit(); rebuildDoc();
-    toast(n?`Filled ${n} from OpenStreetMap: please check them (especially that the hospital has an A&E)`:"Nothing new found nearby");
-  }catch(e){ toast("Couldn't look them up just now ("+(e.message||e)+"). Type them in, or try again."); btn.disabled=false; btn.textContent=old; }
+    const miss=[["hospital","A&E"],["police","police station"],["fire","fire station"]].filter(([k])=>!found[k]).map(([,l])=>l);
+    toast(n?`Filled ${n} from OpenStreetMap: please check them (especially that the hospital has a 24-hour A&E)`:"Nothing new found nearby");
+    setTimeout(()=>msg(n?`Filled from OpenStreetMap: check before sending.${miss.length?" None found nearby for: "+miss.join(", ")+".":""}`:"Nothing found nearby: type them in."),50);
+  }catch(e){ btn.disabled=false; btn.textContent=old; msg("Couldn't reach OpenStreetMap just now ("+(e.message||e)+"). Try again in a minute, or type them in."); }
 }
 function nearestPlaces(els,lat,lon){
   const km=(a,b)=>{const R=6371,dl=(a.lat-lat)*Math.PI/180,dn=(a.lon-lon)*Math.PI/180,x=Math.sin(dl/2)**2+Math.cos(lat*Math.PI/180)*Math.cos(a.lat*Math.PI/180)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
@@ -6687,7 +6718,7 @@ function nearestPlaces(els,lat,lon){
     const addr=[[t["addr:housenumber"],t["addr:street"]].filter(Boolean).join(" "),t["addr:city"],t["addr:postcode"]].filter(Boolean).join(", ");
     const tel=t.phone||t["contact:phone"]||"";
     return [t.name+(note?" ("+note+")":""),addr,tel,`about ${p.km<1?Math.round(p.km*1000)+" m":p.km.toFixed(1)+" km"} away`].filter(Boolean).join("\n"); };
-  const isH=p=>p.t.amenity==="hospital", ae=best(p=>isH(p)&&(p.t.emergency==="yes"||/a\s*&\s*e|accident|emergency/i.test(p.t.name+" "+(p.t.healthcare_speciality||""))));
+  const isH=p=>p.t.amenity==="hospital"||p.t.healthcare==="hospital", ae=best(p=>isH(p)&&(p.t.emergency==="yes"||/a\s*&\s*e|accident|emergency/i.test(p.t.name+" "+(p.t.healthcare_speciality||""))));
   return {hospital:ae?fmtP(ae):fmtP(best(isH),"check it has an A&E"),police:fmtP(best(p=>p.t.amenity==="police")),fire:fmtP(best(p=>p.t.amenity==="fire_station"))};
 }
 // standard sections: shared by every call sheet in the project; untick to leave one off

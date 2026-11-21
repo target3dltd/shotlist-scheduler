@@ -1,6 +1,6 @@
 {
   "name": "shotlist-scheduler",
-  "version": "2.41.1",
+  "version": "2.41.3",
   "private": true,
   "type": "module",
   "description": "Shoot scheduler and DIT shot-naming tool with live team sync on Netlify",
