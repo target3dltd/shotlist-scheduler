@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.32.0";
+const VERSION = "2.33.0";
 const CHANGELOG = [
-  ["2.32.0","2026-11-21","The Shot tick in the first column is now Status: To do, Setting up, Rolling, Shooting, Shot ✓ or Cut. Click it to set up (we're on it), roll or cut a take, mark it shot, or cut the shot; the live ahead / behind, Note View and the slate follow."],
+  ["2.33.0","2026-11-21","Actual timeline under the planned one, on the same scale: how long each shot or sequence really took to set up (from Setting up, or from the last shot finishing) and to shoot (first take to Shot ✓), with a running total against the plan. Pace, Recovery plan and both timelines can each be turned off in Display settings and folded with their header bar. A round ↑ button bottom right takes you back to the top once you scroll down."],
+  ["2.32.0","","The Shot tick in the first column is now Status: To do, Setting up, Rolling, Shooting, Shot ✓ or Cut. Click it to set up (we're on it), roll or cut a take, mark it shot, or cut the shot; the live ahead / behind, Note View and the slate follow."],
   ["2.31.0","","Ahead / behind follows the shot you're actually on. Rolling a take puts you on that shot (or sequence); We're on this (Note View, Sequence View, Slate) says so when you're shooting out of order. Until a take rolls it counts as setting up (behind once its setup should have finished); once rolling, from the first take (behind once it should have wrapped). The Running card shows the shot and whether you're setting up, rolling or shooting."],
   ["2.30.2","","Correct a take's timecode in Note View or Sequence View: double-click the TC (or the take number) and change TC in or out, for a late roll or an early cut. The length and the captured / raw seconds are worked out again."],
   ["2.30.1","","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
@@ -1094,7 +1095,7 @@ function recalc(){
     const sh=$('.eff[data-eff="shoot"]',tr); if(sh) sh.textContent=(!isBlock(r)&&Math.round(c.sh)!==Number(r.shoot))?"= "+Math.round(c.sh)+" min":"";
     tr.classList.toggle("over",c.end>wrapT&&!r.done);
   }
-  renderStats(C); renderPace(C); renderTimeline(C); renderPlan(C); renderLinks(); refreshTabLabel(C);
+  renderStats(C); renderPace(C); renderTimeline(C); renderPlan(C); renderPanels(C); renderLinks(); refreshTabLabel(C);
 }
 function tabSub(d,C){const shots=d.rows.filter(r=>!isBlock(r));const done=shots.filter(r=>r.done).length;
   if(C.shootT>0) return "wrap "+fmt(C.wrap); if(!shots.length) return "empty"; return done===shots.length?"shot":shots.length+" setups";}
@@ -1222,7 +1223,7 @@ function liveStatus(d,C){
 }
 // "We're on this shot": what the live ahead / behind works from (shared with the team); setting up until a take rolls
 function setOnNow(id){ const d=D(); if(!d) return; const r=R(id); if(!r) return; const t=r.seq&&R(r.seq)?seqAnchor(r):r;
-  d.onRow=t.id; d.onSince=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
+  d.onRow=t.id; d.onSince=Date.now(); t.setupAt=Date.now(); commit(); renderStats(compute()); refreshViews(); toast(`On ${t.seq?seqTitle(t):"shot "+(t.shot||"")} now: setting up until you roll`); }
 function isOnNow(r){ const d=D(); if(!d||!r) return false; const L=liveStatus(d,compute()); if(!L||!L.cur) return false; const a=L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur):L.cur, b=r.seq&&R(r.seq)?seqAnchor(r):r; return a.id===b.id; }
 function prioWeight(p){const o=priorityOptions(),i=o.indexOf(String(p||"").trim());return i<0?(o.length+1)/2:o.length-i}
 function durSec(v){const n=parseFloat(String(v||"").replace(",","."));return isNaN(n)?0:n}
@@ -1327,7 +1328,7 @@ function renderLinks(){
   t.append(tb); body.append(t,h("p",{class:"note"},"Shared with the team. The links also show in the Hero link and Safety link columns, and go into the CSV and .xlsx exports. A shot counts as hero or safety when its Hero or Safety column is filled in, or its notes say e.g. \"Hero: T3\"."));
   box.append(body);
 }
-setInterval(()=>{ if(!S||document.hidden) return; const d=D(); if(d&&dayClock(d)!=null){const C=compute();renderStats(C);renderPace(C);renderTimeline(C);renderPlan(C)} },30000);
+setInterval(()=>{ if(!S||document.hidden) return; const d=D(); if(d&&dayClock(d)!=null){const C=compute();renderStats(C);renderPace(C);renderTimeline(C);renderPlan(C);renderPanels(C)} },30000);
 /* ===================== help: contents and search ===================== */
 function buildHelpNav(){
   const body=$("#helpBody"), toc=$("#helpToc"); if(!body||!toc||body.dataset.built) return; body.dataset.built="1";
@@ -1442,8 +1443,7 @@ async function syncProjectName(force){
 }
 function renderTimeline(C){
   const d=D(); const tl=$("#timeline"); tl.innerHTML=""; if(!d) return;
-  const start=toMin(d.call||"09:00"), end=Math.max(C.wrap,wrapMin(d))+15;
-  const span=Math.max(60,end-start); const pct=m=>((m-start)/span*100)+"%";
+  const {start,end,span}=tlRange(d,C); const pct=m=>((m-start)/span*100)+"%";
   const pxHr=(tl.clientWidth||800)/span*60, every=pxHr<26?180:pxHr<46?120:60;
   for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){if(hr%every){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}));continue}const f=(hr-start)/span;tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick"+(f<0.04?" first":f>0.96?" last":""),style:"left:"+pct(hr)},fmt(hr)))}
   const wrapT=wrapMin(d);
@@ -1511,7 +1511,7 @@ function fitTabs(){
     for(const c of ["t1","t2","t3"]){ if(!tight()) break; g.classList.add(c); }
   }
 }
-window.addEventListener("resize",()=>{clearTimeout(fitTabs._t);fitTabs._t=setTimeout(()=>{fitTabs();if(S&&D())renderTimeline(compute())},120)});
+window.addEventListener("resize",()=>{clearTimeout(fitTabs._t);fitTabs._t=setTimeout(()=>{fitTabs();if(S&&D()){const C=compute();renderTimeline(C);renderPanels(C)}},120)});
 function openArchived(){renderArchived();$("#archModal").classList.add("open")}
 function renderArchived(){
   const l=$("#archList"); l.innerHTML=""; const arch=S.days.filter(d=>d.archived);
@@ -1632,7 +1632,7 @@ function doMove(toId,where,copy){
   let to=toId==="new"?null:S.days.find(x=>x.id===toId);
   if(!to){ const c=cfg(), n=S.days.length+1; to={id:uid("d"),name:"Day "+n,kind:from.kind||"schedule",dayNo:n,date:"",call:c.newCall,wrap:c.newWrap,setupPct:c.newSetupPct,shootPct:c.newShootPct,minSetup:c.newMinSetup,origWrap:null,rows:[]}; S.days.push(to); }
   const picked=from.rows.filter(r=>MOVE.ids.has(r.id)); if(!picked.length) return;
-  const moving=copy?picked.map(r=>Object.assign(clone(r),{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",origStart:"",cut:null})):picked;
+  const moving=copy?picked.map(r=>Object.assign(clone(r),{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",origStart:"",cut:null,setupAt:null})):picked;
   // the planned time of day belonged to the old day
   if(!copy){ from.rows=from.rows.filter(r=>!MOVE.ids.has(r.id)); moving.forEach(r=>{r.origStart=""}); }
   to.rows=where==="start"?[...moving,...to.rows]:[...to.rows,...moving];
@@ -2188,7 +2188,10 @@ function renderSetTab(){
         sw("Reduce motion","no flashing or fades",()=>!!P.calm,v=>P.calm=v)));
     sec("Table and on-set tools",h("div",{class:"dswitches"},
       sw("− / + buttons on Setup and Shoot","turn off to just type the minutes",()=>P.steppers!==false,v=>P.steppers=v),
-      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>renderPace(compute()),0)}),
+      sw("Pace panel on shoot days","ahead / behind score, shot scores and streaks",()=>P.showPace!==false,v=>{P.showPace=v;setTimeout(()=>{const C=compute();renderPace(C);renderPanels(C)},0)}),
+      sw("Recovery plan","what to cut or move when the day runs over",()=>P.showPlan!==false,v=>{P.showPlan=v;setTimeout(()=>renderPanels(compute()),0)}),
+      sw("Planned timeline","the day's plan as a bar, with the target wrap",()=>P.showTl!==false,v=>{P.showTl=v;setTimeout(()=>renderPanels(compute()),0)}),
+      sw("Actual timeline","how long setting up and shooting really took, under the plan",()=>P.showActual!==false,v=>{P.showActual=v;setTimeout(()=>renderPanels(compute()),0)}),
       sw("Highlight rows the team are working in","in each person's badge colour (team site)",()=>!!P.peerRows,v=>P.peerRows=v)));
     // timeline colours: a swatch each, with a reset back to the theme's colour
     const sws=h("div",{class:"swatches",id:"colourForm"});

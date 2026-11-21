@@ -411,8 +411,8 @@ function statusMenu(anchor,id){
   const undone=x=>{x.done=false;x.doneAt=null};
   pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},(t.seq?seqTitle(t)+" · shot ":"Shot ")+(r.shot||"-")));
   pop.append(
-    item("To do",()=>{const x=R(id);undone(x);x.cut=false;if(d.onRow===t.id){d.onRow="";d.onSince=null}afterStatus()},"",st==="todo"),
-    item("Setting up",()=>{const x=R(id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();afterStatus();toast("Setting up: ahead / behind counts from now until you roll")},"we're on it, not rolling yet",st==="setup"),
+    item("To do",()=>{const x=R(id);undone(x);x.cut=false;t.setupAt=null;if(d.onRow===t.id){d.onRow="";d.onSince=null}afterStatus()},"",st==="todo"),
+    item("Setting up",()=>{const x=R(id);undone(x);x.cut=false;d.onRow=t.id;d.onSince=Date.now();t.setupAt=Date.now();afterStatus();toast("Setting up: ahead / behind counts from now until you roll")},"we're on it, not rolling yet",st==="setup"),
     rolling?item("■ Cut take",()=>{cutTake(t.id);afterStatus()},"end take "+rolling.n+" (timecode out)")
            :item("● Roll",()=>{const x=R(id);undone(x);x.cut=false;logTake(t.id,t.seq&&d.kind!=="capture"?{caught:[]}:{});afterStatus()},"start take "+nextTake(t,d)+(t.seq?" of the sequence":""),st==="rolling"),
     item("Shot ✓",()=>{const x=R(id);if(rollingTake(t))cutTake(t.id);x.done=true;x.doneAt=dayClock(d);x.cut=false;afterStatus()},t.seq?"just this shot (Sequence done ticks them all)":"",st==="shot"),
@@ -589,7 +589,7 @@ function setSeqMins(id,k,v){ if(frozenNo()) return; const a=R(id); if(!a) return
 function dupSeq(id){
   if(frozenNo()) return; const f=findRow(id); if(!f) return; const d=f.d, a=f.r, mem=seqMembers(a,d); if(!mem.length) return;
   commit();
-  const copies=mem.map(m=>Object.assign({},m,{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:""}));
+  const copies=mem.map(m=>Object.assign({},m,{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:"",setupAt:null}));
   const na=copies[0]; for(const c of copies) c.seq=na.id;
   const base=String(a.seqName||"Sequence").replace(/\s*\(\d+\)$/,""); let n=2; const names=new Set(d.rows.filter(x=>x.seq===x.id).map(x=>x.seqName)); while(names.has(`${base} (${n})`)) n++;
   na.seqName=`${base} (${n})`; na.seqTime=a.seqTime; na.seqSetup=a.seqSetup; na.seqShoot=a.seqShoot; na.seqNotes=a.seqNotes;
@@ -848,3 +848,112 @@ $("#runOrderBtn").onclick=openRunningOrder;
 $("#dedupeBtn").onclick=()=>dedupePictures();
 $("#docPrint").onclick=printDoc;
 $("#docCopy").onclick=async()=>{if(await copyText(docText()))toast("Copied as text, ready to paste into an email or message")};
+
+// ---- Actual timeline: what really happened, on the same scale as the plan ----
+// a moment (epoch ms) as minutes on this day's clock (past midnight runs on past 24:00, like the plan)
+function dayMinOf(d,ms){ const base=new Date((d.date||todayISO())+"T00:00").getTime(); return (ms-base)/60000; }
+// one entry per shot or sequence that has started: setting up, shooting, and a break (planned length) where one sits in between
+function actualUnits(d,C){
+  if(!d) return [];
+  const now=dayClock(d), L=liveStatus(d,C);
+  const curId=L&&L.cur?(L.cur.seq&&R(L.cur.seq)?seqAnchor(L.cur).id:L.cur.id):null;
+  const ok=m=>m!=null&&isFinite(m)&&m>-720&&m<2880;
+  const units=[], seen=new Set();
+  d.rows.forEach((r,idx)=>{
+    if(isBlock(r)||r.cut) return;
+    const a=r.seq&&R(r.seq)?seqAnchor(r):r; if(seen.has(a.id)) return; seen.add(a.id);
+    const mem=a.seq?seqMembers(a,d).filter(x=>!x.cut):[r];
+    const takes=takeList(a).filter(t=>t.at&&ok(dayMinOf(d,t.at)));
+    const allDone=mem.length&&mem.every(x=>x.done), isCur=a.id===curId&&now!=null;
+    const setupAt=a.setupAt&&ok(dayMinOf(d,a.setupAt))?dayMinOf(d,a.setupAt):(isCur&&d.onRow===a.id&&d.onSince&&ok(dayMinOf(d,d.onSince))?dayMinOf(d,d.onSince):null);
+    if(!takes.length&&!allDone&&!(isCur&&setupAt!=null)) return;
+    const ends=mem.filter(x=>x.done&&ok(x.doneAt)).map(x=>Number(x.doneAt));
+    const shootS=takes.length?Math.min(...takes.map(t=>dayMinOf(d,t.at))):null;
+    let shootE=null;
+    if(allDone&&ends.length) shootE=Math.max(...ends);
+    else if(isCur) shootE=now;
+    else if(takes.length) shootE=Math.max(...takes.map(t=>dayMinOf(d,t.at+(t.ms||0))));
+    if(shootS!=null&&shootE!=null&&shootE<shootS) shootE=shootS;
+    const cs=mem.map(x=>C.rows[x.id]).filter(Boolean);
+    const pSu=cs.reduce((t,c)=>t+(c.su||0),0), pSh=cs.reduce((t,c)=>t+(c.sh||0),0);
+    const name=a.seq?seqTitle(a):"Shot "+(a.shot||a.action||"-");
+    units.push({a,idx,name,shootS,shootE,setupAt,isCur,done:allDone,rolling:!!rollingTake(a),pSu,pSh,first:setupAt!=null?setupAt:shootS!=null?shootS:shootE});
+  });
+  units.sort((x,y)=>(x.first??1e9)-(y.first??1e9));
+  let prev=null;
+  for(const u of units){
+    const setupE=u.shootS!=null?u.shootS:(u.isCur?now:null);
+    let s=u.setupAt;
+    if(s==null&&prev&&prev.end!=null&&setupE!=null){
+      // set up from when the last one finished, less any break / tech rows that sit between them in the list
+      s=prev.end;
+      if(u.idx>prev.idx){ const blk=d.rows.slice(prev.idx+1,u.idx).filter(isBlock).reduce((t,b)=>t+((C.rows[b.id]||{}).sh||0),0);
+        if(blk>0){ const be=Math.min(setupE,s+blk); u.brk=[s,be]; s=be; } }
+    }
+    if(s!=null&&setupE!=null&&s<=setupE) u.setup=[s,setupE];
+    if(u.shootS!=null&&u.shootE!=null) u.shoot=[u.shootS,u.shootE];
+    else if(u.shootS==null&&u.done&&u.shootE!=null&&prev&&prev.end!=null&&!u.setup){ const s0=u.brk?u.brk[1]:prev.end; if(s0<u.shootE) u.nolog=[s0,u.shootE]; }
+    u.end=u.shoot?u.shoot[1]:u.nolog?u.nolog[1]:u.setup?u.setup[1]:null;
+    u.idx=Math.max(u.idx,prev?prev.idx:0); prev=u.end!=null?u:prev;
+  }
+  return units.filter(u=>u.setup||u.shoot||u.nolog);
+}
+// the timelines share one scale: call to the later of the planned wrap, target wrap and what's actually happened
+function tlRange(d,C){
+  const start=toMin(d.call||"09:00");
+  let end=Math.max(C.wrap,wrapMin(d))+15;
+  if(P.showActual!==false){ const u=actualUnits(d,C); for(const x of u) if(x.end!=null) end=Math.max(end,x.end+10); }
+  return {start,end,span:Math.max(60,end-start)};
+}
+let ACT_SUM="";
+function renderActual(C){
+  const tl=$("#actualTl"); if(!tl) return 0; tl.innerHTML=""; ACT_SUM=""; const d=D(); if(!d) return 0;
+  const units=actualUnits(d,C); if(!units.length){ $("#actualSum").textContent=""; return 0; }
+  const {start,end,span}=tlRange(d,C); const pct=m=>((m-start)/span*100)+"%", w=(a,b)=>(Math.max(0,b-a)/span*100)+"%";
+  const pxHr=(tl.clientWidth||($("#timeline").clientWidth)||800)/span*60, every=pxHr<26?180:pxHr<46?120:60;
+  for(let hr=Math.ceil(start/60)*60;hr<=end;hr+=60){if(hr%every){tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}));continue}const f=(hr-start)/span;tl.append(h("div",{class:"tickline",style:"left:"+pct(hr)}),h("div",{class:"tick"+(f<0.04?" first":f>0.96?" last":""),style:"left:"+pct(hr)},fmt(hr)))}
+  const mins=x=>Math.round(x[1]-x[0]);
+  let su=0, sh=0, pSu=0, pSh=0, nDone=0;
+  for(const u of units){
+    const go=()=>jump(u.a.id), live=u.isCur&&!u.done;
+    if(u.brk) tl.append(h("div",{class:"seg break",style:`left:${pct(u.brk[0])};width:${w(...u.brk)}`,title:`Break / tech before ${u.name}, at its planned length (${mins(u.brk)} min)`}));
+    if(u.setup){ const s=h("div",{class:"seg setup"+(live&&!u.shoot?" live":""),style:`left:${pct(u.setup[0])};width:${w(...u.setup)}`,title:`${u.name} - setting up ${fmt(u.setup[0])} to ${fmt(u.setup[1])}${live&&!u.shoot?" (so far)":""}: ${mins(u.setup)} min, planned ${Math.round(u.pSu)}`}); s.onclick=go; tl.append(s); }
+    if(u.shoot){ const s=h("div",{class:"seg shoot"+(live?" live":""),style:`left:${pct(u.shoot[0])};width:${w(...u.shoot)};border-left:1px solid var(--panel)`,title:`${u.name} - shooting ${fmt(u.shoot[0])} to ${fmt(u.shoot[1])}${live?" (so far)":""}: ${mins(u.shoot)} min, planned ${Math.round(u.pSh)}`}); s.onclick=go; tl.append(s); }
+    if(u.nolog){ const s=h("div",{class:"seg nolog",style:`left:${pct(u.nolog[0])};width:${w(...u.nolog)};border-left:1px solid var(--panel)`,title:`${u.name} - shot by ${fmt(u.nolog[1])}, no takes logged so setup and shooting can't be split (${mins(u.nolog)} min, planned ${Math.round(u.pSu+u.pSh)})`}); s.onclick=go; tl.append(s); }
+    if(u.done&&(u.setup||u.shoot)){ nDone++; if(u.setup){su+=mins(u.setup);pSu+=u.pSu} if(u.shoot){sh+=mins(u.shoot);pSh+=u.pSh} }
+  }
+  const wrapT=wrapMin(d); tl.append(h("div",{class:"wrapline",style:"left:"+pct(wrapT),title:"Target wrap "+fmt(wrapT)}));
+  { const n=dayClock(d); if(n!=null&&n>=start&&n<=end) tl.append(h("div",{class:"nowline",style:"left:"+pct(n),title:"Now "+fmt(n)})); }
+  const vs=(a,p)=>{const x=Math.round(a-p);return x===0?"on plan":(x>0?"+":"-")+dur(Math.abs(x))};
+  ACT_SUM=nDone?`${nDone} done · setting up ${dur(su)} (${vs(su,pSu)}) · shooting ${dur(sh)} (${vs(sh,pSh)})`:"under way";
+  $("#actualSum").textContent=nDone?`Done so far: setting up ${dur(su)} against ${dur(Math.round(pSu))} planned, shooting ${dur(sh)} against ${dur(Math.round(pSh))}`:"";
+  return units.length;
+}
+// pace, recovery plan and both timelines: each can be turned off (Display settings) and folded (its header bar), per device
+const PANELS={pace:"Pace",timeline:"Planned timeline",actual:"Actual timeline"};
+function renderPanels(C){
+  const d=D(); P.panelFold=P.panelFold||{};
+  const plan=$("#plan"); if(plan) plan.hidden=P.showPlan===false;
+  const nAct=P.showActual!==false?renderActual(C||compute()):0;
+  for(const key of Object.keys(PANELS)){
+    const head=$(`.phead[data-panel="${key}"]`); if(!head) continue;
+    const body=key==="pace"?$("#pace"):$(`.pbody[data-panel="${key}"]`);
+    const on=key==="pace"?(P.showPace!==false&&body.classList.contains("on")):key==="timeline"?(P.showTl!==false&&!!d):(nAct>0);
+    const fold=!!P.panelFold[key];
+    head.hidden=!on; if(key!=="pace") body.hidden=!on;
+    body.classList.toggle("pfold",on&&fold);
+    let sum="";
+    if(key==="pace"&&on){ const n=$(".pacenum",body), wd=$(".pacewords b",body); sum=(n?n.textContent:"")+(wd?" · "+wd.textContent:""); }
+    if(key==="timeline"&&on&&C) sum=`${fmt(toMin(d.call||"09:00"))} to ${fmt(C.wrap)} planned · target wrap ${fmt(wrapMin(d))}`;
+    if(key==="actual"&&on) sum=ACT_SUM;
+    head.replaceChildren(h("b",{},PANELS[key]),h("span",{class:"note"},sum),h("span",{class:"chev"},fold?"▾ show":"▴ hide"));
+    head.setAttribute("aria-expanded",String(!fold));
+    head.onclick=()=>{ P.panelFold[key]=!P.panelFold[key]; savePrefs(); const C2=compute(); if(key==="timeline"&&!P.panelFold[key]) renderTimeline(C2); renderPanels(C2); };
+  }
+}
+// back to the top: a round button bottom right once you've scrolled down the list
+(function(){ const b=$("#topBtn"); if(!b) return;
+  const upd=()=>b.classList.toggle("show",window.scrollY>500);
+  window.addEventListener("scroll",upd,{passive:true}); upd();
+  b.onclick=()=>window.scrollTo({top:0,behavior:P.calm?"auto":"smooth"});
+})();

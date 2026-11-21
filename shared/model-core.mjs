@@ -18,7 +18,7 @@
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place","onRow","onSince"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
 const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;

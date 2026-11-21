@@ -375,6 +375,21 @@ select.cell.prio{font-weight:700;border-radius:4px}
 .timeline .tickline{position:absolute;top:0;height:1.7rem;width:1px;background:var(--tick)}
 .timeline .wrapline{position:absolute;top:0;bottom:0;width:2px;background:var(--wrapc,var(--bad))}
 .legend{display:flex;gap:.9rem;font-size:.85rem;color:var(--muted);margin-top:.3rem}
+
+/* panels: optional (Display settings) and foldable, one header bar each */
+.phead{display:flex;align-items:baseline;gap:.7rem;width:100%;margin-top:.6rem;padding:.3rem .6rem;background:none;border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:.86rem;cursor:pointer;text-align:left;flex-wrap:wrap}
+.phead[hidden]{display:none}
+.phead b{font-weight:600} .phead .note{flex:1;min-width:0} .phead .chev{margin-left:auto;color:var(--muted)}
+.phead:hover{border-color:var(--line2)}
+.phead+.pace.on,.phead+.pbody .timeline{margin-top:.3rem}
+.pfold,.pbody.pfold,.pace.on.pfold{display:none!important}
+.timeline.actual .seg.nolog,.legend i.nolog{background:repeating-linear-gradient(45deg,var(--shoot) 0 4px,transparent 4px 7px);opacity:.75}
+.timeline.actual .seg.live{animation:actpulse 1.6s ease-in-out infinite}
+@keyframes actpulse{50%{opacity:.55}}
+body.calm .timeline.actual .seg.live{animation:none}
+.topbtn{position:fixed;right:max(.8rem,env(safe-area-inset-right));bottom:max(.8rem,env(safe-area-inset-bottom));z-index:50;width:2.6rem;height:2.6rem;border-radius:50%;border:1px solid var(--line2);background:var(--panel);color:var(--ink);font:700 1.15rem/1 inherit;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px -4px rgba(0,0,0,.35);opacity:0;pointer-events:none;transform:translateY(.6rem);transition:opacity .2s,transform .2s}
+.topbtn.show{opacity:1;pointer-events:auto;transform:none}
+body.viewopen .topbtn{display:none}
 .legend i{display:inline-block;width:.75rem;height:.75rem;border-radius:2px;margin-right:.3rem;vertical-align:-1px}
 
 main{padding:.9rem 1.4rem 4.5rem}
@@ -878,12 +893,21 @@ body.nosteps .mins.timing input{width:4.5em}
   <div class="stats" id="stats"></div>
   <div class="sky-row noprint" id="sky" hidden></div>
   <div class="frozenflag noprint" id="frozenFlag" hidden><b>Timings frozen</b> for this day: ticks, takes, notes and cuts still work. <button class="btn small" onclick="toggleFreeze()">Unfreeze</button></div>
+  <button class="phead noprint" data-panel="pace" type="button" hidden></button>
   <div class="pace noprint" id="pace"></div>
   <div class="warnings" id="warnings"></div>
   <div class="plan noprint" id="plan"></div>
   <div class="plan noprint" id="links"></div>
+  <button class="phead noprint" data-panel="timeline" type="button" hidden></button>
+  <div class="pbody noprint" data-panel="timeline">
   <div class="timeline noprint" id="timeline"></div>
   <div class="legend noprint"><span><i style="background:var(--setup)"></i>Setup</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i style="background:var(--tech)"></i>Tech / turnaround</span><span><i style="background:var(--break)"></i>Break / move</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><a href="#" id="tlColours" class="note" style="margin-left:auto">Timeline colours</a></div>
+  </div>
+  <button class="phead noprint" data-panel="actual" type="button" hidden></button>
+  <div class="pbody noprint" data-panel="actual">
+  <div class="timeline actual noprint" id="actualTl"></div>
+  <div class="legend noprint" id="actualLegend"><span><i style="background:var(--setup)"></i>Setting up</span><span><i style="background:var(--shoot)"></i>Shooting</span><span><i class="nolog"></i>Shot, no takes logged</span><span><i style="background:var(--break)"></i>Break (planned length)</span><span><i style="background:var(--wrapc,var(--bad))"></i>Target wrap</span><span class="note" id="actualSum" style="margin-left:auto"></span></div>
+  </div>
 </header>
 
 <main>
@@ -996,6 +1020,7 @@ body.nosteps .mins.timing input{width:4.5em}
 </div></div>
 
 <div class="whopop" id="whoPop" role="dialog" aria-label="Who's online"></div>
+<button class="topbtn noprint" id="topBtn" type="button" title="Back to the top" aria-label="Back to the top">↑</button>
 <button class="fbbtn noprint" id="fbBtn" type="button" aria-haspopup="dialog" aria-expanded="false" title="Report a bug, request a feature or ask a question" aria-label="Feedback and help">?<i id="fbDot" hidden></i></button>
 <div class="fbpanel noprint" id="fbPanel" role="dialog" aria-label="Feedback"></div>
 <!-- Netlify Forms: lets the site owner get an email for each report (Forms > Form notifications). Never shown. -->
