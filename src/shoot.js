@@ -148,7 +148,7 @@ function exportTakes(days){
   const fps=Number(S.project.fps)||"";
   for(const d of days) for(const r of d.rows){ if(isBlock(r)) continue;
     for(const t of takeList(r)){ n++; const ms=takeMs(t);
-      lines.push([d.name,d.date||"",r.shot||"",t.n,shotName(r,d,t.n)||"",t.mark?t.mark[0].toUpperCase()+t.mark.slice(1):"",t.tc||"",t.out||"",ms?Math.round(ms/100)/10:"",ms?durSecs(ms):"",
+      lines.push([d.name,d.date||"",r.shot||"",t.n,t.name||shotName(r,d,t.n)||"",t.mark?t.mark[0].toUpperCase()+t.mark.slice(1):"",t.tc||"",t.out||"",ms?Math.round(ms/100)/10:"",ms?durSecs(ms):"",
         t.at?new Date(t.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}):(t.t||""),t.note||"",r.description||"",r.action||"",r.location||"",r.notes||r.director||"",r.heroUrl||"",r.safetyUrl||"",fps].map(csvEsc).join(","));
     } }
   if(!n){toast("No takes logged yet. Takes come from Slate View or Note View.");return}
@@ -387,6 +387,32 @@ function videoCell(r){
   i.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x.video=videoLinks({video:i.value}).join("\n");commit();renderBody()});
   w.append(i); if(videoLinks(r).length) w.append(h("button",{class:"play",title:"Play in Note View",onclick:()=>{NV.id=r.id;openNotes(r.id)}},"▶"+(videoLinks(r).length>1?" "+videoLinks(r).length:"")));
   return w;
+}
+
+/* ---------- takes: remove (with Undo) and rename (double-click the take number) ---------- */
+function deleteTake(rowId,n,redraw){
+  const x=R(rowId); if(!x) return; const l=takeList(x); if(!l.some(z=>z.n===n)) return;
+  setTakeList(x,l.filter(z=>z.n!==n)); x.takes=Math.max(0,(Number(x.takes)||0)-1); syncMarks(x); commit(); redraw&&redraw();
+  toast("Take "+n+" removed",{label:"Undo",fn:()=>undo()});
+}
+function takeLabel(rowId,t,redraw){
+  const b=h("b",{class:"takelab",title:"Double-click to renumber or rename this take"},"T"+t.n,t.name?h("small",{},t.name):null);
+  b.addEventListener("dblclick",e=>{e.stopPropagation();editTake(b,rowId,t.n,redraw)});
+  return b;
+}
+function editTake(el,rowId,n,redraw){
+  const x=R(rowId); if(!x) return; const t=takeList(x).find(z=>z.n===n); if(!t) return; const f=findRow(rowId);
+  const auto=shotName(x,f&&f.d,n)||"";
+  const num=h("input",{type:"number",min:"1",step:"1",value:String(n),style:"width:4.2rem","aria-label":"Take number"});
+  const nm=h("input",{type:"text",value:t.name||"",placeholder:auto||"Clip name",style:"width:min(22rem,60vw)","aria-label":"Clip name (leave empty for the automatic name)"});
+  const box=h("span",{class:"takeedit"},"T",num,nm,h("button",{class:"btn small primary",onclick:()=>save()},"Save"),h("button",{class:"btn small",onclick:()=>redraw&&redraw()},"Cancel"));
+  const save=()=>{ const y=R(rowId); if(!y) return; const l=takeList(y); const it=l.find(z=>z.n===n); if(!it) return;
+    const nn=Math.max(1,Math.round(Number(num.value)||n));
+    if(nn!==n&&l.some(z=>z.n===nn)){ toast("There's already a take "+nn+" on this "+(y.seq?"sequence":"shot")); num.focus(); return; }
+    it.n=nn; const v=nm.value.trim(); if(v&&v!==auto) it.name=v; else delete it.name;
+    l.sort((a,b)=>a.n-b.n); setTakeList(y,l); syncMarks(y); commit(); redraw&&redraw(); toast(nn!==n?`Take ${n} is now take ${nn}`:"Take renamed",{label:"Undo",fn:()=>undo()}); };
+  [num,nm].forEach(i=>i.addEventListener("keydown",e=>{e.stopPropagation(); if(e.key==="Enter"){e.preventDefault();save()} if(e.key==="Escape"){e.preventDefault();redraw&&redraw()}}));
+  el.replaceWith(box); num.focus(); num.select();
 }
 
 /* ---------- sequences: shots grouped and shot in one go ----------
@@ -668,12 +694,13 @@ function renderSeqView(){
   for(const t of list){
     const marks=h("span",{class:"nvmarks"});
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>edit(t.n,z=>{z.mark=z.mark===m?"":m})},l));
-    const row=h("div",{class:"nvtake"},h("b",{},"T"+t.n),h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),marks);
+    const row=h("div",{class:"nvtake"},takeLabel(a.id,t,()=>renderSeqView()),h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?" → out "+t.out:(rollingTake(a)===t?" ● rolling":""),t.len?" · "+t.len:""),marks);
     if(la){ const ticks=h("span",{class:"seqticks"},h("small",{class:"note"},"Caught:"));
       for(const m of mem){ const on=(t.caught||[]).includes(m.id); ticks.append(h("button",{class:"tick"+(on?" on":""),title:(on?"Caught":"Not caught")+": shot "+(m.shot||""),onclick:()=>edit(t.n,z=>{const c=new Set(z.caught||[]);c.has(m.id)?c.delete(m.id):c.add(m.id);z.caught=mem.map(y=>y.id).filter(id=>c.has(id))})},m.shot||"?")); }
       ticks.append(h("button",{class:"tick all",onclick:()=>edit(t.n,z=>{z.caught=(z.caught||[]).length===mem.length?[]:mem.map(y=>y.id)})},(t.caught||[]).length===mem.length?"None":"All"));
       row.append(ticks); }
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>edit(t.n,z=>{z.note=note.value})); row.append(note);
+    row.append(h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(a.id,t.n,()=>renderSeqView())},"✕"));
     takes.append(row);
   }
   const notes=h("section",{},h("h3",{},"Sequence notes"));

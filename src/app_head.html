@@ -685,6 +685,9 @@ table.plain input[type=checkbox]{width:auto}
 .updatebar.show{display:flex}
 .form label.inline{flex-direction:row;align-items:center;gap:.5rem;color:var(--ink)}
 .form label.inline input{width:auto}
+.toast.act.show{pointer-events:auto} .toastbtn{margin-left:.6rem;border:1px solid currentColor;background:none;color:inherit;border-radius:5px;padding:.15rem .6rem;font:inherit;font-weight:700;cursor:pointer}
+.takelab{cursor:text;border-radius:4px;padding:0 .15rem} .takelab:hover{background:var(--panel2)} .takelab small{font-weight:400;color:var(--muted);margin-left:.3rem}
+.takeedit{display:inline-flex;gap:.3rem;align-items:center;flex-wrap:wrap} .takeedit input{font:inherit;padding:.15rem .35rem;border:1.5px solid var(--accent,#2f6fb0);border-radius:5px;background:var(--field,var(--bg));color:var(--ink)}
 .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.55rem 1.1rem;border-radius:6px;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
 .toast.show{opacity:1}
 

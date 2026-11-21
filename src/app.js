@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.30.0";
+const VERSION = "2.30.1";
 const CHANGELOG = [
-  ["2.30.0","2026-11-20","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
+  ["2.30.1","2026-11-21","Removing a take shows Undo straight away (and Ctrl/Cmd+Z now redraws Note View, Sequence View and the slate, so an undone take reappears). Sequence View can remove takes too. Double-click a take's number to renumber it (e.g. to match the slate; the next take follows on) or give it its own clip name, used in the takes export."],
+  ["2.30.0","","Sequences have their own reference videos in Sequence View (Google Drive and the rest, as in Note View); shots with their own videos are marked. Drag a break, lunch or shot onto a sequence's header row (folded or not) to put it above or below the sequence, and drag the header's ⠿ to move the whole sequence. A break or shot left between a sequence's shots is flagged on its header row, with move after / move before. Click a sequence's time on its header row to type a start time; the whole sequence moves there."],
   ["2.29.2","","Double-click a sequence's name (header row, Sequence column or Sequence View) to rename it. Each shot's ▾ in the Sequence column moves it to another sequence, takes it out, or starts a new sequence with it; + puts a shot into one."],
   ["2.29.1","","Show: Hide cut shots. Not yet shot now leaves cut shots out too."],
   ["2.29.0","","Sequences in the table get a header row: fold a sequence into it (▾, or fold all), see its times, takes and what's caught, and time it as one (a single setup and shoot for the whole sequence; each shot's own times are kept for switching back). Duplicate a sequence (same shots, no takes) from its row or Sequence View. File > Running order: a one-page running order for the day, one line per sequence, to print, save as PDF, copy or download as CSV."],
@@ -71,7 +72,10 @@ function fmt(m){m=Math.round(m);const d=Math.floor(m/1440);let s;if(P.clock==="1
 function dur(m){m=Math.round(m);const s=m<0?"-":"";m=Math.abs(m);const hh=Math.floor(m/60),mm=m%60;return s+(hh?hh+"h"+(mm?" "+String(mm).padStart(2,"0")+"m":""):mm+"m")}
 function uid(p="r"){return p+Date.now().toString(36).slice(-4)+Math.random().toString(36).slice(2,7)}
 function clone(o){return JSON.parse(JSON.stringify(o))}
-function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2600)}
+// toast(msg) shows a note; toast(msg,{label,fn}) adds a button (e.g. Undo) and stays a little longer
+function toast(msg,action){const t=$("#toast");t.textContent=msg;t.classList.toggle("act",!!action);
+  if(action){const b=h("button",{class:"toastbtn",onclick:e=>{e.stopPropagation();t.classList.remove("show");action.fn()}},action.label);t.append(" ",b)}
+  t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),action?7000:2600)}
 function autosize(el){el.style.height="auto";el.style.height=(el.scrollHeight+2)+"px"}
 function download(name,data,type){const b=new Blob([data],{type});const a=h("a",{href:URL.createObjectURL(b),download:name});document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
@@ -281,13 +285,15 @@ function undo(){
   commit();
   const ops=undoStack.pop(); if(!ops) return;
   enqueue(ops.map(o=>({e:o.e,id:o.id,set:o.prev})));
-  redoStack.push(ops); rebuild(true); updUndo(); toast("Undone");
+  redoStack.push(ops); rebuild(true); updUndo(); refreshViews(); toast("Undone");
 }
 function redo(){
   commit();
   const ops=redoStack.pop(); if(!ops) return;
-  enqueue(ops); undoStack.push(ops); rebuild(true); updUndo();
+  enqueue(ops); undoStack.push(ops); rebuild(true); updUndo(); refreshViews();
 }
+// Slate, Note and Sequence View redraw after an undo or redo, so what they show is what happened
+function refreshViews(){ if($("#noteView").classList.contains("open")) renderNotes(); if($("#seqView").classList.contains("open")) renderSeqView(); if($("#slateView").classList.contains("open")) renderSlate(); }
 function updUndo(){ $("#undoBtn").disabled=!undoStack.length; $("#redoBtn").disabled=!redoStack.length; }
 
 /* ===================== team networking ===================== */
@@ -672,7 +678,8 @@ function sameKey(r){ return String(r.shot||"").trim().toLowerCase()+"|"+String(r
 function takeBase(r,d){ d=d||D(); let n=0; const k=sameKey(r); if(k==="|") return 0;
   for(const x of d.rows){ if(x.id===r.id) break; if(!isBlock(x)&&sameKey(x)===k) n+=Number(x.takes)||0; } return n; }
 function lastTake(r,d){ return takeBase(r,d)+(Number(r.takes)||0); }
-function nextTake(r,d){ return lastTake(r,d)+1; }
+// the next take follows the count, or a take renumbered higher (to match the slate)
+function nextTake(r,d){ return Math.max(lastTake(r,d),...takeList(r).map(t=>Number(t.n)||0))+1; }
 
 /* ===================== schedule maths ===================== */
 // breaks and tech / turnaround time are blocks: they take time but aren't shots
@@ -1933,9 +1940,9 @@ function renderNotes(){
     const marks=h("span",{class:"nvmarks"});
     for(const [m,l] of [["good","Good"],["ng","NG"],["hero","Hero ★"],["safety","Safety"]]) marks.append(h("button",{class:"mk mk-"+m+(t.mark===m?" on":""),onclick:()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.mark=it.mark===m?"":m;setTakeList(x,a);syncMarks(x);commit();renderNotes()}}},l));
     const note=h("input",{value:t.note||"",placeholder:"note"}); note.addEventListener("change",()=>{const x=R(r.id);const a=takeList(x);const it=a.find(z=>z.n===t.n);if(it){it.note=note.value;setTakeList(x,a);commit()}});
-    takes.append(h("div",{class:"nvtake"+(!t.out&&t.at&&Date.now()-t.at<4*3600e3&&t===list[0]?" live":"")},h("b",{},"T"+t.n),
+    takes.append(h("div",{class:"nvtake"+(!t.out&&t.at&&Date.now()-t.at<4*3600e3&&t===list[0]?" live":"")},takeLabel(r.id,t,()=>renderNotes()),
       h("span",{class:"mono note nvtc"},t.tc?"in "+t.tc:"",t.out?h("span",{}," → out "+t.out):(t===list[0]&&rollingTake(r)?h("span",{class:"rollingdot"}," ● rolling"):""),t.len?" · "+t.len:""),marks,note,
-      h("button",{class:"nvdel",title:"Remove this take",onclick:async()=>{if(!(await ask("Remove take "+t.n+"?","It comes off the shot's take count and log.","Remove")))return;const x=R(r.id);setTakeList(x,takeList(x).filter(z=>z.n!==t.n));x.takes=Math.max(0,(Number(x.takes)||0)-1);syncMarks(x);commit();renderNotes()}},"✕")));
+      h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(r.id,t.n,()=>renderNotes())},"✕")));
   }
   // notes, saved straight onto the shot for the whole team
   const notes=h("div",{class:"nvnotes"});
