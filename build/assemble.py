@@ -58,7 +58,7 @@ if fonts.exists():
     if dst.exists(): shutil.rmtree(dst)
     shutil.copytree(fonts, dst)
 (repo / "shared").mkdir(exist_ok=True)
-exports = "DAY_FIELDS, ROW_FIELDS, PERSON_FIELDS, COL_FIELDS, isCustomKey, PROJECT_FIELDS, CFG_DEFAULTS, SEED_STAMP, pad13, opStamp, stampTime, emptyModel, applyOp, foldBatch, mergeModels, cloneModel, seedModel, materialize, assignPositions, diffDocs"
+exports = "DAY_FIELDS, ROW_FIELDS, PERSON_FIELDS, COL_FIELDS, CUT_FIELDS, CLIP_FIELDS, isCustomKey, PROJECT_FIELDS, CFG_DEFAULTS, SEED_STAMP, pad13, opStamp, stampTime, emptyModel, applyOp, foldBatch, mergeModels, cloneModel, seedModel, materialize, assignPositions, diffDocs"
 (repo / "shared" / "model-core.mjs").write_text("// Generated from src/model_core.js by build/assemble.py - edit the source, not this file.\n" + core + f"\nexport {{ {exports} }};\n")
 # No project data goes into the repo: every site starts empty and its data lives only in that site's own Blobs store.
 # (The seed is only used for the standalone file.)

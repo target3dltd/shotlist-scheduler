@@ -1,7 +1,9 @@
 "use strict";
-const VERSION = "2.41.3";
+const VERSION = "2.43.0";
 const CHANGELOG = [
-  ["2.41.3","2026-11-21","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
+  ["2.43.0","2026-11-22","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
+  ["2.42.0","","Admins can delete archived days: Delete next to each one in the Archived list (or Delete all), with a confirmation that says how many shots and takes go with it, and Undo straight after. Shown only with the site's admin key saved on the device (or for a project kept only in this browser)."],
+  ["2.41.3","","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
   ["2.41.2","","Call sheet: Find nearest A&E, police, fire is more reliable. It tries several OpenStreetMap servers in turn when one is busy, waits longer, says what's happening next to the button, and no longer sits greyed out without a location: it uses a postcode from the address, or opens Set location."],
   ["2.41.1","","The day banner's Status is now Day status, so it isn't mixed up with a shot's Status. Hide cut shots is its own tick box next to Show (Show is All rows or Not yet shot)."],
   ["2.41.0","","Reset: go again without cutting. While a take rolls, ↺ Reset (or E) in Slate View, Sequence View and Details marks R1, R2... with their timecode on the take. Each reset shows under the take; click one to mark it Hero, Good, NG or Safety (a hero reset fills the Hero column as T3 R4). Resets go in Export takes, and in the Edit tool a reset comes in at its own timecode (Swap in latest takes picks up hero resets). + Take in Details and Sequence View (and T) now only adds a take you forgot to roll on: the next take number, no timecode, nothing rolling. ● Roll is still how you start one."],
@@ -330,10 +332,10 @@ async function api(path,body,opts={}){
 function scheduleFlush(ms){clearTimeout(flushTimer);flushTimer=setTimeout(flush,ms)}
 async function flush(){
   if(MODE!=="team"||flushing||!pending.length) return;
-  flushing=true; updateStatus();
+  flushing=true; updateStatus(); let curP=null;
   try{
     while(pending.length){
-      const p=pending[0];
+      const p=pending[0]; curP=p;
       const r=await api("/api/ops",{cid:P.cid,bid:p.bid,by:P.name||"Someone",ops:p.ops});
       foldBatch(base,{k:r.k,ops:p.ops});
       seenKeys.set(r.k,Date.now()); if(r.k>cursor) cursor=r.k;
@@ -345,6 +347,8 @@ async function flush(){
   }catch(e){
     netErr=e.message; if(e.status===401) return needKey(e.message);
     if(e.status===403&&e.code==="project-key") return projectLocked(pid());
+    // the server turned this change down for good (deleting an archived day without the admin key): drop it, the day comes back
+    if(e.status===403&&e.code==="admin-only"&&curP){ pending=pending.filter(x=>x.bid!==curP.bid); persistLocalState(); netErr=""; toast(e.message); setTimeout(()=>{rebuild(true);if($("#archModal").classList.contains("open"))renderArchived()},0); if(pending.length) scheduleFlush(300); return; }
     backoff=Math.min(30000,(backoff||1000)*2); scheduleFlush(backoff);
   }finally{flushing=false; updateStatus();}
   rebuild(false);
@@ -601,7 +605,7 @@ function blankSeed(name,from){
   const c=cfg||{}; const d={id:uid("d"),name:"Day 1",kind:"schedule",dayNo:1,date:"",call:c.newCall||"09:00",wrap:c.newWrap||"18:00",setupPct:c.newSetupPct||100,shootPct:c.newShootPct||100,minSetup:c.newMinSetup||0,origWrap:null,rows:[]};
   return {project,people,cols:from?clone(from.cols||[]):[],cfg,days:[d]};
 }
-function docToSeed(doc){return {project:clone(doc.project),people:clone(doc.people),cols:clone(doc.cols||[]),cfg:clone(doc.cfg),days:clone(doc.days)}}
+function docToSeed(doc){return {project:clone(doc.project),people:clone(doc.people),cols:clone(doc.cols||[]),cfg:clone(doc.cfg),days:clone(doc.days),cuts:clone(doc.cuts||[])}}
 async function createProject(name,seed){
   if(MODE==="team"){const r=await api("/api/projects",{name,seed},{noProject:true});if(r.key){KEYS[r.id]=r.key;saveKeys()}await loadProjects();return r.id}
   const id=(name||"project").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,24)+"-"+Math.random().toString(36).slice(2,6);
@@ -1139,7 +1143,7 @@ function renderStats(C){
   const hid=statHiddenEff(); $$(".stat",st).forEach(c=>{if(hid.includes(c.dataset.k))c.remove()});
   if(P.focus||dayClock(d)!=null) st.append(h("button",{class:"focusbtn noprint"+(P.focus?" on":""),type:"button","aria-pressed":String(!!P.focus),title:P.focus?"Shoot-day focus is on: planning cards, hints, the planned timeline and planning columns are tucked away. Click to show everything.":"Shoot-day focus: tuck away planning-only cards, hints, the planned timeline and planning columns",onclick:()=>toggleFocus()},P.focus?"◉ Focus":"○ Focus"));
   st.append(h("button",{class:"statcfg noprint",type:"button",title:"Choose which cards show here, and layouts","aria-label":"Choose summary cards and layout",onclick:e=>{e.stopPropagation();statCardMenu(e.currentTarget)}},"⋯"));
-  w.style.display=hintsOn()?"":"none";
+  w.style.display=hintsOn()?"":"none"; document.body.classList.toggle("focusmode",!!P.focus);
   updateMiniBar(d,C,L);
   if(C.shootT>0&&!d.rows.some(r=>isBlock(r)&&/lunch/i.test(r.label||""))) w.append(h("span",{class:"pill"},"No lunch break scheduled - use + Add break / move"));
   if(dayStatus(d)==="wrapped"){const miss=linkNeeds(d).filter(n=>!isUrl(n.r[n.k])).length;if(miss)w.append(h("span",{class:"pill",style:"cursor:pointer",onclick:()=>{P.linksOpen=true;renderLinks();$("#links").scrollIntoView({behavior:"smooth",block:"center"})}},`${miss} hero / safety link${miss>1?"s":""} still needed`))}
@@ -1551,11 +1555,25 @@ function fitTabs(){
 }
 window.addEventListener("resize",()=>{clearTimeout(fitTabs._t);fitTabs._t=setTimeout(()=>{fitTabs();if(S&&D()){const C=compute();renderTimeline(C);renderPanels(C)}},120)});
 function openArchived(){renderArchived();$("#archModal").classList.add("open")}
+// deleting archived days: admins only (the site's admin key on this device), or anyone when the project is only in this browser
+function canDeleteDays(){ return MODE!=="team"||IS_ADMIN; }
+async function deleteDays(ids){
+  const days=S.days.filter(d=>ids.includes(d.id)&&d.archived); if(!days.length||!canDeleteDays()) return;
+  const takes=days.reduce((t,d)=>t+d.rows.reduce((u,r)=>u+takeList(r).length,0),0), shots=days.reduce((t,d)=>t+d.rows.filter(r=>!isBlock(r)).length,0);
+  const what=days.length===1?`"${days[0].name||"Day"}"`:`${days.length} archived days`;
+  if(!(await ask("Delete "+what+"?",`${days.length===1?"It":"They"} will be removed for everyone, with ${shots} shot${shots===1?"":"s"}${takes?` and ${takes} logged take${takes===1?"":"s"}`:""}. Undo straight after brings ${days.length===1?"it":"them"} back; after that it's gone from the app. Export the takes first if you need them.`,"Delete"))) return;
+  S.days=S.days.filter(d=>!days.includes(d)); commit(); renderAll(); renderArchived();
+  toast(`Deleted ${what}`,{label:"Undo",fn:()=>{undo();renderArchived()}});
+}
 function renderArchived(){
   const l=$("#archList"); l.innerHTML=""; const arch=S.days.filter(d=>d.archived);
   if(!arch.length){l.append(h("p",{class:"note"},"Nothing archived."));return}
+  const del=canDeleteDays();
   for(const d of arch) l.append(h("div",{class:"toolbar"},h("span",{},h("b",{},d.name||"Day")," ",h("span",{class:"note"},`${d.date||"no date"} · ${d.rows.filter(r=>!isBlock(r)).length} setups`)),
+    del?h("button",{class:"btn small danger",title:"Delete this day for everyone (admin)",onclick:()=>deleteDays([d.id])},"Delete"):null,
     h("button",{class:"btn small primary",onclick:()=>{d.archived=null;P.activeByProject[pid()]=d.id;commit();savePrefs();renderAll();renderArchived();if(!S.days.some(x=>x.archived))$("#archModal").classList.remove("open");toast("Restored "+d.name)}},"Restore")));
+  if(del&&arch.length>1) l.append(h("div",{class:"toolbar",style:"margin-top:.6rem;border-top:1px solid var(--line);padding-top:.6rem"},h("button",{class:"btn small danger",onclick:()=>deleteDays(arch.map(d=>d.id))},`Delete all ${arch.length} archived days`)));
+  if(!del) l.append(h("p",{class:"note",style:"margin-top:.6rem"},PROJECT_KEYS?"Only the admin can delete archived days (with the site's admin key saved in Settings > Projects).":"Deleting archived days is for the site admin. Set an ADMIN_KEY on the site and save it in Settings > Projects to turn it on."));
 }
 function renderSettingsRow(){
   const d=D(); $("#dayControls").style.display=d?"":"none"; if(!d) return;
@@ -1904,6 +1922,7 @@ function renderSlate0(){
     h("button",{title:"Mark this shot (or the whole sequence) done and go to the next",onclick:()=>{const x=R(SLV.id);if(x){for(const m of (x.seq?seqMembers(x):[x])){m.done=true;m.doneAt=dayClock(D())}commit();renderBody()}const n=seqAnchor(upNext());SLV.id=n&&n.id;renderSlate()}},"Shot done ✓"),
     h("button",{title:"Next shot",onclick:()=>slateStep(1)},"›"),
     h("span",{class:"slgrow"}),
+    viewSwitch(),
     h("button",{title:"Slate settings and timecode",onclick:()=>slateSettings()},"⚙"),
     document.fullscreenEnabled?h("button",{title:"Full screen",onclick:()=>{document.fullscreenElement?document.exitFullscreen():v.requestFullscreen().catch(()=>{})}},"⛶"):null,
     h("button",{title:"Close",onclick:closeSlate},"✕"));
@@ -1919,7 +1938,9 @@ function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m
 // the clap flash: the whole slate inverted for at least 3 frames (and never under 120 ms). Not an animation,
 // so "reduce motion" (in Display settings or on the device) doesn't switch it off: it's the picture sync point
 function slateFlash(){ const v=$("#slateView"); if(!v) return; clearTimeout(SLV.flashT);
-  v.classList.add("flashon"); const hold=Math.max(120,3000/(slateFps()||25)); SLV.flashT=setTimeout(()=>v.classList.remove("flashon"),hold); }
+  v.classList.add("flashon"); const hold=Math.max(120,3000/(slateFps()||25));
+  // time the hold from when the flash is actually on screen, so busy moments can't shorten it
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ clearTimeout(SLV.flashT); SLV.flashT=setTimeout(()=>v.classList.remove("flashon"),Math.max(60,hold-16)); })); }
 function clap(){
   const c=slateCfg();
   // log first: the redraw would otherwise wipe the flash before it showed
@@ -1929,6 +1950,7 @@ function clap(){
   let lag=0; try{ const ctx=sfx(); if((c.sound||"clap")!=="none"&&Number(c.volume)!==0) lag=((ctx.outputLatency||0)+(ctx.baseLatency||0)+0.005)*1000; }catch(e){}
   const go=()=>{ if(c.flash!==false) slateFlash(); };
   lag>4?setTimeout(go,Math.min(lag,400)):go();
+  if(SLV.id) markClap(SLV.id,Math.min(lag,400));
 }
 function slateSettings(){
   const box=$("#slSet"); if(box.classList.toggle("open")===false) return; box.innerHTML=""; const c=slateCfg();
@@ -1987,7 +2009,8 @@ function renderNotes(){
       h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null,r?onNowBtn(r):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{class:"nvreset",title:"Put the panels back in their usual places and sizes",onclick:resetNvLayout,hidden:!nvCustom()},"Reset layout"),
-    h("button",{title:"Close",onclick:closeNotes},"✕"));
+    viewSwitch(),
+    h("button",{title:"Back to the Clipboard (Esc)",onclick:closeNotes},"✕"));
   v.insertBefore(head,body); if(!r){host.innerHTML="";host.dataset.key="";host.className="nvvhost";return}
   // what the shot is
   const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}
@@ -2021,13 +2044,12 @@ function renderNotes(){
       h("button",{class:"nvdel",title:"Remove this take (you can undo it)",onclick:()=>deleteTake(r.id,t.n,()=>renderNotes())},"✕")));
   }
   // notes, saved straight onto the shot for the whole team
+  // the Notes card shows the columns you pick (Columns ▾ in its header), editable here for the whole team
   const notes=h("div",{class:"nvnotes"});
-  for(const [k,l] of [["director","Director notes"],["camera","Camera"],["lighting","Lighting"],["vfx","VFX notes"],["props","Prop / set notes"]]){
-    const t=h("textarea",{rows:"2",placeholder:l}); t.value=r[k]||"";
-    t.addEventListener("input",()=>{const x=R(r.id);if(!x)return;x[k]=t.value;autosize(t);softCommit()}); t.addEventListener("change",commit);
-    notes.append(h("label",{},l,t)); requestAnimationFrame(()=>autosize(t));
-  }
-  for(const [sec,key] of [[h("section",{class:"nvwhat"},pics,info),"what"],[h("section",{class:"nvtk"},h("h3",{},"Takes"),takes),"takes"],[h("section",{class:"nvnt"},h("h3",{},"Notes"),notes),"notes"],[h("section",{class:"nvsc"},h("h3",{},"Scribble"),scribblePad(r)),"scribble"]]){ sec.dataset.card=key; cardControls(sec); body.insertBefore(sec,host); }
+  for(const c of nvFieldCols()) notes.append(nvFieldEditor(r,c));
+  if(!notes.childNodes.length) notes.append(h("p",{class:"note"},"No columns picked: use Columns ▾ to choose what to edit here."));
+  const notesHead=h("h3",{class:"nvnthead"},"Notes",h("button",{class:"nvcolbtn",type:"button",title:"Choose which columns show here",onclick:e=>{e.stopPropagation();nvFieldMenu(e.currentTarget)}},"Columns ▾"));
+  for(const [sec,key] of [[h("section",{class:"nvwhat"},pics,info),"what"],[h("section",{class:"nvtk"},h("h3",{},"Takes"),takes),"takes"],[h("section",{class:"nvnt"},notesHead,notes),"notes"],...(edShotTimings(r.id).length?[[h("section",{class:"nved"},h("h3",{},"Edit"),nvEditCard(r)),"edit"]]:[]),[h("section",{class:"nvsc"},h("h3",{},"Scribble"),scribblePad(r)),"scribble"]]){ sec.dataset.card=key; cardControls(sec); body.insertBefore(sec,host); }
   host.dataset.card="video"; updateVideoHost(r); rememberView("notes",r.id); applyNvLayout();
   v.append(h("p",{class:"keyhint"},"Keys: R roll / cut · E reset · T add a missed take · G N H S mark the last take Good / NG / Hero / Safety · ← → shots · F full screen · Esc close"));
 }
@@ -2069,7 +2091,10 @@ function renderDit(){
       h("button",{class:"btn small",title:"One more take (without copying)",onclick:()=>{const x=R(r.id);x.takes=(Number(x.takes)||0)+1;commit();renderBody();renderDit()}},"+"));
     const go=h("button",{class:"btn small primary",disabled:!name,title:"Log take "+n+" and copy its name",onclick:async()=>{const x=R(r.id);const t=nextTake(x,D());const nm=shotName(x,D(),t);x.takes=t-takeBase(x,D());commit();renderBody();renderDit();const ok=await copyText(nm);addOut(nm);toast((ok?"Copied ":"Couldn't reach the clipboard - select it below: ")+nm)}},"Next take → copy");
     const all=h("button",{class:"btn small",disabled:!name||!(Number(r.takes)>0),title:"Copy every take name so far",onclick:async()=>{const x=R(r.id);const list=[];const b1=takeBase(x,D());for(let t=b1+1;t<=b1+(Number(x.takes)||0);t++)list.push(shotName(x,D(),t));const txt=list.join("\n");await copyText(txt);addOut(txt,true);toast("Copied "+list.length+" names")}},"Copy all");
-    tb.append(h("tr",{},h("td",{},r.shot||"-"),h("td",{class:"name"},name||h("span",{class:"note"},"add an action or shot #")),h("td",{},tk),h("td",{},h("div",{class:"toolbar"},go,all))));
+    // resets marked Hero / Good / Safety: their own names (shot name for the take + _R4), to copy
+    const rsx=takeList(r.seq&&R(r.seq)?seqAnchor(r):r).flatMap(t=>(t.resets||[]).filter(x=>x.mark&&x.mark!=="ng").map(x=>({t,x})));
+    const rsBox=rsx.length?h("div",{class:"ditresets"},...rsx.map(({t,x})=>{const nm=shotName(r,d,t.n)+"_R"+x.n;return h("button",{class:"rchip m-"+x.mark,title:`Copy ${nm} (take ${t.n}, reset R${x.n} at ${x.tc}, ${x.mark})`,onclick:async()=>{const ok=await copyText(nm);toast(ok?"Copied "+nm:nm)}},"T"+t.n+" R"+x.n+" "+(RESET_MARK[x.mark]||""))})):"";
+    tb.append(h("tr",{},h("td",{},r.shot||"-"),h("td",{class:"name"},name||h("span",{class:"note"},"add an action or shot #"),rsBox),h("td",{},tk),h("td",{},h("div",{class:"toolbar"},go,all))));
   }
 }
 function addOut(text,replace){const o=$("#ditOut");o.value=replace?text:(o.value?o.value+"\n":"")+text;o.scrollTop=o.scrollHeight}
@@ -2348,6 +2373,7 @@ async function renderProjectsTab(b){
   b.append(h("h3",{},"Files"));
   b.append(h("p",{class:"note"},"A project file holds everything: details, cast and crew, settings and every day. Use it as a backup, to move a project between browsers, or into the team site. Shotlist Builder project files and older Scheduler files can be imported too."));
   b.append(h("div",{class:"toolbar"},h("button",{class:"btn small",onclick:saveFile},"Export project file"),h("button",{class:"btn small",onclick:()=>{importMode="new";$("#fileInput").value="";$("#fileInput").click()}},"Import as a new project"),h("button",{class:"btn small",onclick:()=>{importMode="replace";$("#fileInput").value="";$("#fileInput").click()}},"Import into this project (replace)")));
+  if(MODE==="team") b.append(backupsBox());
 }
 
 /* ===================== import / export ===================== */
@@ -2402,7 +2428,8 @@ const DAY_BLANK={kind:"schedule",status:"",dayNo:null,date:"",call:"09:00",wrap:
 function normDoc(doc){
   const out={project:Object.assign({name:"",client:"",prodId:"",fps:"",dates:"",location:"",system:"",lead:"",notes:""},doc.project||{}),cfg:Object.assign({},CFG_DEFAULTS,doc.cfg||{}),people:(doc.people||[]).map(p=>Object.assign({id:uid("p"),group:"Crew",name:"",role:"",phone:"",email:"",notes:""},p)),cols:(doc.cols||[]).map(c=>Object.assign({id:uid("k").replace(/[^a-z0-9]/gi,""),label:"Column",type:"text",options:""},c)),days:[]};
   (doc.days||[]).forEach((d,i)=>out.days.push(Object.assign({},DAY_BLANK,d,{id:d.id||uid("d"),name:d.name||("Day "+(i+1)),rows:(d.rows||[]).map(r=>Object.assign({},ROW_BLANK,r,{id:r.id||uid("r")}))})));
-  out.days.forEach(d=>{delete d.pos;d.rows.forEach(r=>delete r.pos)}); out.people.forEach(p=>delete p.pos); out.cols.forEach(c=>delete c.pos);
+  out.cuts=(doc.cuts||[]).map(c=>Object.assign({name:"Cut",audio:"",target:null,notes:""},c,{id:c.id||uid("c"),clips:(c.clips||[]).map(k=>Object.assign({},k,{id:k.id||uid("k")}))}));
+  out.days.forEach(d=>{delete d.pos;d.rows.forEach(r=>delete r.pos)}); out.people.forEach(p=>delete p.pos); out.cols.forEach(c=>delete c.pos); out.cuts.forEach(c=>{delete c.pos;c.clips.forEach(k=>delete k.pos)});
   return out;
 }
 function fromBuilder(j){
@@ -2498,7 +2525,7 @@ function applyDisplay(){
   document.body.classList.toggle("compact",P.density==="compact");
   document.body.classList.toggle("roomy",P.density==="roomy");
   document.body.classList.toggle("zebra",!!P.zebra);
-  document.body.classList.toggle("calm",!!P.calm);
+  document.body.classList.toggle("calm",!!P.calm); document.body.classList.toggle("focusmode",!!P.focus);
   document.body.classList.toggle("nosteps",P.steppers===false);
   { const t=P.colTint||"subtle"; document.body.classList.toggle("colgroups",t!=="off"); const k=dark?1.35:1; root.style.setProperty("--gb",(t==="strong"?9:5)*k+"%"); root.style.setProperty("--gh",(t==="strong"?22:14)*k+"%"); }
   const tl=P.tl||{}; [["setup","--setup"],["shoot","--shoot"],["break","--break"],["tech","--tech"],["wrap","--wrapc"]].forEach(([k,v])=>{if(tl[k])root.style.setProperty(v,tl[k]);else root.style.removeProperty(v)});
@@ -2596,7 +2623,7 @@ $("#bandToggle").onclick=()=>{const c=$("#dayControls");const o=c.classList.togg
 // iPhone / iPad zoom into small inputs on tap; stop that without blocking pinch-zoom (iOS still allows pinch)
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){const m=document.querySelector("meta[name=viewport]");if(m)m.content="width=device-width, initial-scale=1, maximum-scale=1"}
 $("#shareBtn").onclick=openShare;
-$("#slateBtn").onclick=openSlate; $("#notesBtn").onclick=openNotes; $("#editBtn").onclick=openEdit;
+$("#slateBtn").onclick=()=>goView("slate"); $("#notesBtn").onclick=()=>goView("details"); $("#editBtn").onclick=()=>goView("edit"); $("#clipBtn").onclick=()=>goView("clip");
 document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("input,textarea,select"))return;
   // browser and system shortcuts (Ctrl/Cmd+R reload, Cmd+F find, Alt+…) are left alone
   if(e.ctrlKey||e.metaKey||e.altKey) return;

@@ -48,7 +48,7 @@ async function canOpen(st, req, pid, given){
 }
 const noKey = () => json({ error: "This project needs its project key.", code: "project-key" }, 403);
 
-export const config = { path: ["/api/ping", "/api/projects", "/api/sync", "/api/ops", "/api/image", "/api/seed", "/api/activity", "/api/feedback"] };
+export const config = { path: ["/api/ping", "/api/projects", "/api/sync", "/api/ops", "/api/image", "/api/seed", "/api/activity", "/api/feedback", "/api/backups"] };
 
 const WINDOW_MS = 30_000;        // re-offer batches this recent, to cover saves still in flight
 const COMPACT_AT = 250;          // fold old batches into the snapshot once there are this many
@@ -99,7 +99,7 @@ async function getSnapshot(st, pid){
 }
 function validOps(ops){
   if (!Array.isArray(ops) || ops.length === 0 || ops.length > 3000) return false;
-  return ops.every(o => o && ["doc", "day", "row", "person", "col"].includes(o.e) && typeof o.id === "string" && o.id.length <= 80
+  return ops.every(o => o && ["doc", "day", "row", "person", "col", "cut", "clip"].includes(o.e) && typeof o.id === "string" && o.id.length <= 80
     && o.set && typeof o.set === "object" && !Array.isArray(o.set));
 }
 // an image may only be read through the project it belongs to
@@ -114,6 +114,35 @@ async function imageBelongs(st, pid, id, meta){
   if (!found){ for (const k of await listKeys(st, `p/${pid}/ops/`)){ const t = await st.get(k, { type: "text" }); if (t && t.includes(needle)){ found = true; break; } } }
   if (found) await st.setJSON("imgown/" + id, { pid }, { onlyIfNew: true });
   return found;
+}
+/* Daily backups: before the first change of each day (UTC), the whole project as it stood is kept at
+   p/<pid>/backups/<YYYY-MM-DD>. The last 30 are kept. Anyone who can open the project can list and download them;
+   restoring happens in the app as ordinary changes, so it syncs to everyone and Undo works. */
+const BACKUP_KEEP = 30;
+const BK_DONE = globalThis.__BK_DONE__ ||= new Map();
+async function currentModel(st, pid){
+  const got = await getSnapshot(st, pid); if (!got) return null;
+  const model = M.cloneModel(got.snap.model);
+  const keys = await listKeys(st, `p/${pid}/ops/`);
+  const batches = (await Promise.all(keys.map(k => st.get(k, { type: "json" })))).filter(Boolean);
+  batches.sort((a, b) => (a.k < b.k ? -1 : 1)).forEach(b => M.foldBatch(model, b));
+  return model;
+}
+async function maybeBackup(st, pid){
+  const day = new Date().toISOString().slice(0, 10);
+  if (BK_DONE.get(pid) === day) return;
+  const key = `p/${pid}/backups/${day}`;
+  if (await st.get(key, { type: "text" })){ BK_DONE.set(pid, day); return; }
+  const model = await currentModel(st, pid); if (!model) return;
+  await st.setJSON(key, { day, at: Date.now(), model }, { onlyIfNew: true });
+  BK_DONE.set(pid, day);
+  const all = await listKeys(st, `p/${pid}/backups/`);
+  if (all.length > BACKUP_KEEP) await Promise.all(all.slice(0, all.length - BACKUP_KEEP).map(k => st.delete(k)));
+}
+// is this day archived right now? (for the delete lock)
+async function dayArchived(st, pid, dayId){
+  const model = await currentModel(st, pid); if (!model) return false;
+  const e = (model.day || {})[dayId]; return !!(e && e.archived && e.archived.v);
 }
 async function compact(st, pid, snap, etag, keys){
   const cutoff = M.pad13(Date.now() - COMPACT_AGE_MS);
@@ -310,6 +339,12 @@ export default async (req, context) => {
       const prior = await st.get(ackKey, { type: "json" });
       if (prior && prior.k) return json({ k: prior.k, duplicate: true });   // a retry of a save we already have
       const ops = body.ops.map(o => ({ e: o.e, id: o.id, set: o.set }));
+      // deleting an archived day is for the admin only (deleting a day that isn't archived, e.g. undoing Copy day, is fine)
+      if (locked() && !isAdmin(req)){
+        for (const o of ops) if (o.e === "day" && o.set && o.set._del === true && await dayArchived(st, pid, o.id))
+          return json({ error: "Only the admin can delete archived days.", code: "admin-only" }, 403);
+      }
+      try { await maybeBackup(st, pid); } catch (e) { /* a backup problem never blocks a save */ }
       for (let attempt = 0; attempt < 3; attempt++){
         const k = newKey();
         const res = await st.setJSON(`p/${pid}/ops/${k}`, { k, cid, bid, by: String(body.by || "").slice(0, 40), at: Date.now(), ops }, { onlyIfNew: true });
@@ -321,6 +356,12 @@ export default async (req, context) => {
       return json({ error: "Couldn't save, please retry" }, 503);
     }
 
+    if (path === "/api/backups"){
+      const day = String(url.searchParams.get("day") || "").replace(/[^0-9-]/g, "").slice(0, 10);
+      if (day){ const b = await st.get(`p/${pid}/backups/${day}`, { type: "json" }); return b ? json(b) : json({ error: "No backup for that day." }, 404); }
+      const keys = await listKeys(st, `p/${pid}/backups/`);
+      return json({ backups: keys.map(k => k.split("/").pop()).reverse() });
+    }
     if (path === "/api/activity"){
       const keys = await listKeys(st, `p/${pid}/ops/`);
       const batches = (await Promise.all(keys.slice(-80).map(k => st.get(k, { type: "json" })))).filter(Boolean);

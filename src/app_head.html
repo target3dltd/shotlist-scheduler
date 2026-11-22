@@ -437,13 +437,16 @@ body.calm .timeline.actual .seg.live{animation:none}
 /* Shot # in the table: ↗ opens the shot in Details */
 /* resets: R1, R2... within a take */
 .nvresets{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;flex-basis:100%;margin-top:.15rem}
+.seqpickhd{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.5rem 0 .2rem;padding-top:.3rem;border-top:1px solid var(--line)} .seqpickhd:first-child{border-top:none;margin-top:0}
+.ditresets{display:flex;flex-wrap:wrap;gap:.2rem;margin-top:.2rem} .clapat{font-family:ui-monospace,Menlo,monospace;margin-right:.4rem}
+.pvtotal td{border-top:2px solid var(--line2)} .pvbreak td{color:var(--muted)}
 .rchip{border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:999px;padding:.1rem .5rem;font:inherit;font-size:.8rem;cursor:pointer}
 .rchip .mono{font-size:.75rem;color:var(--muted)} .rchip.m-hero{border-color:#c9a227;background:color-mix(in srgb,#c9a227 18%,var(--panel2))} .rchip.m-good{border-color:var(--ok)} .rchip.m-ng{opacity:.6;text-decoration:line-through}
 .rchip.m-safety{border-color:var(--accent)} .rchip .rmk{font-weight:700}
 .btn.resetb:not(:disabled){border-color:#d0882a;color:#b86f12} .slate .resetb{border-color:#d0882a!important}
 .field.fieldchk{justify-content:flex-end} .field.fieldchk label.inline{display:inline-flex;flex-direction:row;align-items:center;gap:.35rem;cursor:pointer;white-space:nowrap;min-height:2rem;color:var(--ink)}
 td.hasgo{position:relative} td.hasgo .shotno{padding-right:1.3rem}
-.togo{position:absolute;right:.15rem;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.15rem .25rem;border-radius:4px;opacity:.45}
+.togo{position:absolute;right:.15rem;top:.55rem;border:none;background:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.15rem .25rem;border-radius:4px;opacity:.45}
 tr:hover .togo,.togo:focus-visible{opacity:1} .togo:hover{color:var(--accent);background:var(--panel2)}
 @media (pointer:coarse){.togo{opacity:.8}}
 @media print{.togo{display:none}}
@@ -479,6 +482,29 @@ tr:hover .togo,.togo:focus-visible{opacity:1} .togo:hover{color:var(--accent);ba
 .edinsphead{display:flex;flex-direction:column;gap:.15rem;margin-bottom:.5rem}
 .edfield{display:flex;flex-direction:column;gap:.2rem;margin:.35rem 0;font-size:.85rem} .edfield>span{color:var(--muted);font-size:.78rem}
 .edfield input[type=number]{width:6rem} .edrow{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap}
+.nvnthead{display:flex;align-items:center} .nvcolbtn{margin-left:auto;margin-right:1.4rem;border:1px solid var(--line2);background:none;color:var(--muted);font:inherit;font-size:.75rem;text-transform:none;letter-spacing:0;border-radius:6px;padding:.1rem .45rem;cursor:pointer} .nvcolbtn:hover{color:var(--ink)}
+.nvnotes label.nvflag{flex-direction:row;align-items:center;gap:.3rem} .nvnotes select,.nvnotes input[type=number]{max-width:12rem}
+.nvedit{display:flex;flex-direction:column;gap:.6rem} .nveditrow{display:flex;flex-direction:column;gap:.15rem;padding-bottom:.5rem;border-bottom:1px solid var(--line)} .nveditrow:last-child{border-bottom:none}
+.nveditrun b{font-size:1.4rem} .nveditrow .btn{align-self:flex-start;margin-top:.2rem}
+/* Edit: inputs match the rest of the app */
+#editView input[type=text],#editView input[type=url],#editView input[type=number],#editView select,#editView textarea,.nvnotes select,.nvnotes input[type=number]{border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;color:var(--ink);font:inherit;font-size:.9rem;min-width:0}
+#editView input:focus,#editView select:focus,#editView textarea:focus{outline:none;border-color:var(--accent)}
+.edtop .edcutsel{max-width:14rem}
+.edmain>*{min-width:0} .edbinhead{flex-wrap:wrap} .edaudio{flex-wrap:wrap} .edaudio input[type=url]{min-width:10rem}
+@media (max-width:760px){
+  .edwide{display:none!important} .edtlbar .note:first-child{display:none}
+  .edtop{gap:.35rem;padding:.4rem .5rem} .edtop .vswitch{order:10;flex-basis:100%;justify-content:space-between} .edtop .vswitch .vsw{flex:1;justify-content:center}
+  .edrt{font-size:.75rem}
+}
+/* phones: the view switcher gets its own full-width row, four equal parts */
+@media (max-width:640px){
+  .titlebar .vswitch{order:20;flex-basis:100%;margin:.35rem 0 0!important;padding-left:2px!important;border-left:1px solid var(--line2)!important} .titlebar .vswitch .vsw{flex:1;justify-content:center;padding:.38rem .2rem;font-size:.82rem}
+  .titlebar .vswitch .clapicon{display:none}
+  .viewer .nvhead{flex-wrap:wrap} .viewer .nvhead .vswitch{order:20;flex-basis:100%;margin:.35rem 0 0} .viewer .nvhead .vswitch .vsw{flex:1;justify-content:center}
+  .slnav .vswitch{flex-basis:100%;order:20;margin:.3rem 0 0} .slnav .vswitch .vsw{flex:1;justify-content:center}
+}
+.edtgt{display:inline-flex;align-items:center;gap:.3rem} .edtarget{width:4.2rem;font-variant-numeric:tabular-nums}
+.edtgtdiff{font-size:.82rem;font-weight:600} .edtgtdiff.over{color:var(--bad)} .edtgtdiff.under{color:var(--muted)} .edtgtdiff.on{color:var(--ok)}
 .edtl{border-top:1px solid var(--line);padding:.3rem .8rem .6rem;flex:none}
 .edtlbar{display:flex;align-items:center;gap:.5rem;font-size:.8rem} .edtlbar input[type=range]{width:9rem}
 .edscroll{overflow-x:auto;overflow-y:hidden;padding-bottom:.3rem}
@@ -545,6 +571,16 @@ tr.break:not(.tech) .kindtag{border-color:var(--break);color:color-mix(in srgb,v
 body.viewopen{overflow:hidden}
 /* Slate and Notes stand out at the end of the header */
 .onsetgroup{display:inline-flex;gap:.35rem;margin-left:.35rem;padding-left:.6rem;border-left:1px solid var(--line2)}
+/* the four ways into the data: Clipboard, Slate, Details, Edit */
+.vswitch{display:inline-flex;gap:0;padding:2px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2);border-left:1px solid var(--line2)!important;padding-left:2px!important}
+.vsw{--vc:var(--accent);display:inline-flex;align-items:center;gap:.3rem;border:none;background:none;color:var(--ink);font:inherit;font-size:.86rem;font-weight:600;padding:.32rem .75rem;border-radius:8px;cursor:pointer;white-space:nowrap}
+.vsw:hover{background:color-mix(in srgb,var(--vc) 12%,transparent)}
+.vsw.on{background:var(--vc);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.vsw-clip{--vc:#5b6573} .vsw-slate{--vc:#e2563d} .vsw-details{--vc:#2f6fb0} .vsw-edit{--vc:#7a4fc0}
+.vsw:not(.on) .clapicon{filter:grayscale(1) brightness(.6)}
+.vsw:focus-visible{outline:2px solid var(--vc);outline-offset:1px}
+.viewer .vswitch{margin:0 .4rem} .viewer .vsw{font-size:.8rem;padding:.25rem .6rem}
+.slate .vswitch{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)} .slate .vsw:not(.on){color:inherit}
 .btn.onset{font-weight:700;letter-spacing:.01em;border-width:2px;box-shadow:0 1px 0 rgba(0,0,0,.08),0 2px 8px -2px color-mix(in srgb,var(--obg) 55%,transparent);transition:transform .08s ease,box-shadow .12s ease}
 .btn.onset.slate{--obg:#e2563d;background:#e2563d;border-color:#c4432c;color:#fff}
 .btn.onset.notes{--obg:#2f6fb0;background:#2f6fb0;border-color:#245a90;color:#fff}
@@ -724,7 +760,7 @@ header.top .toolbar{align-items:center;gap:.5rem}
 @media (max-width:600px){
   header.top .toolbar{flex-wrap:nowrap;gap:.35rem;width:100%}
   .tgroup+.tgroup,.tgroup+.onsetgroup{padding-left:0;border-left:none}
-  #colBtn,#docMenu,#editBtn,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
+  #colBtn,#docMenu,#themeBtn,#shareBtn,#setBtn,#helpBtn{display:none}
   .fl-desk{display:none} .fl-phone{display:inline}
   .pop.menu .mi.phoneonly{display:flex} .pop.menu hr.phoneonly{display:block}
   .onsetgroup{margin-left:auto}
@@ -836,6 +872,10 @@ table.plain input[type=checkbox]{width:auto}
 
 /* ===== tablets and phones ===== */
 #moreBtn,#bandToggle{display:none}
+/* Shoot-day focus also folds the day settings to one line (Show, Priority, Hide cut stay); the toggle opens them */
+body.focusmode #bandToggle{display:inline-flex;align-items:center;gap:.4rem;flex-basis:100%;justify-content:space-between;border:none;background:none;padding:0;color:var(--ink);font-weight:600;cursor:pointer;text-align:left}
+body.focusmode #bandToggle small{font-weight:400;color:var(--muted)}
+body.focusmode #dayControls:not(.open) .field:not(.keep),body.focusmode #dayControls:not(.open) .daybtns{display:none}
 .pv{display:none}
 body.nosteps .mins.timing button{display:none}
 body.nosteps .mins.timing input{width:4.5em}
@@ -943,7 +983,6 @@ body.nosteps .mins.timing input{width:4.5em}
       </span>
       <span class="tgroup">
         <div class="colmenu" id="colMenu"><button class="btn small" id="colBtn">Columns ▾</button><div class="pop" id="colPop"></div></div>
-        <button class="btn small" id="editBtn" title="Edit / animatic: time a cut from boards, takes and video, play it through, export an EDL or FCP XML">Edit</button>
         <div class="colmenu" id="docMenu"><button class="btn small" id="docBtn" aria-haspopup="true" aria-expanded="false" title="Call sheet, running order, wrap report, takes and DIT names for this day">Documents ▾</button>
           <div class="pop menu" id="docPop" role="menu">
             <button class="mi" id="callSheetBtn" role="menuitem">Call sheet <small>one page for the day, to print or share</small></button>
@@ -962,7 +1001,6 @@ body.nosteps .mins.timing input{width:4.5em}
             <button class="mi phoneonly" data-proxy="helpBtn" role="menuitem">Help</button>
             <button class="mi phoneonly" data-proxy="shareBtn" role="menuitem">Share <small>invite someone to this project</small></button>
             <button class="mi phoneonly" data-proxy="colBtn" role="menuitem">Columns <small>show or hide columns</small></button>
-            <button class="mi phoneonly" data-proxy="editBtn" role="menuitem">Edit / animatic</button>
             <button class="mi phoneonly" data-proxy="callSheetBtn" role="menuitem">Call sheet</button>
             <button class="mi phoneonly" data-proxy="runOrderBtn" role="menuitem">Running order</button>
             <button class="mi phoneonly" data-proxy="wrapRepBtn" role="menuitem">Wrap report</button>
@@ -988,10 +1026,12 @@ body.nosteps .mins.timing input{width:4.5em}
         <button class="btn small" id="setBtn">Settings</button>
         <button class="btn small primary" id="helpBtn">Help</button>
       </span>
-      <span class="onsetgroup">
-        <button class="btn small onset slate" id="slateBtn" title="Full-screen slate for the next shot, with timecode"><span class="clapicon" aria-hidden="true"></span>Slate</button>
-        <button class="btn small onset notes" id="notesBtn" title="Details: the current shot full screen, with its storyboard, description, takes, notes and scribbles">Details</button>
-      </span>
+      <nav class="vswitch onsetgroup" id="viewSwitch" role="tablist" aria-label="Views">
+        <button class="vsw vsw-clip on" id="clipBtn" role="tab" aria-selected="true" title="Clipboard: the whole day's shotlist, to plan and run the day">Clipboard</button>
+        <button class="vsw vsw-slate" id="slateBtn" role="tab" aria-selected="false" title="Slate: full-screen slate for the next shot, with timecode, clap, reset and cut"><span class="clapicon" aria-hidden="true"></span>Slate</button>
+        <button class="vsw vsw-details" id="notesBtn" role="tab" aria-selected="false" title="Details: one shot full screen, with its storyboard, description, takes, notes and scribbles">Details</button>
+        <button class="vsw vsw-edit" id="editBtn" role="tab" aria-selected="false" title="Edit: time a cut from boards, takes and video, play it through, export an EDL or FCP XML">Edit</button>
+      </nav>
     </div>
   </div>
   <div class="daytabs" id="dayTabs"></div>
@@ -1179,7 +1219,7 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="modal" id="archModal"><div class="box narrow">
   <button class="btn small close" data-close>Close</button>
   <h2>Archived days</h2>
-  <p class="note">Archived days are put away, not deleted. Their shots, takes and notes are all kept. Restore a day to bring its tab back for everyone.</p>
+  <p class="note">Archived days are put away, not deleted. Their shots, takes and notes are all kept. Restore a day to bring its tab back for everyone. The admin can also delete them for good.</p>
   <div class="archlist" id="archList"></div>
 </div></div>
 

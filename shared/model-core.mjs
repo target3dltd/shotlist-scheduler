@@ -18,11 +18,14 @@
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place","onRow","onSince","csHospital","csPolice","csFire","csMedic","csAssembly","csTravel","csCalls","csKit"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt","seqDup","dupSrc"];
 const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
+// Edit: cuts, and the clips in them, each its own record so two people can work on one cut
+const CUT_FIELDS = ["name","audio","target","notes"];
+const CLIP_FIELDS = ["row","src","take","reset","url","f","inF","name","note"];
 const COL_FIELDS = ["label","type","options","group"];   // project-level custom columns; their values live on rows as c_<id>
 const isCustomKey = k => typeof k === "string" && k.indexOf("c_") === 0;
-const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes","vidSource","vidAccount","vidFolder","vidBase","csCompany","csEmergNo","csSafety","csConfid","csConduct","csGreen","csInvoice","csHide","csRisk","csRiskLink","cutJson"];
+const PROJECT_FIELDS = ["name","client","prodId","fps","dates","location","system","lead","notes","vidSource","vidAccount","vidFolder","vidBase","csCompany","csEmergNo","csSafety","csConfid","csConduct","csGreen","csInvoice","csHide","csRisk","csRiskLink","cutJson","driveKey"];
 const ID_PARTS_DEFAULT = [
   { key:"shot", on:true,  prefix:"" }, { key:"take", on:true, prefix:"T" }, { key:"prod", on:true, prefix:"" },
   { key:"day", on:true, prefix:"d" }, { key:"perfCount", on:true, prefix:"a" }, { key:"props", on:true, prefix:"p" },
@@ -38,7 +41,7 @@ const SEED_STAMP = "0000000000000-seed";
 function pad13(n){ return String(Math.max(0, Math.floor(n))).padStart(13, "0"); }
 function opStamp(batchKey, i){ return batchKey + "." + String(i).padStart(4, "0"); }
 function stampTime(s){ return Number(String(s || "").slice(0, 13)) || 0; }
-function emptyModel(){ return { doc:{ doc:{} }, day:{}, row:{}, person:{}, col:{} }; }
+function emptyModel(){ return { doc:{ doc:{} }, day:{}, row:{}, person:{}, col:{}, cut:{}, clip:{} }; }
 
 function applyOp(model, op, stamp, force){
   const bucket = model[op.e] || (model[op.e] = {});
@@ -53,7 +56,7 @@ function foldBatch(model, batch){
   return model;
 }
 function mergeModels(into, other){
-  for (const e of ["doc","day","row","person","col"]){
+  for (const e of ["doc","day","row","person","col","cut","clip"]){
     const src = other[e] || {};
     for (const id of Object.keys(src)){
       const ent = (into[e] || (into[e] = {}))[id] || (into[e][id] = {});
@@ -95,6 +98,16 @@ function seedModel(seed){
       ROW_FIELDS.forEach(k => { if (r[k] !== undefined) rf[k] = r[k]; });
       Object.keys(r).forEach(k => { if (isCustomKey(k)) rf[k] = r[k]; });
       set("row", r.id, rf);
+    });
+  });
+  (seed.cuts || []).forEach((c, ci) => {
+    const f = { pos: ci + 1, _del: false };
+    CUT_FIELDS.forEach(k => { if (c[k] !== undefined) f[k] = c[k]; });
+    set("cut", c.id, f);
+    (c.clips || []).forEach((k, ki) => {
+      const kf = { cut: c.id, pos: ki + 1, _del: false };
+      CLIP_FIELDS.forEach(x => { if (k[x] !== undefined) kf[x] = k[x]; });
+      set("clip", k.id, kf);
     });
   });
   return m;
@@ -143,8 +156,27 @@ function materialize(model){
     COL_FIELDS.forEach(k => { c[k] = val(e, k, ""); });
     cols.push(c);
   }
+  const cuts = [];
+  for (const id of Object.keys(model.cut || {})){
+    const e = model.cut[id];
+    if (val(e, "_del", false)) continue;
+    const c = { id, pos: val(e, "pos", 0), clips: [] };
+    CUT_FIELDS.forEach(k => { c[k] = val(e, k, null); });
+    cuts.push(c);
+  }
+  const cutById = Object.fromEntries(cuts.map(c => [c.id, c]));
+  for (const id of Object.keys(model.clip || {})){
+    const e = model.clip[id];
+    if (val(e, "_del", false)) continue;
+    const c = cutById[val(e, "cut", null)];
+    if (!c) continue;
+    const k = { id, pos: val(e, "pos", 0) };
+    CLIP_FIELDS.forEach(f => { k[f] = val(e, f, null); });
+    c.clips.push(k);
+  }
   days.sort(byPos); days.forEach(d => d.rows.sort(byPos)); people.sort(byPos); cols.sort(byPos);
-  return { project, cfg, people, cols, days };
+  cuts.sort(byPos); cuts.forEach(c => c.clips.sort(byPos));
+  return { project, cfg, people, cols, days, cuts };
 }
 
 /* give positions to anything new or moved, touching as few items as possible:
@@ -267,7 +299,41 @@ function diffDocs(a, b){
     }
   }
   for (const id of Object.keys(aRows)) if (!bRows[id]) put("row", id, "_del", true, false);
+
+  // cuts and their clips (same pattern as days and rows)
+  const aCuts = Object.fromEntries((a.cuts || []).map(c => [c.id, c]));
+  const bCuts = Object.fromEntries((b.cuts || []).map(c => [c.id, c]));
+  const cutPos = assignPositions(b.cuts || []);
+  for (const c of b.cuts || []){
+    const o = aCuts[c.id], pos = cutPos[c.id] !== undefined ? cutPos[c.id] : c.pos;
+    if (!o){
+      put("cut", c.id, "_del", false, true); put("cut", c.id, "pos", pos, null);
+      CUT_FIELDS.forEach(k => put("cut", c.id, k, c[k] === undefined ? null : c[k], null));
+    } else {
+      CUT_FIELDS.forEach(k => { if (!same(o[k], c[k])) put("cut", c.id, k, c[k], o[k]); });
+      if (cutPos[c.id] !== undefined) put("cut", c.id, "pos", pos, o.pos);
+    }
+  }
+  for (const c of a.cuts || []) if (!bCuts[c.id]) put("cut", c.id, "_del", true, false);
+  const aClips = {}, bClips = {};
+  (a.cuts || []).forEach(c => (c.clips || []).forEach(k => { aClips[k.id] = { k, cut: c.id }; }));
+  (b.cuts || []).forEach(c => {
+    const kp = assignPositions(c.clips || []);
+    (c.clips || []).forEach(k => { bClips[k.id] = { k, cut: c.id, pos: kp[k.id] !== undefined ? kp[k.id] : k.pos, moved: kp[k.id] !== undefined }; });
+  });
+  for (const id of Object.keys(bClips)){
+    const { k, cut, pos, moved } = bClips[id], o = aClips[id];
+    if (!o){
+      put("clip", id, "_del", false, true); put("clip", id, "cut", cut, null); put("clip", id, "pos", pos, null);
+      CLIP_FIELDS.forEach(f => put("clip", id, f, k[f] === undefined ? null : k[f], null));
+    } else {
+      if (o.cut !== cut) put("clip", id, "cut", cut, o.cut);
+      if (moved) put("clip", id, "pos", pos, o.k.pos);
+      CLIP_FIELDS.forEach(f => { if (!same(o.k[f], k[f])) put("clip", id, f, k[f] === undefined ? null : k[f], o.k[f]); });
+    }
+  }
+  for (const id of Object.keys(aClips)) if (!bClips[id]) put("clip", id, "_del", true, false);
   return Object.values(ops);
 }
 
-export { DAY_FIELDS, ROW_FIELDS, PERSON_FIELDS, COL_FIELDS, isCustomKey, PROJECT_FIELDS, CFG_DEFAULTS, SEED_STAMP, pad13, opStamp, stampTime, emptyModel, applyOp, foldBatch, mergeModels, cloneModel, seedModel, materialize, assignPositions, diffDocs };
+export { DAY_FIELDS, ROW_FIELDS, PERSON_FIELDS, COL_FIELDS, CUT_FIELDS, CLIP_FIELDS, isCustomKey, PROJECT_FIELDS, CFG_DEFAULTS, SEED_STAMP, pad13, opStamp, stampTime, emptyModel, applyOp, foldBatch, mergeModels, cloneModel, seedModel, materialize, assignPositions, diffDocs };

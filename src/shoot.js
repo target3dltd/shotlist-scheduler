@@ -134,13 +134,15 @@ function buildWrap(b,d){
   const tb=h("tbody",{});
   for(const r of W.planned){
     const c=W.C.rows[r.id], a=takeList(r);
-    const marks=a.filter(t=>t.mark==="hero"||t.mark==="safety"||t.mark==="good").map(t=>`T${t.n} ${t.mark}${t.tc?" @ "+t.tc:""}`).join(", ");
+    const marks=[...a.filter(t=>t.mark==="hero"||t.mark==="safety"||t.mark==="good").map(t=>`T${t.n} ${t.mark}${t.tc?" @ "+t.tc:""}`),
+      ...a.flatMap(t=>(t.resets||[]).filter(x=>x.mark==="hero"||x.mark==="safety"||x.mark==="good").map(x=>`T${t.n} R${x.n} ${x.mark} @ ${x.tc}`))].join(", ");
     const vs=r.done&&r.doneAt!=null?Math.round(r.doneAt-c.end):null;
     tb.append(h("tr",{class:r.done?"":"undone"},h("td",{class:"nowrap"},h("b",{},r.shot||"-")),h("td",{},String((capture?r.action:r.description)||r.description||r.action||"").slice(0,120)),
       h("td",{class:"num"},String(Number(r.takes)||0)),h("td",{},marks||""),h("td",{class:"nowrap"},r.done?(r.doneAt!=null?fmt(r.doneAt):"done"):"not shot"),
       h("td",{class:"nowrap "+(vs>0?"bad":vs<0?"good":"")},vs==null?"":vs===0?"on plan":(vs>0?"+":"−")+dur(Math.abs(vs)))));
   }
   t.append(tb); b.append(h("section",{class:"docsec"},h("h3",{},"Shots"),t));
+  b.append(planVsActual(d,W.C));
   if(W.left.length){
     b.append(h("section",{class:"docsec"},h("h3",{},`Carry over (${W.left.length})`),
       h("p",{},W.left.map(r=>(r.shot?"Shot "+r.shot:"")+(r.priority?" ("+r.priority+")":"")+((r.action||r.description)?": "+String(r.action||r.description).slice(0,60):"")).join("; ")),
@@ -308,7 +310,7 @@ function videoEmbed(raw){
   if(/<iframe/i.test(raw)&&!/^https:\/\//i.test(url)) return {kind:"link",src:"",open:"#",name:"Embed code without an https address"};
   if(/<iframe/i.test(raw)) return {kind:"embed",src:url,open:url,name:(()=>{try{return new URL(url).hostname.replace(/^www\./,"")}catch(e){return "Embedded player"}})()};
   if(/^ftp:/i.test(url)) return {kind:"ftp",src:url,open:url,name:"FTP"};
-  if((m=url.match(/drive\.google\.com\/(?:file\/d\/|open\?(?:.*&)?id=|uc\?(?:.*&)?id=)([\w-]{10,})/))) return {kind:"drive",src:withAccount(`https://drive.google.com/file/d/${m[1]}/preview`),open:withAccount(`https://drive.google.com/file/d/${m[1]}/view`),name:"Drive video"};
+  if((m=url.match(/drive\.google\.com\/(?:file\/d\/|open\?(?:.*&)?id=|uc\?(?:.*&)?id=)([\w-]{10,})/))) return {kind:"drive",src:withAccount(`https://drive.google.com/file/d/${m[1]}/preview`),open:withAccount(`https://drive.google.com/file/d/${m[1]}/view`),name:"Drive video",id:m[1]};
   if((m=url.match(/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]{10,})/))) return {kind:"folder",src:withAccount(`https://drive.google.com/embeddedfolderview?id=${m[1]}#grid`),open:withAccount(url),name:"Drive folder"};
   if((m=url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/))) return {kind:"youtube",src:`https://www.youtube-nocookie.com/embed/${m[1]}?rel=0`,open:url,name:"YouTube"};
   if((m=url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/([0-9a-f]+))?/))) return {kind:"vimeo",src:`https://player.vimeo.com/video/${m[1]}${m[2]?"?h="+m[2]:""}`,open:url,name:"Vimeo"};
@@ -333,7 +335,9 @@ function renderVideoSettings(b){
     other:"Paste any link. Video files (.mp4, .mov, .webm) play in place; embed codes (<iframe…>) play in their own player; anything else opens in a new tab."};
   if(src==="drive"){ const i=h("input",{type:"email",value:vidAccount(),placeholder:"you@company.com",spellcheck:"false"});
     i.addEventListener("change",()=>{setVidAccount(i.value);const vh=$("#nvVideoHost");if(vh)vh.dataset.key="";toast(i.value.trim()?"Drive videos will open with "+i.value.trim()+" on this device":"Drive videos open with your default Google account")});
-    f.append(h("label",{},"Your Google account for this project",i,h("small",{class:"note"},"Just for you, on this device. Everyone sets their own."))); }
+    f.append(h("label",{},"Your Google account for this project",i,h("small",{class:"note"},"Just for you, on this device. Everyone sets their own.")));
+    f.append(h("label",{},"Google API key for playing Drive videos in Edit (optional)",(()=>{const k=h("input",{type:"text",value:pr.driveKey||"",placeholder:"AIza…",spellcheck:"false",autocomplete:"off"});bindDoc(k,null,v=>{S.project.driveKey=v.trim()});return k})(),
+      h("small",{class:"note"},"Drive's own player can't be timed from the page. With a key, Drive files shared as 'Anyone with the link' play straight into the Edit tool, on time and with in points. Make the key in Google Cloud Console (APIs & Services > Credentials), turn on the Google Drive API, and restrict the key to this site's address. It's shared with the team."))); }
   if(src==="server") f.append(field("vidBase","Web address of the video folder","https://files.example.com/project/videos/","url"));
   if(src) f.append(field("vidFolder","Project video folder (link, for the team to browse)","https://…","url"));
   b.append(h("h3",{style:"margin-top:1.2rem"},"Reference video"),h("p",{class:"note"},"Rehearsal and reference videos stay where they're stored; each shot only keeps the link. "+(tips[src]||"Pick where this project keeps its videos. Each project can use a different place or Google account.")),f);
@@ -540,10 +544,11 @@ function seqMenu(anchor,id){
 }
 function moveToSeq(id,target){
   if(frozenNo()) return; const f=findRow(id); if(!f) return; const d=f.d, r=f.r; commit();
+  const fromA=r.seq?seqAnchor(r):null, fromGrp=fromA?fromA.seqDup:"", wasAnchor=fromA&&fromA.id===r.id;
   const SEQF=["seqName","takeLog","seqNotes","seqTime","seqSetup","seqShoot","seqVideo"], blank={seqName:"",takeLog:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0,seqVideo:""};
   // leaving: if it was the sequence's first shot, the sequence's takes, name and timing pass to the next one
   if(r.seq){ const a=seqAnchor(r), rest=seqMembers(a,d).filter(x=>x.id!==r.id);
-    if(a.id===r.id&&rest.length){ const na=rest[0]; for(const k of SEQF) na[k]=r[k]; na.takes=r.takes; rest.forEach(x=>x.seq=na.id); }
+    if(a.id===r.id&&rest.length){ const na=rest[0]; for(const k of SEQF) na[k]=r[k]; na.takes=r.takes; na.seqDup=r.seqDup; r.seqDup=""; rest.forEach(x=>x.seq=na.id); if(SQV.id===r.id) SQV.id=na.id; }
     // its takes went with the sequence; a sequence of one keeps them on the shot
     if(a.id===r.id){ if(rest.length){ Object.assign(r,blank); r.takes=0; } else Object.assign(r,{seqName:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0}); }
     r.seq=""; }
@@ -552,6 +557,9 @@ function moveToSeq(id,target){
   else if(target){ const ta=R(target); if(ta){ r.seq=ta.seq; msg=`Shot ${r.shot||""} moved to ${seqTitle(ta)}`; } }
   else msg=`Shot ${r.shot||""} taken out of the sequence`;
   commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); toast(msg+" - Undo to put it back");
+  // it left a duplicated sequence: offer the same to the copies (the sequence it left is the one in the group on this day that isn't r)
+  if(fromGrp){ const left=wasAnchor?d.rows.find(x=>x.seq===x.id&&x.seqDup===fromGrp&&x.id!==r.id&&x.seq!==r.seq&&seqMembers(x,d).length):fromA;
+    if(left&&left.seqDup===fromGrp&&r.seq!==left.seq) offerSeqPush(left.id,"its shots (Shot "+(r.shot||"?")+" taken out)",c=>seqPushMembers(c,[],[r])); }
 }
 // group: pick the shots on this day that are shot together
 function openSeqDialog(rowId){
@@ -562,9 +570,13 @@ function openSeqDialog(rowId){
   const close=()=>m.remove();
   const name=h("input",{type:"text",value:cur?cur.seqName||"":"",placeholder:"e.g. Tavern fight",maxlength:"60"});
   const list=h("div",{class:"seqpick"});
-  shots.forEach(x=>{ const cb=h("input",{type:"checkbox"}); cb.checked=pick.has(x.id); cb.addEventListener("change",()=>{cb.checked?pick.add(x.id):pick.delete(x.id);upd()});
+  // the sequence's own shots first (ticked), then the rest of the day
+  const mine=cur?shots.filter(x=>pick.has(x.id)):[], rest=cur?shots.filter(x=>!pick.has(x.id)):shots;
+  const rowFor=x=>{ const cb=h("input",{type:"checkbox"}); cb.checked=pick.has(x.id); cb.addEventListener("change",()=>{cb.checked?pick.add(x.id):pick.delete(x.id);upd()});
     const other=x.seq&&(!cur||x.seq!==cur.seq)?h("small",{class:"note"}," (in "+seqTitle(seqAnchor(x))+")"):null;
-    list.append(h("label",{},cb,h("b",{},x.shot||"-"),h("span",{}," "+String(x.action||x.description||"").slice(0,70)),other)); });
+    list.append(h("label",{},cb,h("b",{},x.shot||"-"),h("span",{}," "+String(x.action||x.description||"").slice(0,70)),other)); };
+  if(cur){ list.append(h("div",{class:"seqpickhd"},`In ${seqTitle(cur)} (${mine.length})`)); mine.forEach(rowFor); list.append(h("div",{class:"seqpickhd"},"Other shots on this day")); }
+  rest.forEach(rowFor);
   const info=h("p",{class:"note"}); const save=h("button",{class:"btn primary"},cur?"Save":"Group");
   const upd=()=>{ const n=pick.size; save.disabled=n<2; info.textContent=n<2?"Tick at least two shots.":`${n} shots. Takes are logged once for the sequence; on Live Action days you tick which shots each take caught.`; };
   save.onclick=()=>{ applySeq(d,cur,[...pick],name.value.trim()); close(); };
@@ -577,6 +589,7 @@ function openSeqDialog(rowId){
 }
 function applySeq(d,cur,ids,name){
   commit();
+  const before=cur?seqMembers(cur,d).map(x=>x.id):[], grp=cur?cur.seqDup:"";
   const keep=d.rows.filter(x=>ids.includes(x.id)&&!isBlock(x));   // in day order
   const oldMem=cur?seqMembers(cur,d):[];
   for(const x of oldMem) if(!ids.includes(x.id)) x.seq="";
@@ -588,7 +601,11 @@ function applySeq(d,cur,ids,name){
   for(const x of keep){ if(x.seq&&x.seq!==(cur&&cur.seq)){ const other=seqAnchor(x); x.seq=""; const rest=seqMembers(other,d).filter(y=>y.id!==x.id); if(rest.length<2) rest.forEach(y=>y.seq=""); else if(other.id===x.id){ const na=rest[0]; for(const y of rest) y.seq=na.id; na.seqName=x.seqName; na.takeLog=x.takeLog; na.takes=x.takes; na.seqNotes=x.seqNotes; x.takeLog=""; x.takes=0; x.seqName=""; x.seqNotes=""; } } }
   for(const x of keep) x.seq=anchor.id;
   anchor.seqName=name;
+  if(grp&&!anchor.seqDup) anchor.seqDup=grp;
+  if(cur&&cur.id!==anchor.id) cur.seqDup="";
   commit(); renderAll(); toast(`${cur?"Updated":"Grouped"} ${keep.length} shots as ${name||"a sequence"} - Undo to take it back`);
+  if(cur){ const added=keep.filter(x=>!before.includes(x.id)), removed=before.filter(id=>!ids.includes(id)).map(id=>R(id)).filter(Boolean);
+    if(added.length||removed.length) offerSeqPush(anchor.id,"its shots ("+[added.length?`${added.length} added`:"",removed.length?`${removed.length} taken out`:""].filter(Boolean).join(", ")+")",c=>seqPushMembers(c,added,removed)); }
 }
 /* ---------- sequence rows in the table: fold, time as one, duplicate ---------- */
 function seqTimedRow(r){ if(!r||!r.seq) return false; const a=R(r.seq); return !!(a&&a.seq===a.id&&a.seqTime); }
@@ -600,16 +617,20 @@ function seqSpan(a,C,d){ const m=seqMembers(a,d).filter(x=>!x.cut); if(!m.length
 function setSeqTime(id,on){ if(frozenNo()) return; const a=R(id); if(!a) return; const d=findRow(id).d;
   if(on&&!a.seqTime&&!(Number(a.seqSetup)||Number(a.seqShoot))){ const m=seqMembers(a,d).filter(x=>!x.cut); a.seqSetup=Math.max(0,...m.map(x=>Number(x.setup)||0)); a.seqShoot=m.reduce((t,x)=>t+(Number(x.shoot)||0),0); }
   a.seqTime=!!on; commit(); renderAll(); rebuildDoc(); if($("#seqView").classList.contains("open")) renderSeqView();
+  offerSeqPush(a.id,"its timing",(c,x)=>{c.seqTime=x.seqTime;c.seqSetup=x.seqSetup;c.seqShoot=x.seqShoot});
   toast(on?`${seqTitle(a)} is timed as one: setup ${a.seqSetup} min, shoot ${a.seqShoot} min`:`${seqTitle(a)} back to per-shot timings`); }
-function setSeqMins(id,k,v){ if(frozenNo()) return; const a=R(id); if(!a) return; a[k]=Math.max(0,Math.round(Number(v)||0)); commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); }
+function setSeqMins(id,k,v){ if(frozenNo()) return; const a=R(id); if(!a) return; a[k]=Math.max(0,Math.round(Number(v)||0)); commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView();
+  offerSeqPush(a.id,k==="seqSetup"?"its setup time":"its shoot time",(c,x)=>{c[k]=x[k];c.seqTime=x.seqTime}); }
 function dupSeq(id){
   if(frozenNo()) return; const f=findRow(id); if(!f) return; const d=f.d, a=f.r, mem=seqMembers(a,d); if(!mem.length) return;
   commit();
-  const copies=mem.map(m=>Object.assign({},m,{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:"",setupAt:null}));
+  const copies=mem.map(m=>Object.assign({},m,{id:uid("r"),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:"",setupAt:null,dupSrc:twinKey(m)}));
   const na=copies[0]; for(const c of copies) c.seq=na.id;
+  const group=a.seqDup||a.id; a.seqDup=group;
   const base=String(a.seqName||"Sequence").replace(/\s*\(\d+\)$/,""); let n=2; const names=new Set(d.rows.filter(x=>x.seq===x.id).map(x=>x.seqName)); while(names.has(`${base} (${n})`)) n++;
   na.seqName=`${base} (${n})`; na.seqTime=a.seqTime; na.seqSetup=a.seqSetup; na.seqShoot=a.seqShoot; na.seqNotes=a.seqNotes;
-  for(const c of copies.slice(1)){ c.seqName=""; c.seqTime=false; c.seqSetup=0; c.seqShoot=0; c.seqNotes=""; }
+  for(const c of copies.slice(1)){ c.seqName=""; c.seqTime=false; c.seqSetup=0; c.seqShoot=0; c.seqNotes=""; c.seqDup=""; }
+  na.seqDup=group;
   const last=mem[mem.length-1]; d.rows.splice(d.rows.indexOf(last)+1,0,...copies);
   commit(); renderAll(); toast(`Duplicated as ${na.seqName}: same shots, no takes yet - Undo to take it back`); return na.id;
 }
@@ -734,7 +755,8 @@ function renderSeqView(){
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
     h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
-    h("button",{title:"Close",onclick:closeSeqView},"✕"));
+    viewSwitch(),
+    h("button",{title:"Back to the Clipboard (Esc)",onclick:closeSeqView},"✕"));
   // DIT name for the next take
   const dit=h("section",{},h("h3",{},"DIT name"),h("div",{class:"seqdit"},h("code",{},name||"-"),h("button",{class:"btn small",onclick:async()=>{if(await copyText(name))toast("Copied "+name)}},"Copy")),
     h("p",{class:"note"},"Covers shots "+seqRange(a,d)+". "+(la?"Every storyboard shot still needs catching: tick what each take got.":"Mocap: each take records the whole action; framing is set in post.")));
@@ -745,6 +767,8 @@ function renderSeqView(){
       h("div",{},h("b",{},"Shot "+(m.shot||"-")),m.vcs?h("span",{class:"pill"},"VCS"):null,h("p",{},String(m.action||m.description||"").slice(0,120)),
         la?h("small",{},got?"Caught in "+got.map(n=>"T"+n).join(", "):"Not caught yet"):null,
         h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Details"),
+        h("button",{class:"go",style:"margin-left:.6rem",title:"Move this shot to another sequence, or start a new one",onclick:e=>seqMenu(e.currentTarget,m.id)},"Move…"),
+        h("button",{class:"go",style:"margin-left:.6rem",title:"Take this shot out of the sequence (it stays on the day)",onclick:()=>moveToSeq(m.id,"")},"Remove"),
         videoLinks(m).length?h("button",{class:"go",style:"margin-left:.6rem",title:"This shot has its own reference video",onclick:()=>{closeSeqView();openNotes(m.id)}},"▶ shot video"):null)));
   }
   if(la) shots.append(h("p",{class:"seqcov "+(cov.missing.length?"miss":"got")},cov.missing.length?`Still to get: ${cov.missing.map(m=>m.shot||"?").join(", ")}`:"Every shot caught"+(takeList(a).length?"":" (no takes yet)")));
@@ -775,7 +799,7 @@ function renderSeqView(){
   }
   const notes=h("section",{},h("h3",{},"Sequence notes"));
   const ta=h("textarea",{rows:"4",placeholder:"Blocking, what to watch for, pickups needed"}); ta.value=a.seqNotes||"";
-  ta.addEventListener("input",()=>{const x=R(a.id);if(x){x.seqNotes=ta.value;softCommit()}}); ta.addEventListener("change",commit); notes.append(ta);
+  ta.addEventListener("input",()=>{const x=R(a.id);if(x){x.seqNotes=ta.value;softCommit()}}); ta.addEventListener("change",()=>{commit();offerSeqPush(a.id,"its notes",(c,x)=>{c.seqNotes=x.seqNotes})}); notes.append(ta);
   const C=compute(d), sp=seqSpan(a,C,d);
   const timing=h("section",{},h("h3",{},"Timing"));
   if(a.seqTime){ const inp=(k,l)=>{const i=h("input",{type:"number",min:"0",step:"5",value:String(Number(a[k])||0),style:"width:5rem"});i.addEventListener("change",()=>setSeqMins(a.id,k,i.value));return h("label",{class:"mins2",style:"margin-right:1rem"},l+" ",i," min")};
@@ -790,7 +814,7 @@ function renderSeqView(){
 
 /* ---------- Note View panels: drag ⠿ to move, drag the corner to resize (kept per device) ----------
    Panels are reordered with CSS order and sized with grid spans, never moved in the page, so a playing video carries on. */
-const NV_CARDS=["what","video","takes","notes","scribble"];
+const NV_CARDS=["what","video","takes","notes","edit","scribble"];
 function nvLayout(){P.nvLayout=P.nvLayout||{};return P.nvLayout}
 function nvCustom(){const L=P.nvLayout||{};return !!((L.order&&L.order.length)||Object.keys(L.span||{}).length||Object.keys(L.h||{}).length)}
 // how many columns the panel grid has room for (the same sum the grid does: 26rem panels and their gaps), whatever is spanning now
@@ -799,7 +823,7 @@ function nvCols(body){const cs=getComputedStyle(body),gap=parseFloat(cs.columnGa
 function applyNvLayout(){
   const body=$("#nvBody"); if(!body) return; const L=nvLayout(), cols=nvCols(body);
   for(const c of body.children){ const k=c.dataset.card; if(!k) continue;
-    const i=(L.order||[]).indexOf(k); c.style.order=i>=0?String(i):"";
+    const i=(L.order||[]).indexOf(k); c.style.order=i>=0?String(i):(L.order&&L.order.length?String(100+NV_CARDS.indexOf(k)):"");
     const sp=Math.min(cols,Number((L.span||{})[k])||1); c.style.gridColumn=sp>1?`span ${sp}`:"";
     const hh=Number((L.h||{})[k]); c.style.height=hh&&cols>1?hh+"px":""; c.classList.toggle("sized",!!(hh&&cols>1)); }
   const rb=$("#noteView .nvreset"); if(rb) rb.hidden=!nvCustom();
@@ -1270,14 +1294,23 @@ function tableSection(d,T){
 }
 
 /* ---------- Edit / animatic: time a cut from boards, takes and video, play it, export an EDL or FCP XML ---------- */
-// Cuts are shared with the team (project field cutJson). Clips: {id,row,src:"board"|"take"|"video",take,url,f (frames),inF,name,note}
+// Cuts are shared with the team (S.cuts: each cut and clip is its own record). Clips: {id,row,src:"board"|"take"|"video",take,url,f (frames),inF,name,note}
 const ED={sel:null,t:0,playing:false,zoom:60,raf:0,last:0,cur:"",aud:null,localAudio:"",thumbs:new Map(),tab:"shots",binDay:""};
 function edFps(){const f=Number(S.project.fps);return f>0?f:25}
 function edNom(){return Math.round(edFps())||25}
-function edData(){let o=null;try{o=JSON.parse(S.project.cutJson||"null")}catch(e){} return o&&Array.isArray(o.cuts)?o:{cuts:[]}}
-function edSave(o,soft){S.project.cutJson=JSON.stringify(o); soft?softCommit():commit()}
+// cuts live in S.cuts (each cut and clip its own record). Cuts made before v2.43 were one block in the project: bring them across once
+function edMigrate(){
+  if(!Array.isArray(S.cuts)) S.cuts=[];
+  if(!S.project.cutJson) return;
+  let o=null; try{o=JSON.parse(S.project.cutJson)}catch(e){}
+  const have=new Set(S.cuts.map(c=>c.id));
+  if(o&&Array.isArray(o.cuts)) for(const c of o.cuts) if(!have.has(c.id)) S.cuts.push({id:c.id||uid("c"),name:c.name||"Cut",audio:c.audio||"",target:c.target||null,notes:c.notes||"",clips:(c.clips||[]).map(k=>({id:k.id||uid("k"),row:k.row,src:k.src||"board",take:k.take??null,reset:k.reset??null,url:k.url||"",f:k.f||1,inF:k.inF||0,name:k.name||"",note:k.note||""}))});
+  S.project.cutJson=""; commit();
+}
+function edData(){ edMigrate(); return {get cuts(){return S.cuts}, set cuts(v){S.cuts=v}}; }
+function edSave(o,soft){ soft?softCommit():commit(); }
 function edCut(o){ o=o||edData(); const id=(P.edCut||{})[pid()]; let c=o.cuts.find(x=>x.id===id)||o.cuts[0];
-  if(!c){c={id:uid("c"),name:"Cut 1",clips:[],audio:""};o.cuts.push(c);edSave(o)} return c; }
+  if(!c){c={id:uid("c"),name:"Cut 1",clips:[],audio:"",target:null,notes:""};o.cuts.push(c);edSave(o)} return c; }
 // change the current cut: fn(cut, all) then save
 function edDo(fn,soft){ const o=edData(), c=edCut(o); fn(c,o); edSave(o,soft); }
 function edTc(fr){ const n=edNom(); fr=Math.max(0,Math.round(fr)); return [Math.floor(fr/(n*3600)),Math.floor(fr/(n*60))%60,Math.floor(fr/n)%60,fr%n].map(x=>String(x).padStart(2,"0")).join(":"); }
@@ -1299,10 +1332,16 @@ function edBest(r){ const tk=edTakes(r).filter(t=>t.out||takeMs(t));
 function edResetSpan(t,rn){ const rs=(t.resets||[]).slice().sort((a,b)=>a.at-b.at), i=rs.findIndex(x=>x.n==rn); if(i<0) return null; const x=rs[i], fps=edFps();
   const a=edTcToF(t.tc), b=edTcToF(x.tc); const inF=a!=null&&b!=null&&b>=a?b-a:Math.max(0,Math.round((x.at-t.at)/1000*fps));
   const endMs=i+1<rs.length?rs[i+1].at:(t.at&&takeMs(t)?t.at+takeMs(t):0); const f=endMs?Math.max(1,Math.round((endMs-x.at)/1000*fps)):0; return {inF,f}; }
+// where the clap is, in frames into the take (or null): on the reset if the clip is a reset, else on the take
+function edClapF(t,rn){ if(!t) return null; const x=rn?(t.resets||[]).find(y=>y.n==rn):null, tc=x?x.clap:t.clap; if(!tc) return null;
+  const a=edTcToF(t.tc), b=edTcToF(tc); if(a!=null&&b!=null&&b>=a) return b-a; const at=x?x.clapAt:t.clapAt; return at&&t.at?Math.max(0,Math.round((at-t.at)/1000*edFps())):null; }
+const ED_AFTER_CLAP=0.5;   // seconds after the clap that a clip starts
 function edNewClip(r,opt){ const fps=edFps(), b=Object.assign(edBest(r),opt||{}); if(opt&&opt.src&&!("reset" in opt)) delete b.reset; let f=Math.round((durSec(r.duration)||3)*fps), inF=0;
   const t=b.src==="take"?edTakes(r).find(x=>x.n==b.take):null;
   if(t&&b.reset){ const sp=edResetSpan(t,b.reset); if(sp){ inF=sp.inF; if(!durSec(r.duration)&&sp.f) f=sp.f; } }
   else if(t&&!durSec(r.duration)){ const ms=takeMs(t); if(ms) f=Math.round(ms/1000*fps); }
+  const cf=t?edClapF(t,b.reset):null;
+  if(cf!=null&&cf+Math.round(ED_AFTER_CLAP*fps)>inF){ const nin=cf+Math.round(ED_AFTER_CLAP*fps); if(!durSec(r.duration)) f=Math.max(1,f-(nin-inF)); inF=nin; }
   return Object.assign({id:uid("k"),row:r.id,f:Math.max(1,f),inF},b); }
 function edShotLabel(r){ return r?(r.shot||r.action||"-"):"Missing shot"; }
 function edClipName(cl,r){ if(cl.name) return cl.name; if(!r) return "Missing";
@@ -1330,16 +1369,19 @@ function renderEditNow(){
   let stage=$("#edStage"); if(!stage) stage=h("div",{class:"edstage",id:"edStage"});
   // top bar: cut picker, running time, export, close
   const cutSel=h("select",{class:"edcutsel","aria-label":"Cut"},...o.cuts.map(x=>h("option",{value:x.id,selected:x.id===c.id},x.name||"Cut")),h("option",{value:"__new"},"+ New cut"));
-  cutSel.onchange=()=>{ if(cutSel.value==="__new"){ const n={id:uid("c"),name:"Cut "+(o.cuts.length+1),clips:[],audio:""}; o.cuts.push(n); edSave(o); P.edCut=Object.assign({},P.edCut,{[pid()]:n.id}); }
+  cutSel.onchange=()=>{ if(cutSel.value==="__new"){ const n={id:uid("c"),name:"Cut "+(o.cuts.length+1),clips:[],audio:"",target:null,notes:""}; o.cuts.push(n); edSave(o); P.edCut=Object.assign({},P.edCut,{[pid()]:n.id}); }
     else P.edCut=Object.assign({},P.edCut,{[pid()]:cutSel.value}); savePrefs(); edStop(); ED.t=0; ED.sel=null; ED.cur=""; renderEdit(); };
-  const cutMenu=h("button",{class:"btn small",title:"Rename, duplicate or delete this cut",onclick:e=>edCutMenu(e.currentTarget)},"⋯");
+  const cutMenu=h("button",{class:"btn small",title:"Import, export, rename, duplicate or delete this cut",onclick:e=>edCutMenu(e.currentTarget)},"⋯");
   const top=h("div",{class:"edtop"},h("b",{class:"edtitle"},"Edit"),cutSel,cutMenu,
     h("span",{class:"edrt",title:"Running time of the cut"},edTc(total)+" · "+c.clips.length+" clip"+(c.clips.length===1?"":"s")+" · "+(Number.isInteger(fps)?fps:fps.toFixed(3))+" fps"),
+    edTargetBox(c,total),
     h("span",{style:"flex:1"}),
-    h("button",{class:"btn small",title:"Swap boards (and older takes) for each shot's hero or good take where there is one",onclick:edUpgrade},"Swap in latest takes"),
-    h("button",{class:"btn small",title:"CMX3600 EDL for Premiere, Resolve or Avid",onclick:()=>edExport("edl")},"Export EDL"),
-    h("button",{class:"btn small",title:"Final Cut Pro 7 XML: opens in Premiere and Resolve",onclick:()=>edExport("xml")},"Export FCP XML"),
-    h("button",{class:"btn small vclose",title:"Close (Esc)","aria-label":"Close",onclick:closeEdit},"✕"));
+    h("button",{class:"btn small edwide",title:"Swap boards (and older takes) for each shot's hero or good take where there is one",onclick:edUpgrade},"Swap in latest takes"),
+    h("button",{class:"btn small edwide",title:"Bring in a cut from the edit (EDL or FCP XML): clip names are matched to shots and takes",onclick:edImport},"Import EDL / XML"),
+    h("button",{class:"btn small edwide",title:"CMX3600 EDL for Premiere, Resolve or Avid",onclick:()=>edExport("edl")},"Export EDL"),
+    h("button",{class:"btn small edwide",title:"Final Cut Pro 7 XML: opens in Premiere and Resolve",onclick:()=>edExport("xml")},"Export FCP XML"),
+    viewSwitch(),
+    h("button",{class:"btn small vclose",title:"Back to the Clipboard (Esc)","aria-label":"Close",onclick:closeEdit},"✕"));
   // player
   const tcBox=h("span",{class:"edtc",id:"edTcNow"},edTc(ED.t));
   const btn=(label,title,fn)=>h("button",{class:"btn small",title,"aria-label":title,onclick:fn},label);
@@ -1364,6 +1406,7 @@ function edCutMenu(anchor){
   $$(".locpop").forEach(x=>x.remove()); const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
   const item=(l,fn)=>h("button",{class:"mi",role:"menuitem",onclick:()=>{close();fn()}},l);
   pop.append(
+    item("Swap in latest takes",edUpgrade), item("Import EDL / XML…",edImport), item("Export EDL",()=>edExport("edl")), item("Export FCP XML",()=>edExport("xml")), h("hr"),
     item("Rename…",()=>{ const c=edCut(); const box=h("div",{class:"locpop seqmenu"}); const inp=h("input",{type:"text",value:c.name||"","aria-label":"Cut name"});
       const ok=()=>{edDo(x=>{x.name=inp.value.trim()||x.name});box.remove();renderEdit()};
       inp.onkeydown=e=>{if(e.key==="Enter")ok();if(e.key==="Escape")box.remove()}; box.append(inp,h("button",{class:"btn small",onclick:ok},"Save"));
@@ -1400,10 +1443,12 @@ function edBin(c){
   const d=days.find(x=>x.id===ED.binDay)||D()||days[0]; if(!d) return box;
   const shots=d.rows.filter(r=>!isBlock(r)&&!r.cut);
   const inCut=new Set(c.clips.map(k=>k.row));
-  box.append(h("div",{class:"edbinhead"},sel,h("button",{class:"btn small",title:"Add every shot of this day, in order, each with its best picture (hero take, video or board)",onclick:()=>{edAdd(shots.filter(r=>!inCut.has(r.id)).map(r=>edNewClip(r)));}},"+ Add all ("+shots.filter(r=>!inCut.has(r.id)).length+")")),
+  const onlyMissing=h("label",{class:"edchk",title:"Show only shots that aren't in this cut yet"},(()=>{const x=h("input",{type:"checkbox"});x.checked=!!ED.binMissing;x.onchange=()=>{ED.binMissing=x.checked;renderEdit()};return x})()," Not in this cut");
+  box.append(h("div",{class:"edbinhead"},sel,onlyMissing,h("button",{class:"btn small",title:"Add every shot of this day, in order, each with its best picture (hero take, video or board)",onclick:()=>{edAdd(shots.filter(r=>!inCut.has(r.id)).map(r=>edNewClip(r)));}},"+ Add all ("+shots.filter(r=>!inCut.has(r.id)).length+")")),
     h("p",{class:"note"},"Click a picture to add it after the selected clip, or drag it onto the timeline. The best source is picked for you: hero take, then good take, then video, then board."));
   const list=h("div",{class:"edbinlist"});
   for(const r of shots){
+    if(ED.binMissing&&inCut.has(r.id)) continue;
     const tk=edTakes(r).filter(t=>t.out||takeMs(t)), vids=videoLinks(r), pic=edPic(r), best=edBest(r);
     const th=h("div",{class:"edthumb"}); edThumb(r,u=>{if(u)th.style.backgroundImage=`url("${u}")`;else th.textContent=r.shot||"-"});
     const add=o=>()=>edAdd([edNewClip(r,o)]);
@@ -1436,7 +1481,10 @@ function edInspector(c){
   if(!k){ box.append(h("p",{class:"note"},"Click a clip on the timeline to set its source, length and in point.")); return box; }
   const r=R(k.row), fps=edFps(), tk=edTakes(r), vids=r?videoLinks(r):[], t=edTake(k,r);
   const upd=(fn,soft)=>{edDo(cc=>{const x=cc.clips.find(y=>y.id===k.id);if(x)fn(x)},soft);};
-  box.append(h("div",{class:"edinsphead"},h("b",{},"Shot "+edShotLabel(r)),h("span",{class:"note"},r?String(r.description||r.action||""):"This shot was deleted")));
+  box.append(h("div",{class:"edinsphead"},h("b",{},"Shot "+edShotLabel(r)),h("span",{class:"note"},r?String(r.description||r.action||""):(k.name?"Not matched: "+k.name:"This shot was deleted"))));
+  { const shotSel=h("select",{"aria-label":"Shot for this clip"},h("option",{value:""},"(no shot)"),...live().flatMap(d=>d.rows.filter(x=>!isBlock(x)).map(x=>h("option",{value:x.id,selected:x.id===k.row},`${d.name} · ${x.shot||"-"} ${String(x.description||x.action||"").slice(0,40)}`))));
+    shotSel.onchange=()=>{edDo(cc=>{const x=cc.clips.find(y=>y.id===k.id);if(x){x.row=shotSel.value;if(x.note&&/^Not matched/.test(x.note))x.note=""}});ED.cur="";renderEdit()};
+    box.append(h("label",{class:"edfield"},h("span",{},"Shot"),shotSel)); }
   // source
   const src=h("select",{"aria-label":"Source"},
     h("option",{value:"board",selected:k.src==="board"},"Board"+(edPic(r)?"":" (no picture)")),
@@ -1532,9 +1580,14 @@ function edTimeline(c){
 function edMount(x){
   const st=$("#edStage"); if(!st) return null; ED.cur=x?x.cl.id+"|"+x.cl.src+"|"+(x.cl.take||"")+"|"+(x.cl.url||"")+"|"+x.cl.inF:"";
   st.innerHTML=""; if(!x){ st.append(h("div",{class:"edblank"},edCut().clips.length?"End of the cut":"Empty cut: add shots from the list")); return null; }
-  const k=x.cl, r=x.r, t=edTake(k,r), url=k.src==="board"?"":edVidUrl(k,r), em=url?videoEmbed(url):null;
+  const k=x.cl, r=x.r, t=edTake(k,r), url=k.src==="board"?"":edVidUrl(k,r); let em=url?videoEmbed(url):null;
+  // Drive + the project's API key: play the file itself, so it can be timed; if Drive says no (not shared publicly), fall back to its player
+  const driveFallback=em&&em.kind==="drive"?em:null;
+  if(em&&em.kind==="drive"&&em.id&&S.project.driveKey) em={kind:"file",src:`https://www.googleapis.com/drive/v3/files/${em.id}?alt=media&key=${encodeURIComponent(S.project.driveKey)}`,name:"Drive video",drive:true};
   let el=null;
-  if(em&&em.kind==="file"){ el=h("video",{src:em.src,playsinline:"",preload:"auto"}); el.muted=!P.edClipSound; el.addEventListener("error",()=>{const n=h("div",{class:"edblank"},"This video won't play here: "+em.name);el.replaceWith(n)}); }
+  if(em&&em.kind==="file"){ el=h("video",{src:em.src,playsinline:"",preload:"auto"}); el.muted=!P.edClipSound;
+    el.addEventListener("error",()=>{ if(em.drive&&driveFallback){ const fr=h("iframe",{src:driveFallback.src,allow:"autoplay; fullscreen",title:"Drive video"}); el.replaceWith(fr); st.append(h("div",{class:"edwarn"},"Drive wouldn't hand this file to the player (is it shared as 'Anyone with the link'?). Showing Drive's own player.")); return; }
+      const n=h("div",{class:"edblank"},"This video won't play here: "+em.name);el.replaceWith(n)}); }
   else if(em&&["drive","youtube","vimeo","embed"].includes(em.kind)){
     let src=em.src; const s=Math.floor((k.inF||0)/edFps());
     if(em.kind==="youtube") src+=`&start=${s}&autoplay=${ED.playing?1:0}&mute=${P.edClipSound?0:1}`; if(em.kind==="vimeo") src+=(src.includes("?")?"&":"?")+`autoplay=${ED.playing?1:0}&muted=${P.edClipSound?0:1}#t=${s}s`;
@@ -1599,6 +1652,7 @@ function edExport(kind){
       lines.push(`${String(i+1).padStart(3,"0")}  ${reelOf(x).padEnd(8)} V     C        ${edTc(si)} ${edTc(si+x.cl.f)} ${edTc(recStart+x.start)} ${edTc(recStart+x.end)}`);
       lines.push(`* FROM CLIP NAME: ${edClipName(x.cl,x.r)}`);
       lines.push(`* COMMENT: SHOT ${x.r?x.r.shot||"-":"MISSING"} - ${edSrcLabel(x.cl,x.r).replace(/[★✓]/g,"").trim().toUpperCase()}${x.cl.note?" - "+x.cl.note.replace(/\s+/g," "):""}`);
+      { const t=edTake(x.cl,x.r), cf=edClapF(t,x.cl.reset); if(cf!=null){ const tc=x.cl.reset?((t.resets||[]).find(y=>y.n==x.cl.reset)||{}).clap:t.clap; lines.push(`* SYNC: CLAP AT ${tc} (${cf<(x.cl.inF||0)?"before the in point":"in the clip"})`); } }
       lines.push(""); });
     out=lines.join("\r\n"); fn=`${proj} - ${title}.edl`;
   } else {
@@ -1614,7 +1668,8 @@ function edExport(kind){
       else { fid="file-"+(files.size+1); files.set(fkey,fid);
         const fname=k.src==="board"?name+".png":em&&em.kind==="file"?em.name:name;
         fileXml=`<file id="${fid}"><name>${esc(fname)}</name>${em&&em.kind==="file"&&/^https?:/.test(em.src)?`<pathurl>${esc(em.src)}</pathurl>`:""}${rate}<duration>${mediaDur}</duration>${tcXml(base)}<media><video><samplecharacteristics>${rate}<width>1920</width><height>1080</height></samplecharacteristics></video></media></file>`; }
-      items+=`<clipitem id="clipitem-${i+1}"><name>${esc(name)}</name><enabled>TRUE</enabled><duration>${mediaDur}</duration>${rate}<start>${x.start}</start><end>${x.end}</end><in>${inF}</in><out>${inF+k.f}</out>${fileXml}<comments><mastercomment1>${esc("Shot "+(r?r.shot||"-":"missing")+" - "+edSrcLabel(k,r).replace(/[★✓]/g,"").trim())}</mastercomment1>${k.note?`<mastercomment2>${esc(k.note)}</mastercomment2>`:""}</comments></clipitem>`;
+      const cf=edClapF(t,k.reset), clapMk=cf!=null?`<marker><name>Clap</name><comment>Sync point</comment><in>${cf}</in><out>-1</out></marker>`:"";
+      items+=`<clipitem id="clipitem-${i+1}"><name>${esc(name)}</name><enabled>TRUE</enabled><duration>${mediaDur}</duration>${rate}<start>${x.start}</start><end>${x.end}</end><in>${inF}</in><out>${inF+k.f}</out>${fileXml}${clapMk}<comments><mastercomment1>${esc("Shot "+(r?r.shot||"-":"missing")+" - "+edSrcLabel(k,r).replace(/[★✓]/g,"").trim())}</mastercomment1>${k.note?`<mastercomment2>${esc(k.note)}</mastercomment2>`:""}</comments></clipitem>`;
       markers+=`<marker><name>${esc(r?r.shot||"-":"missing")}</name><comment>${esc((r&&(r.description||r.action))||"")}</comment><in>${x.start}</in><out>-1</out></marker>`; });
     out=`<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="5"><sequence id="sequence-1"><name>${esc(title)}</name><duration>${total}</duration>${rate}<timecode>${rate}<string>01:00:00:00</string><frame>${recStart}</frame><displayformat>NDF</displayformat></timecode><in>-1</in><out>-1</out><media><video><format><samplecharacteristics>${rate}<width>1920</width><height>1080</height><pixelaspectratio>square</pixelaspectratio></samplecharacteristics></format><track>${items}<enabled>TRUE</enabled><locked>FALSE</locked></track></video></media>${markers}</sequence></xmeml>\n`;
     fn=`${proj} - ${title}.xml`;
@@ -1643,11 +1698,13 @@ const RESET_MARK={hero:"★",good:"✓",ng:"✗",safety:"S"};
 function editReset(rowId,tn,rn,fn){ const r0=R(rowId); if(!r0) return; const r=r0.seq&&R(r0.seq)?seqAnchor(r0):r0; const a=takeList(r), t=a.find(z=>z.n===tn); if(!t) return;
   const x=(t.resets||[]).find(z=>z.n===rn); if(!x) return; const keep=fn(x,t); if(keep===false) t.resets=t.resets.filter(z=>z!==x); setTakeList(r,a); syncMarks(r); commit(); renderBody(); }
 function resetChips(rowId,t,redraw){
-  const rs=t.resets||[]; if(!rs.length) return "";
-  const box=h("div",{class:"nvresets"},h("small",{class:"note"},"Resets:"));
+  const rs=t.resets||[]; if(!rs.length&&!t.clap) return "";
+  const box=h("div",{class:"nvresets"});
+  if(t.clap) box.append(h("small",{class:"note clapat",title:"The clap (sync point). The Edit tool starts this take just after it."},"Clap "+t.clap));
+  if(rs.length) box.append(h("small",{class:"note"},"Resets:"));
   for(const x of rs){
     const chip=h("button",{class:"rchip"+(x.mark?" m-"+x.mark:""),title:`Reset R${x.n} at ${x.tc}${x.mark?" · "+x.mark:""}. Click to mark it Hero, Good, NG or Safety`},
-      h("b",{},"R"+x.n),h("span",{class:"mono"}," "+x.tc),x.mark?h("span",{class:"rmk"}," "+RESET_MARK[x.mark]):"");
+      h("b",{},"R"+x.n),h("span",{class:"mono"}," "+x.tc),x.mark?h("span",{class:"rmk"}," "+RESET_MARK[x.mark]):"",x.clap?h("span",{class:"note",title:"Clapped at "+x.clap}," · clap"):"");
     chip.onclick=e=>{ e.stopPropagation(); $$(".locpop").forEach(p=>p.remove());
       const pop=h("div",{class:"locpop seqmenu",role:"menu"}); const close=()=>pop.remove();
       const item=(l,fn,on)=>h("button",{class:"mi"+(on?" on":""),role:"menuitem",onclick:()=>{close();fn();redraw&&redraw()}},l);
@@ -1665,3 +1722,239 @@ function resetChips(rowId,t,redraw){
 // + Take: a take you forgot to roll on. It takes the next number but has no timecode and never shows as rolling
 function addMissedTake(id,extra){ const t=logTake(id,Object.assign({tc:"",at:null,t:"",added:true},extra||{}));
   if(t) toast(`Take ${t.n} added (not rolled). Double-click its timecode to fill it in.`); return t; }
+
+/* ---------- Backups: the server keeps the project as it stood at the start of each day (30 days) ---------- */
+function canRestore(){ return !PROJECT_KEYS||IS_ADMIN; }
+function backupsBox(){
+  const box=h("div",{class:"backups"},h("h3",{},"Daily backups"),h("p",{class:"note"},"The site keeps this project as it stood before the first change of each day, for 30 days. Download one as a project file, or "+(canRestore()?"restore it: the whole project goes back to that point for everyone (Undo straight after puts it back).":"ask the admin to restore one.")));
+  const list=h("div",{class:"bklist"},h("span",{class:"note"},"Loading…")); box.append(list);
+  api("/api/backups").then(j=>{
+    list.replaceChildren(); const days=j.backups||[];
+    if(!days.length){ list.append(h("p",{class:"note"},"No backups yet: the first is made with the first change of the day.")); return; }
+    for(const day of days){
+      const nice=new Date(day+"T12:00").toLocaleDateString([], {weekday:"short",day:"numeric",month:"short",year:"numeric"});
+      list.append(h("div",{class:"toolbar bkrow"},h("span",{},h("b",{},nice),h("span",{class:"note"}," start of the day")),
+        h("button",{class:"btn small",onclick:()=>backupDownload(day)},"Download"),
+        canRestore()?h("button",{class:"btn small danger",onclick:()=>backupRestore(day)},"Restore…"):null));
+    }
+  }).catch(e=>{ list.replaceChildren(h("p",{class:"note"},"Couldn't load the backups ("+e.message+").")); });
+  return box;
+}
+async function backupFetch(day){ const j=await api("/api/backups?day="+encodeURIComponent(day)); return materialize(j.model); }
+async function backupDownload(day){
+  try{ const doc=await backupFetch(day);
+    download(fileBase()+" backup "+day+".shotlist.json",JSON.stringify({app:"shotlist-scheduler",version:VERSION,saved:new Date().toISOString(),backupOf:day,doc}),"application/json");
+    toast("Downloaded the "+day+" backup (pictures stay on the site)"); }catch(e){ toast("Couldn't download it: "+e.message); }
+}
+async function backupRestore(day){
+  let doc; try{ doc=await backupFetch(day); }catch(e){ toast("Couldn't load it: "+e.message); return; }
+  const n=x=>x.days.filter(d=>!d.archived).length, shots=x=>x.days.reduce((t,d)=>t+d.rows.filter(r=>!isBlock(r)).length,0);
+  if(!(await ask("Restore the "+day+" backup?",`The whole project goes back to how it was at the start of that day, for everyone: ${n(doc)} day${n(doc)===1?"":"s"} and ${shots(doc)} shots (now ${n(S)} and ${shots(S)}). Takes and notes logged since then are lost unless you download a backup of today first. Undo straight after puts it all back.`,"Restore"))) return;
+  commit();
+  S.project=doc.project; S.cfg=doc.cfg; S.people=doc.people; S.cols=doc.cols||[]; S.days=doc.days; S.cuts=doc.cuts||[];
+  commit(); renderAll(); toast("Restored the "+day+" backup",{label:"Undo",fn:()=>{undo()}});
+}
+
+/* ---------- the clap: the sync point. Kept on the rolling take (or on its latest reset), so the edit starts just after it ---------- */
+function markClap(id,lagMs){
+  // the moment is taken now; it's saved once the flash is over, so saving can't get in the flash's way
+  const at=Date.now()+(lagMs||0), tc=tcString(nowTcMs()+(lagMs||0),slateFps());
+  setTimeout(()=>saveClap(id,at,tc),(lagMs||0)+250);
+}
+function saveClap(id,at,tc){
+  const r0=R(id); if(!r0) return; const r=r0.seq&&R(r0.seq)?seqAnchor(r0):r0; const a=takeList(r), t=a[a.length-1];
+  if(!t||!t.at||at<t.at-1000||at-t.at>=4*3600e3||(t.out&&t.outAt&&at>t.outAt)) return;
+  const rs=(t.resets||[]).filter(x=>x.at<=at), last=rs.length?rs.reduce((m,x)=>x.at>m.at?x:m):null;
+  if(last) { last.clap=tc; last.clapAt=at; } else { t.clap=tc; t.clapAt=at; }
+  setTakeList(r,a); commit();
+}
+
+// wrap report: where the day went. From the actual timeline: real setting up and shooting against the plan, and breaks at their real length
+function planVsActual(d,C){
+  const sec=h("section",{class:"docsec"},h("h3",{},"Plan against actual"));
+  const U=actualUnits(d,C).filter(u=>u.done||u.blockU&&!u.live);
+  if(!U.length){ sec.append(h("p",{class:"note"},"Nothing timed yet: set Status to Setting up when you move on to a shot, and log takes, to see where the day goes.")); return sec; }
+  const m=x=>x?Math.round(x[1]-x[0]):0, sd=(a,p)=>{const x=Math.round(a-p);return x===0?"on plan":(x>0?"+":"−")+dur(Math.abs(x))}, cls=(a,p)=>Math.round(a-p)>0?"bad":Math.round(a-p)<0?"good":"";
+  const t=h("table",{class:"doctable"},h("thead",{},h("tr",{},...["","Setting up","plan","Shooting","plan","Total vs plan"].map(x=>h("th",{},x)))));
+  const tb=h("tbody",{}); let aSu=0,pSu=0,aSh=0,pSh=0,aB=0,pB=0; const over=[];
+  for(const u of U){
+    if(u.blockU){ const a=m(u.blk); aB+=a; pB+=u.pLen; tb.append(h("tr",{class:"pvbreak"},h("td",{},u.name),h("td",{colspan:"3"},`${u.est?"ended "+fmt(u.blk[1]):fmt(u.blk[0])+" to "+fmt(u.blk[1])} · ${dur(a)}`),h("td",{},dur(Math.round(u.pLen))),h("td",{class:cls(a,u.pLen)},sd(a,u.pLen)))); continue; }
+    const su=u.setup?m(u.setup):null, sh=u.shoot?m(u.shoot):u.nolog?m(u.nolog):null;
+    if(su!=null){aSu+=su;pSu+=u.pSu} if(sh!=null){aSh+=sh;pSh+=u.pSh+(u.nolog?u.pSu:0)}
+    const tot=(su||0)+(sh||0), ptot=(su!=null?u.pSu:0)+(sh!=null?u.pSh+(u.nolog?u.pSu:0):0);
+    if(tot-ptot>0) over.push({name:u.name,by:Math.round(tot-ptot)});
+    tb.append(h("tr",{},h("td",{class:"nowrap"},h("b",{},u.name)),h("td",{class:"nowrap"},su!=null?dur(su):u.nolog?"(not split)":"-"),h("td",{class:"nowrap note"},su!=null?dur(Math.round(u.pSu)):""),
+      h("td",{class:"nowrap"},sh!=null?dur(sh):"-"),h("td",{class:"nowrap note"},sh!=null?dur(Math.round(u.pSh+(u.nolog?u.pSu:0))):""),h("td",{class:"nowrap "+cls(tot,ptot)},ptot?sd(tot,ptot):"")));
+  }
+  tb.append(h("tr",{class:"pvtotal"},h("td",{},h("b",{},"Total")),h("td",{},dur(aSu)),h("td",{class:"note"},dur(Math.round(pSu))),h("td",{},dur(aSh)),h("td",{class:"note"},dur(Math.round(pSh))),h("td",{class:cls(aSu+aSh,pSu+pSh)},sd(aSu+aSh,pSu+pSh))));
+  t.append(tb);
+  const lines=[`Setting up ${sd(aSu,pSu)}, shooting ${sd(aSh,pSh)}`+(pB?`, breaks ${sd(aB,pB)}`:"")+"."];
+  over.sort((a,b)=>b.by-a.by); if(over.length) lines.push("Ran longest over plan: "+over.slice(0,3).map(o=>`${o.name} (+${dur(o.by)})`).join(", ")+".");
+  sec.append(h("p",{},lines.join(" ")),t);
+  return sec;
+}
+
+/* ---------- duplicated sequences: changes to one can be pushed to its copies ---------- */
+// a shot and the copies made of it share a twin key: the original shot's id
+function twinKey(r){ return r?(r.dupSrc||r.id):""; }
+function seqCopies(a){ if(!a||!a.seqDup) return []; return live().flatMap(d=>d.rows).filter(x=>x.seq===x.id&&x.seqDup===a.seqDup&&x.id!==a.id); }
+function offerSeqPush(anchorId,what,fn){
+  const a=R(anchorId); const copies=seqCopies(a); if(!copies.length) return;
+  setTimeout(async()=>{
+    const names=copies.map(c=>seqTitle(c)).join(", ");
+    if(!await ask(`Update ${copies.length===1?"the copy":"the "+copies.length+" copies"} too?`,`You changed ${what} on ${seqTitle(a)}. Make the same change to ${names}?`,copies.length===1?"Update the copy":"Update copies")) return;
+    commit(); const x=R(anchorId); for(const c of copies){ const cc=R(c.id); if(cc) fn(cc,x); }
+    commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView(); toast(`Updated ${copies.length===1?seqTitle(copies[0]):copies.length+" copies"} - Undo to take it back`);
+  },0);
+}
+// make a copy's shots match: copy in the shots added to the original, take out (or remove) the twins of shots taken out
+function seqPushMembers(c,added,removed){
+  const f=findRow(c.id); if(!f) return; const d=f.d; let anchor=c;
+  for(const m of removed){
+    const mem=seqMembers(anchor,d), tw=mem.find(x=>twinKey(x)===twinKey(m)); if(!tw) continue;
+    const rest=mem.filter(x=>x.id!==tw.id);
+    if(tw.id===anchor.id&&rest.length){ const na=rest[0]; for(const k of ["seqName","takeLog","seqNotes","seqTime","seqSetup","seqShoot","seqVideo","seqDup"]) na[k]=tw[k]; na.takes=tw.takes; rest.forEach(x=>x.seq=na.id); anchor=na; }
+    // a copied shot nobody has shot yet goes; one with takes stays, just out of the sequence
+    if(!Number(tw.takes)&&!takeList(tw).length&&!tw.done) d.rows.splice(d.rows.indexOf(tw),1);
+    else { tw.seq=""; tw.seqDup=""; }
+  }
+  const mem=seqMembers(anchor,d), last=mem[mem.length-1];
+  let at=last?d.rows.indexOf(last)+1:d.rows.length;
+  for(const x of added){
+    if(mem.some(y=>twinKey(y)===twinKey(x))) continue;
+    const n=Object.assign({},x,{id:uid("r"),seq:anchor.id,dupSrc:twinKey(x),done:false,doneAt:null,takes:0,takeLog:"",cut:false,origStart:"",setupAt:null,seqName:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0,seqVideo:"",seqDup:""});
+    d.rows.splice(at++,0,n);
+  }
+}
+
+/* ---------- the four views: Clipboard (the day's list), Slate, Details (and Sequence View), Edit ---------- */
+const VIEWS=[["clip","Clipboard"],["slate","Slate"],["details","Details"],["edit","Edit"]];
+function curView(){ return $("#slateView").classList.contains("open")?"slate":$("#editView").classList.contains("open")?"edit":($("#noteView").classList.contains("open")||$("#seqView").classList.contains("open"))?"details":"clip"; }
+function goView(v){
+  const from=curView(); if(from===v){ updViewSwitch(); return; }
+  // keep the shot you're on when moving between Slate and Details
+  const ctx=from==="slate"?SLV.id:from==="details"?($("#seqView").classList.contains("open")?SQV.id:NV.id):(ED.sel&&R((edCut().clips.find(k=>k.id===ED.sel)||{}).row)?edCut().clips.find(k=>k.id===ED.sel).row:null);
+  if(from==="slate") closeSlate(); else if(from==="details"){ if($("#seqView").classList.contains("open")) closeSeqView(); else closeNotes(); } else if(from==="edit") closeEdit();
+  if(v==="slate") openSlate(ctx||undefined); else if(v==="details") openNotes(ctx||undefined); else if(v==="edit") openEdit();
+  updViewSwitch();
+}
+function viewSwitch(){ const cur=curView();
+  return h("nav",{class:"vswitch",role:"tablist","aria-label":"Views"},...VIEWS.map(([k,l])=>h("button",{class:"vsw vsw-"+k+(cur===k?" on":""),role:"tab","aria-selected":String(cur===k),title:"Switch to "+l,onclick:e=>{e.stopPropagation();goView(k)}},l))); }
+function updViewSwitch(){ const cur=curView(); $$("#viewSwitch .vsw").forEach(b=>{const on=b.classList.contains("vsw-"+cur);b.classList.toggle("on",on);b.setAttribute("aria-selected",String(on))}); }
+
+(function(){ const mo=new MutationObserver(()=>updViewSwitch()); for(const id of ["slateView","noteView","seqView","editView"]){ const el=document.getElementById(id); if(el) mo.observe(el,{attributes:true,attributeFilter:["class"]}); } })();
+
+/* ---------- Edit: where each shot sits in the cuts (for Details), target length, import an EDL or FCP XML ---------- */
+function edShotTimings(rowId){
+  const out=[]; for(const c of (S.cuts||[])){ const L=edClips(c); L.forEach((x,i)=>{ if(x.cl.row===rowId) out.push({cut:c,clip:x.cl,i,start:x.start,end:x.end,total:edTotal(c)}); }); }
+  return out;
+}
+// clip names in an imported cut -> shots and takes (DIT names, clip names, _R resets, shot_board)
+function edNameIndex(){
+  const ix=new Map(), put=(k,v)=>{ k=String(k||"").toLowerCase().replace(/\.(mov|mp4|mxf|wav|png|jpg|r3d|braw|ari)$/i,"").trim(); if(k&&!ix.has(k)) ix.set(k,v); };
+  for(const d of live()) for(const r of d.rows){ if(isBlock(r)) continue; const a=edA(r);
+    put((r.shot||"")+"_board",{row:r.id,src:"board"}); put((r.shot||"")+"_video",{row:r.id,src:"video"});
+    if(a.id!==r.id) continue;
+    for(const t of takeList(a)){ let nm=""; try{nm=shotName(a,d,t.n)}catch(e){}
+      for(const base of [t.name,nm]){ if(!base) continue; put(base,{row:r.id,src:"take",take:t.n}); for(const x of (t.resets||[])) put(base+"_R"+x.n,{row:r.id,src:"take",take:t.n,reset:x.n}); } } }
+  return ix;
+}
+function edMatchClip(name,comment,ix){
+  const k=String(name||"").toLowerCase().replace(/\.(mov|mp4|mxf|wav|png|jpg|r3d|braw|ari)$/i,"").trim();
+  if(ix.has(k)) return ix.get(k);
+  const m=String(comment||"").match(/SHOT\s+([^\s-]+)/i); if(m){ const r=live().flatMap(d=>d.rows).find(x=>!isBlock(x)&&String(x.shot).toLowerCase()===m[1].toLowerCase()); if(r) return {row:r.id,src:"board"}; }
+  return null;
+}
+function parseEdl(text){
+  const ev=[]; let cur=null; const tc=/(\d\d:\d\d:\d\d[:;]\d\d)/.source;
+  for(const line of text.split(/\r?\n/)){
+    const m=line.match(new RegExp("^(\\d{3,})\\s+(\\S+)\\s+(\\S+)\\s+(C|D\\s*\\d*|W\\S*)\\s+"+tc+"\\s+"+tc+"\\s+"+tc+"\\s+"+tc));
+    if(m){ if(!/^V/i.test(m[3])){ cur=null; continue; } cur={reel:m[2],srcIn:m[5],srcOut:m[6],recIn:m[7],recOut:m[8],name:"",comment:""}; ev.push(cur); continue; }
+    if(!cur) continue;
+    let c; if((c=line.match(/^\*\s*FROM CLIP NAME:\s*(.+)$/i))) cur.name=c[1].trim(); else if((c=line.match(/^\*\s*(?:COMMENT|LOC)[^:]*:\s*(.+)$/i))) cur.comment+=(cur.comment?" ":"")+c[1].trim();
+  }
+  return ev.map(e=>({name:e.name||e.reel,comment:e.comment,srcIn:edTcToF(e.srcIn.replace(";",":")),f:edTcToF(e.recOut.replace(";",":"))-edTcToF(e.recIn.replace(";",":")),recIn:edTcToF(e.recIn.replace(";",":"))}));
+}
+function parseXml(text){
+  const doc=new DOMParser().parseFromString(text,"application/xml"); const out=[];
+  const seq=doc.querySelector("sequence"); if(!seq) return out;
+  const track=seq.querySelector("media > video > track"); if(!track) return out;
+  for(const ci of track.querySelectorAll(":scope > clipitem")){
+    const g=s=>{const e=ci.querySelector(":scope > "+s);return e?e.textContent.trim():""};
+    const start=Number(g("start")), end=Number(g("end")), inF=Number(g("in")), outF=Number(g("out"));
+    const file=ci.querySelector(":scope > file"), fid=file&&file.getAttribute("id");
+    const fnode=file&&file.querySelector("name")?file:(fid?doc.querySelector(`file[id="${fid}"] > name`)?.parentNode:null);
+    const ftc=fnode&&fnode.querySelector(":scope > timecode > string");
+    const base=ftc?edTcToF(ftc.textContent.trim()):0;
+    out.push({name:g("name")||(fnode&&fnode.querySelector(":scope > name")?.textContent)||"",comment:(ci.querySelector("comments")?.textContent||"").trim(),srcIn:(base||0)+(isFinite(inF)?inF:0),f:(isFinite(end)&&isFinite(start)&&end>start)?end-start:Math.max(1,outF-inF),recIn:start});
+  }
+  return out;
+}
+function edImport(){
+  const inp=h("input",{type:"file",accept:".edl,.xml,text/plain,application/xml",style:"display:none"}); document.body.append(inp);
+  inp.onchange=async()=>{ const f=inp.files[0]; inp.remove(); if(!f) return; const text=await f.text();
+    const evs=/\.xml$/i.test(f.name)||/^\s*<\?xml|<xmeml/i.test(text)?parseXml(text):parseEdl(text);
+    if(!evs.length){ toast("No video events found in "+f.name); return; }
+    const ix=edNameIndex(); let hit=0;
+    const clips=evs.map(e=>{ const m=edMatchClip(e.name,e.comment,ix); const k={id:uid("k"),row:m?m.row:"",src:m?m.src:"board",take:m&&m.take!=null?m.take:null,reset:m&&m.reset!=null?m.reset:null,url:"",f:Math.max(1,e.f||1),inF:0,name:m?"":e.name,note:m?"":"Not matched to a shot: "+e.name};
+      if(m){ hit++; if(m.src==="take"){ const r=R(m.row), t=r&&edTakes(r).find(x=>x.n==m.take), b=t&&edTcToF(t.tc); if(b!=null&&e.srcIn!=null&&e.srcIn>=b) k.inF=e.srcIn-b; } }
+      return k; });
+    const o=edData(), base=f.name.replace(/\.(edl|xml)$/i,""); const c={id:uid("c"),name:base.slice(0,50)||"Imported cut",audio:"",target:null,notes:"Imported from "+f.name,clips};
+    o.cuts.push(c); edSave(o); P.edCut=Object.assign({},P.edCut,{[pid()]:c.id}); savePrefs(); ED.t=0; ED.sel=null; ED.cur=""; renderEdit();
+    toast(`Imported ${clips.length} clip${clips.length===1?"":"s"} from ${f.name}: ${hit} matched to shots${hit<clips.length?`, ${clips.length-hit} not (they show striped; set their shot under Clip)`:""}`);
+  };
+  inp.click();
+}
+
+// target length for the cut: running time turns red when over, with how much
+function edTargetBox(c,total){
+  const fps=edFps(), tgt=Number(c.target)||0;
+  const inp=h("input",{type:"text",class:"edtarget",value:tgt?(Math.floor(tgt/60)+":"+String(Math.round(tgt%60)).padStart(2,"0")):"",placeholder:"m:ss",title:"Target length for this cut (minutes:seconds)","aria-label":"Target length"});
+  inp.onchange=()=>{ const v=inp.value.trim(); let s=null; const m=v.match(/^(\d+):(\d{1,2})$/); if(m) s=Number(m[1])*60+Number(m[2]); else if(/^\d+(\.\d+)?$/.test(v)) s=Number(v); edDo(x=>{x.target=s&&s>0?s:null}); renderEdit(); };
+  const diff=tgt?total/fps-tgt:0;
+  return h("span",{class:"edtgt"},h("span",{class:"note"},"Target"),inp,tgt?h("span",{class:"edtgtdiff "+(diff>0.5?"over":diff<-0.5?"under":"on")},Math.abs(diff)<0.5?"on target":(diff>0?"+":"−")+edSecs(Math.round(Math.abs(diff)*fps))):null);
+}
+
+/* ---------- Details: the Notes card's columns (per device), and the Edit card ---------- */
+const NV_FIELDS_DEFAULT=["director","camera","lighting","vfx","props"];
+const NV_SKIP=new Set(["handle","shot","seq","shotId","setup","start","shoot","end","takes","refs","actions","description","video","orig"]);
+function nvFieldChoices(){ return cols().filter(c=>!NV_SKIP.has(c.key)&&!c.fixed); }
+function nvFieldCols(){ const keys=Array.isArray(P.nvFields)?P.nvFields:NV_FIELDS_DEFAULT; const all=nvFieldChoices(); return keys.map(k=>all.find(c=>c.key===k)).filter(Boolean); }
+function nvFieldEditor(r,c){
+  const k=c.key, lab=c.label||c.base||k, save=(v,soft)=>{const x=R(r.id);if(!x)return;x[k]=v;soft?softCommit():(commit(),renderBody())};
+  if(c.type==="flag"){ const cb=h("input",{type:"checkbox"}); cb.checked=!!r[k]&&r[k]!=="0"; cb.addEventListener("change",()=>save(cb.checked?(c.custom?true:"Y"):"",false)); return h("label",{class:"nvflag"},cb," "+lab); }
+  if(c.options&&c.options.length){ const sel=h("select",{},...c.options.map(o=>h("option",{value:o,selected:String(r[k]||"")===o},o||"-"))); sel.addEventListener("change",()=>save(sel.value,false)); return h("label",{},lab,sel); }
+  if(c.type==="number"){ const i=h("input",{type:"number",value:r[k]??""}); i.addEventListener("change",()=>save(i.value===""?"":Number(i.value),false)); return h("label",{},lab,i); }
+  const t=h("textarea",{rows:c.type==="note"?"2":"1",placeholder:lab}); t.value=r[k]||"";
+  t.addEventListener("input",()=>{save(t.value,true);autosize(t)}); t.addEventListener("change",()=>{commit();renderBody()});
+  requestAnimationFrame(()=>autosize(t)); return h("label",{},lab,t);
+}
+function nvFieldMenu(anchor){
+  $$(".locpop").forEach(x=>x.remove());
+  const pop=h("div",{class:"locpop seqmenu statmenu",role:"menu"});
+  const cur=()=>Array.isArray(P.nvFields)?P.nvFields.slice():NV_FIELDS_DEFAULT.slice();
+  pop.append(h("div",{class:"note",style:"margin:0 .3rem .3rem"},"Edit these in Details (this device)"));
+  for(const c of nvFieldChoices()){ const cb=h("input",{type:"checkbox"}); cb.checked=cur().includes(c.key);
+    cb.addEventListener("change",()=>{let L=cur().filter(k=>k!==c.key); if(cb.checked) L.push(c.key); P.nvFields=L; savePrefs(); renderNotes();});
+    pop.append(h("label",{class:"mi"},cb," "+(c.label||c.base||c.key))); }
+  pop.append(h("button",{class:"mi",onclick:()=>{P.nvFields=null;savePrefs();renderNotes();pop.remove()}},"Back to the usual five"));
+  document.body.append(pop);
+  const b=anchor.getBoundingClientRect(); pop.style.top=Math.max(8,Math.min(b.bottom+6,innerHeight-pop.offsetHeight-8))+"px"; pop.style.left=Math.max(8,Math.min(b.right-pop.offsetWidth,innerWidth-pop.offsetWidth-8))+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",function off(e){if(!pop.contains(e.target)&&e.target.isConnected){pop.remove();document.removeEventListener("pointerdown",off)}}),0);
+}
+// where this shot sits in each cut: how long it should run, where, from which take
+function nvEditCard(r){
+  const box=h("div",{class:"nvedit"}), T=edShotTimings(r.id), fps=edFps();
+  if(!T.length){ box.append(h("p",{class:"note"},"Not in a cut yet."),h("button",{class:"btn small",onclick:()=>{closeNotes();openEdit()}},"Open Edit")); return box; }
+  for(const x of T){
+    const rec0=3600*edNom();
+    box.append(h("div",{class:"nveditrow"},
+      h("div",{class:"nveditrun"},h("b",{},edSecs(x.clip.f)),h("span",{class:"note"}," ("+x.clip.f+" frames)")),
+      h("div",{},h("b",{},x.cut.name||"Cut"),h("span",{class:"note"},` · clip ${x.i+1} of ${x.cut.clips.length} · ${edSrcLabel(x.clip,r)}`)),
+      h("div",{class:"mono note"},`${edTc(rec0+x.start)} → ${edTc(rec0+x.end)} in the cut`+(x.clip.src!=="board"&&x.clip.inF?` · starts ${edSecs(x.clip.inF)} into the ${x.clip.reset?"reset":"take"}`:"")),
+      x.clip.note?h("div",{class:"note"},x.clip.note):null,
+      h("button",{class:"btn small",onclick:()=>{closeNotes();P.edCut=Object.assign({},P.edCut,{[pid()]:x.cut.id});savePrefs();ED.sel=x.clip.id;ED.tab="clip";ED.t=x.start;openEdit()}},"Open in Edit")));
+  }
+  const durS=durSec(r.duration); if(durS&&T.length){ const f=T[0].clip.f/fps, d=f-durS; if(Math.abs(d)>=0.5) box.append(h("p",{class:"note"},`Planned screen duration is ${durS}s: the cut runs it ${d>0?"+":"−"}${Math.abs(d).toFixed(1)}s ${d>0?"longer":"shorter"}.`)); }
+  return box;
+}
