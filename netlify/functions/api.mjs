@@ -1,4 +1,4 @@
-// Shotlist Scheduler - team sync API (Netlify Functions v2 + Netlify Blobs)
+// Set Sense (formerly Shotlist Scheduler) - team sync API (Netlify Functions v2 + Netlify Blobs)
 //
 // Storage layout (one Blobs store, strong consistency). Each project has its own space:
 //   projects/<pid>            {id, name, created, archived}

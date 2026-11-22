@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.43.0";
+const VERSION = "2.44.0";
 const CHANGELOG = [
-  ["2.43.0","2026-11-22","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
+  ["2.44.0","2026-11-22","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
+  ["2.43.0","","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
   ["2.42.0","","Admins can delete archived days: Delete next to each one in the Archived list (or Delete all), with a confirmation that says how many shots and takes go with it, and Undo straight after. Shown only with the site's admin key saved on the device (or for a project kept only in this browser)."],
   ["2.41.3","","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
   ["2.41.2","","Call sheet: Find nearest A&E, police, fire is more reliable. It tries several OpenStreetMap servers in turn when one is busy, waits longer, says what's happening next to the button, and no longer sits greyed out without a location: it uses a postcode from the address, or opens Set location."],
@@ -1463,7 +1464,7 @@ function showKeyPrompt(id,msg){
   if(others.length){ ol.append(h("span",{class:"note"},"Or open: ")); others.forEach(p=>ol.append(h("button",{class:"btn small",onclick:async()=>{$("#keyModal").classList.remove("open");await openProject(p.id)}},p.name||p.id))); }
   // nothing from a project you can't open stays on screen
   if(!id||(S&&P.projectId===id)){ S=null; base=null; pending=[]; $("#grid tbody")&&($("#grid tbody").innerHTML=""); }
-  document.body.classList.add("keylocked"); document.title="Shotlist Scheduler";
+  document.body.classList.add("keylocked"); document.title="Set Sense";
   $("#keyModal").classList.add("open"); setTimeout(()=>$("#keyInput").focus(),50);
 }
 async function submitKey(){
@@ -1583,7 +1584,7 @@ function renderSettingsRow(){
   set("callTime",d.call); set("wrapTime",d.wrap); set("setupPct",d.setupPct); set("shootPct",d.shootPct); set("minSetup",d.minSetup); if(P.view==="nocut"){P.view="all";P.hideCut=true;savePrefs();} set("viewMode",P.view||"all"); $("#hideCut").checked=!!P.hideCut; renderPrioFilter();
   $("#bandSummary").textContent=`${d.name||"Day"} · call ${fmt(toMin(d.call||"09:00"))} · wrap ${fmt(toMin(d.wrap||"18:00"))}`;
   $("#projTitle").textContent=S.project.name||"Untitled project";
-  if(!syncProjectName._t) syncProjectName._t=setTimeout(()=>{syncProjectName._t=null;syncProjectName(false)},1500); document.title=(S.project.name||"Shotlist")+" - Shotlist Scheduler";
+  if(!syncProjectName._t) syncProjectName._t=setTimeout(()=>{syncProjectName._t=null;syncProjectName(false)},1500); document.title=(S.project.name||"Shotlist")+" - Set Sense";
 }
 function renderAll(){ if(!S) return; invalidateCols(); renderDayTabs(); renderSettingsRow(); renderCols(); renderHead(); renderBody(); applyFreeze(); renderSky(); rebuildDoc(); }
 function renderAllKeepFocus(){

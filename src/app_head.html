@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Shotlist Scheduler</title>
+<title>Set Sense</title>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -572,6 +572,7 @@ body.viewopen{overflow:hidden}
 /* Slate and Notes stand out at the end of the header */
 .onsetgroup{display:inline-flex;gap:.35rem;margin-left:.35rem;padding-left:.6rem;border-left:1px solid var(--line2)}
 /* the four ways into the data: Clipboard, Slate, Details, Edit */
+.tagline{margin:-.3rem 0 .6rem;color:var(--muted);font-style:italic}
 .vswitch{display:inline-flex;gap:0;padding:2px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2);border-left:1px solid var(--line2)!important;padding-left:2px!important}
 .vsw{--vc:var(--accent);display:inline-flex;align-items:center;gap:.3rem;border:none;background:none;color:var(--ink);font:inherit;font-size:.86rem;font-weight:600;padding:.32rem .75rem;border-radius:8px;cursor:pointer;white-space:nowrap}
 .vsw:hover{background:color-mix(in srgb,var(--vc) 12%,transparent)}
@@ -972,7 +973,7 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="updatebar noprint" id="updateBar"><span id="updateText"></span><button class="btn small primary" id="updateGo">Refresh now</button><button class="btn small" id="updateLater">Later</button></div>
 <header class="top">
   <div class="titlebar">
-    <h1><span id="projTitle" title="Project name - change it in Settings">Shotlist</span> <small>Shotlist Scheduler <span id="verLabel"></span></small></h1>
+    <h1><span id="projTitle" title="Project name - change it in Settings">Shotlist</span> <small title="Set Sense: break down projects, not people">Set Sense <span id="verLabel"></span></small></h1>
     <span class="status noprint" id="status" title=""><i></i><span>Local</span></span>
     <button class="who noprint" id="who" type="button" aria-haspopup="dialog" aria-expanded="false" title="Who's online"></button>
     <span class="spacer"></span>
@@ -1164,7 +1165,8 @@ body.nosteps .mins.timing input{width:4.5em}
 
 <!-- Join team -->
 <div class="modal" id="joinModal"><div class="box narrow">
-  <h2>Join the team schedule</h2>
+  <h2>Join the team on Set Sense</h2>
+  <p class="tagline">Break down projects, not people.</p>
   <p class="note">Add your name so teammates can see who's editing. <span id="joinKeyNote">Ask whoever set up the site for the team key. It's stored on this device so you only enter it once.</span></p>
   <div class="form" style="grid-template-columns:1fr">
     <label>Your name (shown to the team)<input id="joinName" autocomplete="name"></label>

@@ -1,4 +1,4 @@
-"""Assemble the Shotlist Scheduler.
+"""Assemble Set Sense (formerly Shotlist Scheduler).
 
   python3 build/assemble.py <repo_dir> <standalone_out.html> <seed.json>
 
@@ -98,7 +98,9 @@ for d in ("src", "build", "vendor", "icon"):
     "description": "Shoot scheduler and DIT shot-naming tool with live team sync on Netlify",
     "dependencies": {"@netlify/blobs": "^10.0.0"}}, indent=2) + "\n")
 (repo / ".gitignore").write_text("node_modules/\n.netlify/\n*.pyc\n__pycache__/\n")
-readme = f"""# Shotlist Scheduler v{version}
+readme = f"""# Set Sense v{version}
+
+_Break down projects, not people._
 
 Shoot scheduler and DIT shot-naming tool. Projects with cast and crew, schedule and capture days,
 timings that cascade, shot names with take numbers, and live team editing.

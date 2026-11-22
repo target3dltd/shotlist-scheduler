@@ -1,4 +1,6 @@
-# Shotlist Scheduler v2.43.0
+# Set Sense v2.44.0
+
+_Break down projects, not people._
 
 Shoot scheduler and DIT shot-naming tool. Projects with cast and crew, schedule and capture days,
 timings that cascade, shot names with take numbers, and live team editing.

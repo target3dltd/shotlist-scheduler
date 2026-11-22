@@ -787,12 +787,12 @@ async function buildTracker(days,opt){
   { const ad=wb.addWorksheet("App data",{state:"hidden"});
     const payload=JSON.stringify({app:"shotlist-scheduler",v:1,exported:new Date().toISOString(),cols:S.cols,
       days:days.map(d=>{const o={};for(const k of DAY_FIELDS)o[k]=d[k]??null;o.id=d.id;o.rows=d.rows.map(r=>Object.assign({},r));return o})});
-    ad.getCell("A1").value="Shotlist Scheduler app data - used when this file is imported back. Please leave it as it is.";
+    ad.getCell("A1").value="Set Sense app data - used when this file is imported back. Please leave it as it is.";
     for(let i=0,rn=2;i<payload.length;i+=30000,rn++) ad.getCell("A"+rn).value=payload.slice(i,i+30000); }
   const ins=wb.addWorksheet("Instructions",{properties:{tabColor:{argb:XC.signal}},views:[{showGridLines:false}]});
   ins.columns=[{width:30},{width:100}];
   ins.getCell("A1").value="How to use this shotlist"; ins.getCell("A1").font=F({size:18,bold:true}); ins.getRow(1).height=30;
-  const help=[["Made by",`Shotlist Scheduler v${VERSION} on ${new Date().toISOString().slice(0,10)} for ${S.project.name||"this project"}: ${days.map(d=>d.name).join(", ")}.`],
+  const help=[["Made by",`Set Sense v${VERSION} on ${new Date().toISOString().slice(0,10)} for ${S.project.name||"this project"}: ${days.map(d=>d.name).join(", ")}.`],
     ["One row per take","Every logged take is its own row. Shots with no takes logged yet have a single planned row."],
     ["Shot ID","A formula built from the ID Settings tab: set a part to FALSE to drop it from every ID. 'Shot name (app)' is what the Scheduler generated, for checking."],
     ["Retakes added here",`Add a row and type the same Action. Blank rows already carry the Take # and Shot ID formulas (Take # counts earlier rows with that Action). ${total} rows are ready.`],
