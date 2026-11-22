@@ -440,6 +440,19 @@ body.calm .timeline.actual .seg.live{animation:none}
 .seqpickhd{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.5rem 0 .2rem;padding-top:.3rem;border-top:1px solid var(--line)} .seqpickhd:first-child{border-top:none;margin-top:0}
 .seqshot{position:relative} .sqgrip{align-self:center;border:none;background:none;color:var(--muted);font-size:1.1rem;cursor:grab;padding:.4rem .2rem;touch-action:none;border-radius:6px} .sqgrip:hover,.sqgrip:focus-visible{color:var(--ink);background:var(--panel2)}
 .seqshot.sqmoving{opacity:.45} .seqshot.sqdrop{box-shadow:-4px 0 0 var(--accent)} .seqshot.sqdrop.sqdrop-after{box-shadow:4px 0 0 var(--accent)}
+/* Details for tech and breaks */
+.nvblk h3{display:flex;align-items:baseline;gap:.4rem} .ckprog{font-weight:400;font-size:.85rem}
+.cklist{display:flex;flex-direction:column;gap:.3rem}
+.ckrow{display:grid;grid-template-columns:auto 1fr minmax(6rem,9rem) auto auto;gap:.4rem;align-items:center;padding:.25rem .3rem;border-radius:6px}
+.ckrow.mine{background:color-mix(in srgb,var(--accent) 9%,transparent)} .ckrow input[type=checkbox]{width:1.15rem;height:1.15rem}
+.cktext{border:1px solid transparent;background:none;padding:.25rem .35rem;border-radius:5px;font:inherit;color:var(--ink);min-width:0} .cktext:hover{border-color:var(--line)} .cktext:focus{border-color:var(--accent);outline:none;background:var(--panel)}
+.cktext.done{text-decoration:line-through;color:var(--muted)} .ckwho,.ckadd select{border:1px solid var(--line);border-radius:6px;padding:.25rem .35rem;font:inherit;font-size:.85rem;min-width:0;color:var(--ink)}
+.ckby{font-size:.75rem;white-space:nowrap} .ckrow .x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:1rem}
+.ckadd{display:flex;gap:.4rem;margin-top:.5rem} .ckadd input[type=text]{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:.35rem .5rem;font:inherit;color:var(--ink)}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.5rem;margin-bottom:.5rem}
+.nvblk label.stack{display:flex;flex-direction:column;gap:.2rem;font-size:.82rem;color:var(--muted)} .nvblk label.stack input,.nvblk label.stack textarea,.nvblk textarea{border:1px solid var(--line);border-radius:6px;padding:.35rem .5rem;font:inherit;font-size:.92rem;color:var(--ink);width:100%;box-sizing:border-box}
+.diettable input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:5px;padding:.25rem .4rem;font:inherit;font-size:.88rem;color:var(--ink)}
+@media (max-width:640px){ .ckrow{grid-template-columns:auto 1fr auto;} .ckrow .ckwho{grid-column:2} .ckrow .ckby{grid-column:2} }
 .ditresets{display:flex;flex-wrap:wrap;gap:.2rem;margin-top:.2rem} .clapat{font-family:ui-monospace,Menlo,monospace;margin-right:.4rem}
 .pvtotal td{border-top:2px solid var(--line2)} .pvbreak td{color:var(--muted)}
 .rchip{border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:999px;padding:.1rem .5rem;font:inherit;font-size:.8rem;cursor:pointer}
@@ -1376,6 +1389,12 @@ header.top{padding:var(--barpad-y) var(--barpad-x) .8rem}
     <li>Two people can work on the same cut at once: each clip saves on its own, so you don't overwrite each other.</li>
     <li>On a phone, Import, Export and Swap in latest takes are in the cut's <b>⋯</b> menu.</li>
   </ul>
+  <h3>Tech and breaks in Details</h3>
+  <ul>
+    <li>Tech and break rows open in Details too: click the <b>↗</b> on the row in the Clipboard, or step to them with ‹ › (Details now moves through the day's shots, breaks and tech in order). <b>Start now</b> / <b>End now</b> there work like the status chip on the row.</li>
+    <li><b>Tech: checklist.</b> Add what needs doing, pick who it's for (anyone on cast &amp; crew), and tick items off: each tick shows who ticked it and when, and your own items are highlighted. Several people can tick at once without overwriting each other. <b>Copy items from another tech</b> reuses a list (unticked); <b>Untick everything</b> resets it. There's a Notes box as well.</li>
+    <li><b>Breaks: catering.</b> Headcount, supplier, order and arrival time, and catering notes for that break. <b>Dietary needs and drinks</b> lists everyone on cast &amp; crew: type each person's needs (vegan, gluten free, allergies) and how they take their drink. They're kept on the cast &amp; crew list, so they carry over to every break and day. The summary counts the needs, and <b>Copy for the caterer</b> copies the whole list to paste into an email or message.</li>
+  </ul>
   <h3>On the day: ahead / behind</h3>
   <ul>
     <li><b>Running card</b>: on the day itself (the day's Shoot date is today) a card shows how far ahead (<b>-</b>, green) or behind (<b>+</b>) you are. It uses the time each shot was ticked as shot, against when the schedule had it finishing. If the shot you're on runs past its planned finish, the delta keeps growing until you tick it. Hover the card to see what it's based on. The card also shows the projected wrap, and a blue line marks now on the timeline. It updates every 30 seconds.</li>
@@ -1629,9 +1648,10 @@ header.top{padding:var(--barpad-y) var(--barpad-x) .8rem}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.44.1";
+const VERSION = "2.45.0";
 const CHANGELOG = [
-  ["2.44.1","2026-11-22","One look for the bar at the top of Clipboard, Details, Sequence View and Edit: the same height, padding, title size and button size, with the view switcher in the same place in every view. Its Clipboard segment (or Esc) is the way back, so the separate ✕ has gone. Details keeps ‹ and › either side of the shot; Edit's buttons sit beside the switcher. Sequence View: drag a shot by its ⠿ handle (or use the arrow keys on it) to reorder the sequence; its rows move in the day to match, and a duplicated sequence offers to follow. A sequence with other shots in the middle now offers gather at Shot 04 or Shot 09: its shots move together to the first or last shot's place and the others stay put (before, both buttons moved the other shots, which looked the same). With only a break in the middle it offers to move the break out after or before."],
+  ["2.45.0","2026-11-22","Details for tech and breaks: open any tech or break row (↗ on its row, or ‹ › in Details, which now moves through shots, breaks and tech). Tech: a checklist where each item is assigned to someone and ticked off with who and when (two people can tick at once), copy items from another tech, and notes. Breaks: catering (headcount, supplier, order and arrival time, notes), everyone's dietary needs and drinks (kept on cast & crew so they carry over), a summary and Copy for the caterer, and notes. Start and end the break or tech from there too."],
+  ["2.44.1","","One look for the bar at the top of Clipboard, Details, Sequence View and Edit: the same height, padding, title size and button size, with the view switcher in the same place in every view. Its Clipboard segment (or Esc) is the way back, so the separate ✕ has gone. Details keeps ‹ and › either side of the shot; Edit's buttons sit beside the switcher. Sequence View: drag a shot by its ⠿ handle (or use the arrow keys on it) to reorder the sequence; its rows move in the day to match, and a duplicated sequence offers to follow. A sequence with other shots in the middle now offers gather at Shot 04 or Shot 09: its shots move together to the first or last shot's place and the others stay put (before, both buttons moved the other shots, which looked the same). With only a break in the middle it offers to move the break out after or before."],
   ["2.44.0","","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
   ["2.43.0","","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
   ["2.42.0","","Admins can delete archived days: Delete next to each one in the Archived list (or Delete all), with a confirmation that says how many shots and takes go with it, and Undo straight after. Shown only with the site's admin key saved on the device (or for a project kept only in this browser)."],
@@ -1731,8 +1751,8 @@ const SEED = null;
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place","onRow","onSince","csHospital","csPolice","csFire","csMedic","csAssembly","csTravel","csCalls","csKit"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt","seqDup","dupSrc"];
-const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt","seqDup","dupSrc","checklist","blockNotes","catering"];
+const PERSON_FIELDS = ["group","name","role","phone","email","notes","diet","drink"];
 // Edit: cuts, and the clips in them, each its own record so two people can work on one cut
 const CUT_FIELDS = ["name","audio","target","notes"];
 const CLIP_FIELDS = ["row","src","take","reset","url","f","inF","name","note"];
@@ -3026,7 +3046,7 @@ function renderBody(){
         hd.append(isBreak?blockChip(r):statusChip(r,NOWCUR));
         td.append(hd);
       }
-      else if(k==="shot"){ if(isBreak) td.append(textCell(r,"label",false)); else { td.classList.add("hasgo"); td.append(textCell(r,"shot",false,{ph:"-"}),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open this shot in Details",onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } }
+      else if(k==="shot"){ if(isBreak){ td.classList.add("hasgo"); td.append(textCell(r,"label",false),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open in Details: "+(r.type==="tech"?"notes and checklists":"catering, dietary needs and drinks"),onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } else { td.classList.add("hasgo"); td.append(textCell(r,"shot",false,{ph:"-"}),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open this shot in Details",onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } }
       else if(k==="seq"){ if(!isBreak) td.append(seqCell(r)); }
       else if(k==="shotId"){ if(!isBreak) td.append(nameCell(r)); }
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
@@ -3961,7 +3981,7 @@ function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textC
 const NV={id:null,roll:null,timer:0};
 function openNotes(id){const d=D();if(!d)return;const r=(typeof id==="string"&&R(id))||upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
 function closeNotes(){rememberView(null);const vh=$("#nvVideoHost");if(vh){vh.innerHTML="";vh.dataset.key=""}$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
-function notesStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
+function notesStep(dir){const s=(D()||{rows:[]}).rows.filter(r=>!r.cut);if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
 function renderNotes(){
   // the panels are redrawn but the video player isn't, so marking a take doesn't restart it:
   // it lives in the same grid as the panels and stays put while they're replaced around it
@@ -3971,6 +3991,8 @@ function renderNotes(){
   [...body.children].forEach(c=>{if(c!==host)c.remove()});
   const d=D(), r=NV.id&&R(NV.id);
   const L=d&&liveStatus(d,compute());
+  if(r&&isBlock(r)){ renderBlockDetails(r,d,v,body,host); return; }
+  host.style.display="";
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
     h("div",{class:"nvtitle"},h("b",{},r?"Shot "+(r.shot||"-"):"No shots"),r&&r.priority?h("span",{class:"pill nvprio",style:`background:${prioHex(r.priority)||"var(--panel2)"};color:${inkOn(prioHex(r.priority)||"#ffffff")}`},r.priority):null,
@@ -7715,6 +7737,103 @@ function gatherSeq(id,where){
   if(where==="last") rest.splice(i,0,...moving); else rest.splice(i+1,0,...moving);
   d.rows=rest; commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView();
   toast(`${seqTitle(a)} gathered at Shot ${keep.shot||"-"} - Undo to put it back`);
+}
+
+/* ---------- Details for tech and break rows ---------- */
+// tech: notes and a checklist, each item assigned to someone and ticked off (who, when). Ticks save one item at a time (c_ck_<id>) so two people ticking don't clash.
+// breaks: catering (headcount, supplier, time, notes) and everyone's dietary needs and drinks, kept on the cast & crew list for every break
+function ckItems(r){ try{ const a=JSON.parse(r.checklist||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function ckSave(r,items){ const x=R(r.id); if(x){ x.checklist=JSON.stringify(items); } }
+function ckDone(r,it){ const v=r["c_ck_"+it.id]; return v&&typeof v==="object"?v:null; }
+function cateringOf(r){ try{ return Object.assign({head:"",supplier:"",time:"",notes:""},JSON.parse(r.catering||"{}")); }catch(e){ return {head:"",supplier:"",time:"",notes:""}; } }
+function teamNames(){ const s=new Set(); for(const p of (S.people||[])) if(p.name) s.add(p.name); if(P.name) s.add(P.name); return [...s].sort((a,b)=>a.localeCompare(b)); }
+function renderBlockDetails(r,d,v,body,host){
+  host.innerHTML=""; host.dataset.key=""; host.style.display="none";
+  const C=compute(), c=C.rows[r.id]||{}, tech=r.type==="tech", st=blockStatus(r);
+  const head=h("div",{class:"nvhead"},
+    h("button",{title:"Previous",onclick:()=>notesStep(-1)},"‹"),
+    h("div",{class:"nvtitle"},h("b",{},blockName(r)),h("span",{class:"note"},`${d?d.name+" · ":""}${c.start!=null?fmt(c.start)+" to "+fmt(c.end):""} · ${dur(c.sh||0)} planned`),blockChip(r)),
+    h("button",{title:"Next",onclick:()=>notesStep(1)},"›"),
+    viewSwitch());
+  v.insertBefore(head,body); rememberView("notes",r.id);
+  const cards=[];
+  const timing=h("section",{class:"nvblk"},h("h3",{},tech?"Tech / turnaround":"Break"),
+    h("div",{class:"toolbar"},st!=="bon"?h("button",{class:"btn",onclick:()=>{startBlock(r.id);renderNotes()}},"Start now"):h("button",{class:"btn rolling",onclick:()=>{endBlock(r.id);renderNotes()}},"End now"),
+      st!=="btodo"?h("button",{class:"btn",onclick:()=>{const x=R(r.id);x.setupAt=null;x.done=false;x.doneAt=null;commit();renderBody();renderNotes()}},"Not yet"):null),
+    h("p",{class:"note"},st==="bon"?`On now since ${fmt(dayMinOf(d,r.setupAt))}`:st==="bdone"?`Done${r.doneAt!=null?" at "+fmt(r.doneAt):""}`:"Not started yet. Starting and ending it keeps ahead / behind and the actual timeline right."));
+  cards.push(timing);
+  if(tech) cards.push(checklistCard(r));
+  else { cards.push(cateringCard(r,d)); cards.push(dietCard()); }
+  const nt=h("textarea",{rows:"4",placeholder:tech?"What needs doing in this turnaround, kit, who's on it":"Anything else for this break: location, timings, who's covering set"}); nt.value=r.blockNotes||"";
+  nt.addEventListener("input",()=>{const x=R(r.id);if(x){x.blockNotes=nt.value;autosize(nt);softCommit()}}); nt.addEventListener("change",commit); requestAnimationFrame(()=>autosize(nt));
+  cards.push(h("section",{class:"nvblk"},h("h3",{},"Notes"),nt));
+  for(const s of cards) body.insertBefore(s,host);
+  v.append(h("p",{class:"keyhint"},"← → move through the day's shots, breaks and tech · Esc back to the Clipboard"));
+}
+function checklistCard(r){
+  const items=ckItems(r), names=teamNames(), sec=h("section",{class:"nvblk nvck"});
+  const doneN=items.filter(it=>ckDone(r,it)).length;
+  sec.append(h("h3",{},"Checklist",items.length?h("span",{class:"note ckprog"},` ${doneN} of ${items.length} done`):""));
+  const list=h("div",{class:"cklist"});
+  items.forEach((it,i)=>{
+    const dn=ckDone(r,it), cb=h("input",{type:"checkbox","aria-label":"Done: "+it.text}); cb.checked=!!dn;
+    cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x["c_ck_"+it.id]=cb.checked?{by:P.name||"Someone",at:Date.now()}:null;commit();renderBody();renderNotes()});
+    const txt=h("input",{type:"text",value:it.text,class:"cktext"+(dn?" done":""),"aria-label":"Item"}); txt.addEventListener("change",()=>{const L=ckItems(R(r.id));const y=L.find(z=>z.id===it.id);if(y){y.text=txt.value.trim()||y.text;ckSave(r,L);commit()}});
+    const who=h("select",{class:"ckwho","aria-label":"Assigned to"},h("option",{value:""},"Anyone"),...names.map(n=>h("option",{value:n,selected:it.who===n},n)),...(it.who&&!names.includes(it.who)?[h("option",{value:it.who,selected:true},it.who)]:[]));
+    who.addEventListener("change",()=>{const L=ckItems(R(r.id));const y=L.find(z=>z.id===it.id);if(y){y.who=who.value;ckSave(r,L);commit();renderNotes()}});
+    const mine=it.who&&P.name&&it.who===P.name;
+    list.append(h("div",{class:"ckrow"+(dn?" done":"")+(mine?" mine":"")},cb,txt,who,
+      dn?h("span",{class:"note ckby",title:new Date(dn.at).toLocaleString()},`✓ ${dn.by}, ${new Date(dn.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`):h("span",{class:"ckby"}),
+      h("button",{class:"x",title:"Remove this item","aria-label":"Remove",onclick:()=>{const L=ckItems(R(r.id)).filter(z=>z.id!==it.id);ckSave(r,L);const x=R(r.id);delete x["c_ck_"+it.id];commit();renderNotes()}},"×")));
+  });
+  if(!items.length) list.append(h("p",{class:"note"},"Nothing yet. Add what needs doing, and who's doing it."));
+  sec.append(list);
+  const add=h("input",{type:"text",placeholder:"Add an item, e.g. Re-rig key light to stage left","aria-label":"New checklist item"});
+  const addWho=h("select",{"aria-label":"Assign to"},h("option",{value:""},"Anyone"),...names.map(n=>h("option",{value:n},n)));
+  const go=()=>{ const t=add.value.trim(); if(!t) return add.focus(); const L=ckItems(R(r.id)); L.push({id:uid("ck").replace(/[^a-z0-9]/gi,""),text:t,who:addWho.value}); ckSave(r,L); commit(); renderNotes(); setTimeout(()=>{const a=$("#noteView .ckadd input[type=text]");if(a)a.focus()},30); };
+  add.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}});
+  sec.append(h("div",{class:"ckadd"},add,addWho,h("button",{class:"btn small",onclick:go},"Add")));
+  // copy a checklist from another tech row (any day)
+  const others=live().flatMap(dd=>dd.rows.filter(x=>x.type==="tech"&&x.id!==r.id&&ckItems(x).length).map(x=>({x,dd})));
+  if(others.length){ const sel=h("select",{"aria-label":"Copy a checklist from"},h("option",{value:""},"Copy items from another tech…"),...others.map(({x,dd})=>h("option",{value:x.id},`${dd.name} · ${blockName(x)} (${ckItems(x).length})`)));
+    sel.addEventListener("change",()=>{ const src=R(sel.value); if(!src) return; const L=ckItems(R(r.id)); for(const it of ckItems(src)) L.push({id:uid("ck").replace(/[^a-z0-9]/gi,""),text:it.text,who:it.who||""}); ckSave(r,L); commit(); renderNotes(); toast("Copied "+ckItems(src).length+" items (unticked)"); });
+    sec.append(h("div",{class:"toolbar",style:"margin-top:.4rem"},sel)); }
+  if(items.some(it=>ckDone(r,it))) sec.append(h("button",{class:"btn small",style:"margin-top:.4rem",onclick:()=>{const x=R(r.id);for(const it of ckItems(x)) x["c_ck_"+it.id]=null;commit();renderNotes()}},"Untick everything"));
+  return sec;
+}
+function cateringCard(r,d){
+  const c=cateringOf(r), sec=h("section",{class:"nvblk"}), people=(S.people||[]).filter(p=>p.name);
+  const save=(k,v,soft)=>{const x=R(r.id);if(!x)return;const o=cateringOf(x);o[k]=v;x.catering=JSON.stringify(o);soft?softCommit():commit()};
+  const field=(k,label,ph,type)=>{const i=h("input",{type:type||"text",value:c[k]||"",placeholder:ph});i.addEventListener("input",()=>save(k,i.value,true));i.addEventListener("change",()=>save(k,i.value,false));return h("label",{class:"stack"},label,i)};
+  const notes=h("textarea",{rows:"3",placeholder:"Order details, allergies to flag, where food is served"}); notes.value=c.notes||"";
+  notes.addEventListener("input",()=>{save("notes",notes.value,true);autosize(notes)}); notes.addEventListener("change",()=>save("notes",notes.value,false)); requestAnimationFrame(()=>autosize(notes));
+  sec.append(h("h3",{},"Catering"),
+    h("div",{class:"catgrid"},field("head","Headcount",people.length?String(people.length)+" on cast & crew":"how many","number"),field("supplier","Supplier","caterer or venue"),field("time","Order by / arrives","e.g. order 10:30, arrives 12:45")),
+    h("label",{class:"stack"},"Catering notes",notes));
+  return sec;
+}
+function dietSummary(){
+  const ps=(S.people||[]).filter(p=>p.name), diet=new Map(), drinks=[];
+  for(const p of ps){ const d=String(p.diet||"").trim(); if(d){ for(const k of d.split(/[,;\/]+/).map(x=>x.trim().toLowerCase()).filter(Boolean)) diet.set(k,(diet.get(k)||0)+1); } if(String(p.drink||"").trim()) drinks.push(`${p.name}: ${p.drink.trim()}`); }
+  return {ps,diet,drinks};
+}
+function dietCard(){
+  const sec=h("section",{class:"nvblk nvdiet"}), {ps,diet,drinks}=dietSummary();
+  sec.append(h("h3",{},"Dietary needs and drinks"));
+  sec.append(h("p",{class:"note"},ps.length?(diet.size?[...diet].map(([k,n])=>`${n} ${k}`).join(" · "):"No dietary needs noted yet")+` · ${ps.length} people`:"Add people in Settings > Cast & crew to list them here."));
+  if(ps.length){
+    const t=h("table",{class:"doctable diettable"},h("thead",{},h("tr",{},h("th",{},"Name"),h("th",{},"Dietary needs"),h("th",{},"Drink"))));
+    const tb=h("tbody",{});
+    for(const p of ps){
+      const mk=(k,ph)=>{const i=h("input",{type:"text",value:p[k]||"",placeholder:ph,"aria-label":k+" for "+p.name});i.addEventListener("input",()=>{const x=(S.people||[]).find(y=>y.id===p.id);if(x){x[k]=i.value;softCommit()}});i.addEventListener("change",()=>{commit();renderNotes()});return i};
+      tb.append(h("tr",{},h("td",{},h("b",{},p.name),p.role?h("div",{class:"note"},p.role):""),h("td",{},mk("diet","e.g. vegan, gluten free, nut allergy")),h("td",{},mk("drink","e.g. tea, oat milk, 1 sugar"))));
+    }
+    t.append(tb); sec.append(t);
+    const text=()=>{const s=dietSummary();return [`Headcount: ${s.ps.length}`,s.diet.size?"Dietary: "+[...s.diet].map(([k,n])=>`${n} ${k}`).join(", "):"",...s.ps.filter(p=>p.diet).map(p=>`  ${p.name}: ${p.diet}`),s.drinks.length?"Drinks:":"",...s.drinks.map(x=>"  "+x)].filter(Boolean).join("\n")};
+    sec.append(h("div",{class:"toolbar",style:"margin-top:.4rem"},h("button",{class:"btn small",onclick:async()=>{const ok=await copyText(text());toast(ok?"Copied for the caterer":"Couldn't copy")}},"Copy for the caterer")));
+    sec.append(h("p",{class:"note"},"Kept on the cast & crew list, so they carry over to every break and every day."));
+  }
+  return sec;
 }
 
 boot();

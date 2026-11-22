@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.44.1";
+const VERSION = "2.45.0";
 const CHANGELOG = [
-  ["2.44.1","2026-11-22","One look for the bar at the top of Clipboard, Details, Sequence View and Edit: the same height, padding, title size and button size, with the view switcher in the same place in every view. Its Clipboard segment (or Esc) is the way back, so the separate ✕ has gone. Details keeps ‹ and › either side of the shot; Edit's buttons sit beside the switcher. Sequence View: drag a shot by its ⠿ handle (or use the arrow keys on it) to reorder the sequence; its rows move in the day to match, and a duplicated sequence offers to follow. A sequence with other shots in the middle now offers gather at Shot 04 or Shot 09: its shots move together to the first or last shot's place and the others stay put (before, both buttons moved the other shots, which looked the same). With only a break in the middle it offers to move the break out after or before."],
+  ["2.45.0","2026-11-22","Details for tech and breaks: open any tech or break row (↗ on its row, or ‹ › in Details, which now moves through shots, breaks and tech). Tech: a checklist where each item is assigned to someone and ticked off with who and when (two people can tick at once), copy items from another tech, and notes. Breaks: catering (headcount, supplier, order and arrival time, notes), everyone's dietary needs and drinks (kept on cast & crew so they carry over), a summary and Copy for the caterer, and notes. Start and end the break or tech from there too."],
+  ["2.44.1","","One look for the bar at the top of Clipboard, Details, Sequence View and Edit: the same height, padding, title size and button size, with the view switcher in the same place in every view. Its Clipboard segment (or Esc) is the way back, so the separate ✕ has gone. Details keeps ‹ and › either side of the shot; Edit's buttons sit beside the switcher. Sequence View: drag a shot by its ⠿ handle (or use the arrow keys on it) to reorder the sequence; its rows move in the day to match, and a duplicated sequence offers to follow. A sequence with other shots in the middle now offers gather at Shot 04 or Shot 09: its shots move together to the first or last shot's place and the others stay put (before, both buttons moved the other shots, which looked the same). With only a break in the middle it offers to move the break out after or before."],
   ["2.44.0","","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
   ["2.43.0","","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
   ["2.42.0","","Admins can delete archived days: Delete next to each one in the Archived list (or Delete all), with a confirmation that says how many shots and takes go with it, and Undo straight after. Shown only with the site's admin key saved on the device (or for a project kept only in this browser)."],
@@ -1060,7 +1061,7 @@ function renderBody(){
         hd.append(isBreak?blockChip(r):statusChip(r,NOWCUR));
         td.append(hd);
       }
-      else if(k==="shot"){ if(isBreak) td.append(textCell(r,"label",false)); else { td.classList.add("hasgo"); td.append(textCell(r,"shot",false,{ph:"-"}),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open this shot in Details",onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } }
+      else if(k==="shot"){ if(isBreak){ td.classList.add("hasgo"); td.append(textCell(r,"label",false),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open in Details: "+(r.type==="tech"?"notes and checklists":"catering, dietary needs and drinks"),onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } else { td.classList.add("hasgo"); td.append(textCell(r,"shot",false,{ph:"-"}),h("button",{class:"togo",type:"button",tabindex:"-1",title:"Open this shot in Details",onclick:e=>{e.stopPropagation();commit();openNotes(r.id)}},"↗")); } }
       else if(k==="seq"){ if(!isBreak) td.append(seqCell(r)); }
       else if(k==="shotId"){ if(!isBreak) td.append(nameCell(r)); }
       else if(k==="duration"){ td.className+=" num"; if(!isBreak) td.append(textCell(r,"duration",false)); }
@@ -1995,7 +1996,7 @@ function renderSlateTcLabel(){const t=$("#slateView .sltcbox .sll");if(t)t.textC
 const NV={id:null,roll:null,timer:0};
 function openNotes(id){const d=D();if(!d)return;const r=(typeof id==="string"&&R(id))||upNext(d);NV.id=r&&r.id;$("#noteView").classList.add("open");document.body.classList.add("viewopen");keepAwake(true);renderNotes()}
 function closeNotes(){rememberView(null);const vh=$("#nvVideoHost");if(vh){vh.innerHTML="";vh.dataset.key=""}$("#noteView").classList.remove("open");document.body.classList.remove("viewopen");clearInterval(NV.timer);keepAwake(false);renderBody()}
-function notesStep(dir){const s=runningShots();if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
+function notesStep(dir){const s=(D()||{rows:[]}).rows.filter(r=>!r.cut);if(!s.length)return;let i=s.findIndex(r=>r.id===NV.id);i=Math.max(0,Math.min(s.length-1,(i<0?0:i)+dir));NV.id=s[i].id;renderNotes()}
 function renderNotes(){
   // the panels are redrawn but the video player isn't, so marking a take doesn't restart it:
   // it lives in the same grid as the panels and stays put while they're replaced around it
@@ -2005,6 +2006,8 @@ function renderNotes(){
   [...body.children].forEach(c=>{if(c!==host)c.remove()});
   const d=D(), r=NV.id&&R(NV.id);
   const L=d&&liveStatus(d,compute());
+  if(r&&isBlock(r)){ renderBlockDetails(r,d,v,body,host); return; }
+  host.style.display="";
   const head=h("div",{class:"nvhead"},
     h("button",{title:"Previous shot",onclick:()=>notesStep(-1)},"‹"),
     h("div",{class:"nvtitle"},h("b",{},r?"Shot "+(r.shot||"-"):"No shots"),r&&r.priority?h("span",{class:"pill nvprio",style:`background:${prioHex(r.priority)||"var(--panel2)"};color:${inkOn(prioHex(r.priority)||"#ffffff")}`},r.priority):null,

@@ -18,8 +18,8 @@
 const DAY_FIELDS = ["name","kind","dayNo","date","call","wrap","setupPct","shootPct","minSetup","origWrap","status","archived","frozen","address","callNotes","wrapNotes","lat","lon","place","onRow","onSince","csHospital","csPolice","csFire","csMedic","csAssembly","csTravel","csCalls","csKit"];
 const ROW_FIELDS = ["type","shot","label","duration","setup","shoot","origStart","origSetup","origShoot",
   "location","description","script","shotType","camera","vfx","director","props","ref1","ref2","ref3","done",
-  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt","seqDup","dupSrc"];
-const PERSON_FIELDS = ["group","name","role","phone","email","notes"];
+  "priority","perfCount","performers","genre","action","body","face","glove","hero","safety","takes","takeLog","doneAt","cut","heroUrl","safetyUrl","lighting","scribble","video","seq","seqName","seqNotes","vcs","seqTime","seqSetup","seqShoot","seqVideo","setupAt","seqDup","dupSrc","checklist","blockNotes","catering"];
+const PERSON_FIELDS = ["group","name","role","phone","email","notes","diet","drink"];
 // Edit: cuts, and the clips in them, each its own record so two people can work on one cut
 const CUT_FIELDS = ["name","audio","target","notes"];
 const CLIP_FIELDS = ["row","src","take","reset","url","f","inF","name","note"];

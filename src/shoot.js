@@ -2015,3 +2015,100 @@ function gatherSeq(id,where){
   d.rows=rest; commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView();
   toast(`${seqTitle(a)} gathered at Shot ${keep.shot||"-"} - Undo to put it back`);
 }
+
+/* ---------- Details for tech and break rows ---------- */
+// tech: notes and a checklist, each item assigned to someone and ticked off (who, when). Ticks save one item at a time (c_ck_<id>) so two people ticking don't clash.
+// breaks: catering (headcount, supplier, time, notes) and everyone's dietary needs and drinks, kept on the cast & crew list for every break
+function ckItems(r){ try{ const a=JSON.parse(r.checklist||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function ckSave(r,items){ const x=R(r.id); if(x){ x.checklist=JSON.stringify(items); } }
+function ckDone(r,it){ const v=r["c_ck_"+it.id]; return v&&typeof v==="object"?v:null; }
+function cateringOf(r){ try{ return Object.assign({head:"",supplier:"",time:"",notes:""},JSON.parse(r.catering||"{}")); }catch(e){ return {head:"",supplier:"",time:"",notes:""}; } }
+function teamNames(){ const s=new Set(); for(const p of (S.people||[])) if(p.name) s.add(p.name); if(P.name) s.add(P.name); return [...s].sort((a,b)=>a.localeCompare(b)); }
+function renderBlockDetails(r,d,v,body,host){
+  host.innerHTML=""; host.dataset.key=""; host.style.display="none";
+  const C=compute(), c=C.rows[r.id]||{}, tech=r.type==="tech", st=blockStatus(r);
+  const head=h("div",{class:"nvhead"},
+    h("button",{title:"Previous",onclick:()=>notesStep(-1)},"‹"),
+    h("div",{class:"nvtitle"},h("b",{},blockName(r)),h("span",{class:"note"},`${d?d.name+" · ":""}${c.start!=null?fmt(c.start)+" to "+fmt(c.end):""} · ${dur(c.sh||0)} planned`),blockChip(r)),
+    h("button",{title:"Next",onclick:()=>notesStep(1)},"›"),
+    viewSwitch());
+  v.insertBefore(head,body); rememberView("notes",r.id);
+  const cards=[];
+  const timing=h("section",{class:"nvblk"},h("h3",{},tech?"Tech / turnaround":"Break"),
+    h("div",{class:"toolbar"},st!=="bon"?h("button",{class:"btn",onclick:()=>{startBlock(r.id);renderNotes()}},"Start now"):h("button",{class:"btn rolling",onclick:()=>{endBlock(r.id);renderNotes()}},"End now"),
+      st!=="btodo"?h("button",{class:"btn",onclick:()=>{const x=R(r.id);x.setupAt=null;x.done=false;x.doneAt=null;commit();renderBody();renderNotes()}},"Not yet"):null),
+    h("p",{class:"note"},st==="bon"?`On now since ${fmt(dayMinOf(d,r.setupAt))}`:st==="bdone"?`Done${r.doneAt!=null?" at "+fmt(r.doneAt):""}`:"Not started yet. Starting and ending it keeps ahead / behind and the actual timeline right."));
+  cards.push(timing);
+  if(tech) cards.push(checklistCard(r));
+  else { cards.push(cateringCard(r,d)); cards.push(dietCard()); }
+  const nt=h("textarea",{rows:"4",placeholder:tech?"What needs doing in this turnaround, kit, who's on it":"Anything else for this break: location, timings, who's covering set"}); nt.value=r.blockNotes||"";
+  nt.addEventListener("input",()=>{const x=R(r.id);if(x){x.blockNotes=nt.value;autosize(nt);softCommit()}}); nt.addEventListener("change",commit); requestAnimationFrame(()=>autosize(nt));
+  cards.push(h("section",{class:"nvblk"},h("h3",{},"Notes"),nt));
+  for(const s of cards) body.insertBefore(s,host);
+  v.append(h("p",{class:"keyhint"},"← → move through the day's shots, breaks and tech · Esc back to the Clipboard"));
+}
+function checklistCard(r){
+  const items=ckItems(r), names=teamNames(), sec=h("section",{class:"nvblk nvck"});
+  const doneN=items.filter(it=>ckDone(r,it)).length;
+  sec.append(h("h3",{},"Checklist",items.length?h("span",{class:"note ckprog"},` ${doneN} of ${items.length} done`):""));
+  const list=h("div",{class:"cklist"});
+  items.forEach((it,i)=>{
+    const dn=ckDone(r,it), cb=h("input",{type:"checkbox","aria-label":"Done: "+it.text}); cb.checked=!!dn;
+    cb.addEventListener("change",()=>{const x=R(r.id);if(!x)return;x["c_ck_"+it.id]=cb.checked?{by:P.name||"Someone",at:Date.now()}:null;commit();renderBody();renderNotes()});
+    const txt=h("input",{type:"text",value:it.text,class:"cktext"+(dn?" done":""),"aria-label":"Item"}); txt.addEventListener("change",()=>{const L=ckItems(R(r.id));const y=L.find(z=>z.id===it.id);if(y){y.text=txt.value.trim()||y.text;ckSave(r,L);commit()}});
+    const who=h("select",{class:"ckwho","aria-label":"Assigned to"},h("option",{value:""},"Anyone"),...names.map(n=>h("option",{value:n,selected:it.who===n},n)),...(it.who&&!names.includes(it.who)?[h("option",{value:it.who,selected:true},it.who)]:[]));
+    who.addEventListener("change",()=>{const L=ckItems(R(r.id));const y=L.find(z=>z.id===it.id);if(y){y.who=who.value;ckSave(r,L);commit();renderNotes()}});
+    const mine=it.who&&P.name&&it.who===P.name;
+    list.append(h("div",{class:"ckrow"+(dn?" done":"")+(mine?" mine":"")},cb,txt,who,
+      dn?h("span",{class:"note ckby",title:new Date(dn.at).toLocaleString()},`✓ ${dn.by}, ${new Date(dn.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`):h("span",{class:"ckby"}),
+      h("button",{class:"x",title:"Remove this item","aria-label":"Remove",onclick:()=>{const L=ckItems(R(r.id)).filter(z=>z.id!==it.id);ckSave(r,L);const x=R(r.id);delete x["c_ck_"+it.id];commit();renderNotes()}},"×")));
+  });
+  if(!items.length) list.append(h("p",{class:"note"},"Nothing yet. Add what needs doing, and who's doing it."));
+  sec.append(list);
+  const add=h("input",{type:"text",placeholder:"Add an item, e.g. Re-rig key light to stage left","aria-label":"New checklist item"});
+  const addWho=h("select",{"aria-label":"Assign to"},h("option",{value:""},"Anyone"),...names.map(n=>h("option",{value:n},n)));
+  const go=()=>{ const t=add.value.trim(); if(!t) return add.focus(); const L=ckItems(R(r.id)); L.push({id:uid("ck").replace(/[^a-z0-9]/gi,""),text:t,who:addWho.value}); ckSave(r,L); commit(); renderNotes(); setTimeout(()=>{const a=$("#noteView .ckadd input[type=text]");if(a)a.focus()},30); };
+  add.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}});
+  sec.append(h("div",{class:"ckadd"},add,addWho,h("button",{class:"btn small",onclick:go},"Add")));
+  // copy a checklist from another tech row (any day)
+  const others=live().flatMap(dd=>dd.rows.filter(x=>x.type==="tech"&&x.id!==r.id&&ckItems(x).length).map(x=>({x,dd})));
+  if(others.length){ const sel=h("select",{"aria-label":"Copy a checklist from"},h("option",{value:""},"Copy items from another tech…"),...others.map(({x,dd})=>h("option",{value:x.id},`${dd.name} · ${blockName(x)} (${ckItems(x).length})`)));
+    sel.addEventListener("change",()=>{ const src=R(sel.value); if(!src) return; const L=ckItems(R(r.id)); for(const it of ckItems(src)) L.push({id:uid("ck").replace(/[^a-z0-9]/gi,""),text:it.text,who:it.who||""}); ckSave(r,L); commit(); renderNotes(); toast("Copied "+ckItems(src).length+" items (unticked)"); });
+    sec.append(h("div",{class:"toolbar",style:"margin-top:.4rem"},sel)); }
+  if(items.some(it=>ckDone(r,it))) sec.append(h("button",{class:"btn small",style:"margin-top:.4rem",onclick:()=>{const x=R(r.id);for(const it of ckItems(x)) x["c_ck_"+it.id]=null;commit();renderNotes()}},"Untick everything"));
+  return sec;
+}
+function cateringCard(r,d){
+  const c=cateringOf(r), sec=h("section",{class:"nvblk"}), people=(S.people||[]).filter(p=>p.name);
+  const save=(k,v,soft)=>{const x=R(r.id);if(!x)return;const o=cateringOf(x);o[k]=v;x.catering=JSON.stringify(o);soft?softCommit():commit()};
+  const field=(k,label,ph,type)=>{const i=h("input",{type:type||"text",value:c[k]||"",placeholder:ph});i.addEventListener("input",()=>save(k,i.value,true));i.addEventListener("change",()=>save(k,i.value,false));return h("label",{class:"stack"},label,i)};
+  const notes=h("textarea",{rows:"3",placeholder:"Order details, allergies to flag, where food is served"}); notes.value=c.notes||"";
+  notes.addEventListener("input",()=>{save("notes",notes.value,true);autosize(notes)}); notes.addEventListener("change",()=>save("notes",notes.value,false)); requestAnimationFrame(()=>autosize(notes));
+  sec.append(h("h3",{},"Catering"),
+    h("div",{class:"catgrid"},field("head","Headcount",people.length?String(people.length)+" on cast & crew":"how many","number"),field("supplier","Supplier","caterer or venue"),field("time","Order by / arrives","e.g. order 10:30, arrives 12:45")),
+    h("label",{class:"stack"},"Catering notes",notes));
+  return sec;
+}
+function dietSummary(){
+  const ps=(S.people||[]).filter(p=>p.name), diet=new Map(), drinks=[];
+  for(const p of ps){ const d=String(p.diet||"").trim(); if(d){ for(const k of d.split(/[,;\/]+/).map(x=>x.trim().toLowerCase()).filter(Boolean)) diet.set(k,(diet.get(k)||0)+1); } if(String(p.drink||"").trim()) drinks.push(`${p.name}: ${p.drink.trim()}`); }
+  return {ps,diet,drinks};
+}
+function dietCard(){
+  const sec=h("section",{class:"nvblk nvdiet"}), {ps,diet,drinks}=dietSummary();
+  sec.append(h("h3",{},"Dietary needs and drinks"));
+  sec.append(h("p",{class:"note"},ps.length?(diet.size?[...diet].map(([k,n])=>`${n} ${k}`).join(" · "):"No dietary needs noted yet")+` · ${ps.length} people`:"Add people in Settings > Cast & crew to list them here."));
+  if(ps.length){
+    const t=h("table",{class:"doctable diettable"},h("thead",{},h("tr",{},h("th",{},"Name"),h("th",{},"Dietary needs"),h("th",{},"Drink"))));
+    const tb=h("tbody",{});
+    for(const p of ps){
+      const mk=(k,ph)=>{const i=h("input",{type:"text",value:p[k]||"",placeholder:ph,"aria-label":k+" for "+p.name});i.addEventListener("input",()=>{const x=(S.people||[]).find(y=>y.id===p.id);if(x){x[k]=i.value;softCommit()}});i.addEventListener("change",()=>{commit();renderNotes()});return i};
+      tb.append(h("tr",{},h("td",{},h("b",{},p.name),p.role?h("div",{class:"note"},p.role):""),h("td",{},mk("diet","e.g. vegan, gluten free, nut allergy")),h("td",{},mk("drink","e.g. tea, oat milk, 1 sugar"))));
+    }
+    t.append(tb); sec.append(t);
+    const text=()=>{const s=dietSummary();return [`Headcount: ${s.ps.length}`,s.diet.size?"Dietary: "+[...s.diet].map(([k,n])=>`${n} ${k}`).join(", "):"",...s.ps.filter(p=>p.diet).map(p=>`  ${p.name}: ${p.diet}`),s.drinks.length?"Drinks:":"",...s.drinks.map(x=>"  "+x)].filter(Boolean).join("\n")};
+    sec.append(h("div",{class:"toolbar",style:"margin-top:.4rem"},h("button",{class:"btn small",onclick:async()=>{const ok=await copyText(text());toast(ok?"Copied for the caterer":"Couldn't copy")}},"Copy for the caterer")));
+    sec.append(h("p",{class:"note"},"Kept on the cast & crew list, so they carry over to every break and every day."));
+  }
+  return sec;
+}

@@ -1,4 +1,4 @@
-# Set Sense v2.44.1
+# Set Sense v2.45.0
 
 _Break down projects, not people._
 
