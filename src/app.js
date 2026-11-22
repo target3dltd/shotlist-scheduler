@@ -1,7 +1,8 @@
 "use strict";
-const VERSION = "2.44.0";
+const VERSION = "2.44.1";
 const CHANGELOG = [
-  ["2.44.0","2026-11-22","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
+  ["2.44.1","2026-11-22","One look for the bar at the top of Clipboard, Details, Sequence View and Edit: the same height, padding, title size and button size, with the view switcher in the same place in every view. Its Clipboard segment (or Esc) is the way back, so the separate ✕ has gone. Details keeps ‹ and › either side of the shot; Edit's buttons sit beside the switcher. Sequence View: drag a shot by its ⠿ handle (or use the arrow keys on it) to reorder the sequence; its rows move in the day to match, and a duplicated sequence offers to follow. A sequence with other shots in the middle now offers gather at Shot 04 or Shot 09: its shots move together to the first or last shot's place and the others stay put (before, both buttons moved the other shots, which looked the same). With only a break in the middle it offers to move the break out after or before."],
+  ["2.44.0","","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
   ["2.43.0","","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
   ["2.42.0","","Admins can delete archived days: Delete next to each one in the Archived list (or Delete all), with a confirmation that says how many shots and takes go with it, and Undo straight after. Shown only with the site's admin key saved on the device (or for a project kept only in this browser)."],
   ["2.41.3","","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
@@ -2010,8 +2011,7 @@ function renderNotes(){
       h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null,r?onNowBtn(r):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{class:"nvreset",title:"Put the panels back in their usual places and sizes",onclick:resetNvLayout,hidden:!nvCustom()},"Reset layout"),
-    viewSwitch(),
-    h("button",{title:"Back to the Clipboard (Esc)",onclick:closeNotes},"✕"));
+    viewSwitch());
   v.insertBefore(head,body); if(!r){host.innerHTML="";host.dataset.key="";host.className="nvvhost";return}
   // what the shot is
   const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}

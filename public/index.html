@@ -438,6 +438,8 @@ body.calm .timeline.actual .seg.live{animation:none}
 /* resets: R1, R2... within a take */
 .nvresets{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;flex-basis:100%;margin-top:.15rem}
 .seqpickhd{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.5rem 0 .2rem;padding-top:.3rem;border-top:1px solid var(--line)} .seqpickhd:first-child{border-top:none;margin-top:0}
+.seqshot{position:relative} .sqgrip{align-self:center;border:none;background:none;color:var(--muted);font-size:1.1rem;cursor:grab;padding:.4rem .2rem;touch-action:none;border-radius:6px} .sqgrip:hover,.sqgrip:focus-visible{color:var(--ink);background:var(--panel2)}
+.seqshot.sqmoving{opacity:.45} .seqshot.sqdrop{box-shadow:-4px 0 0 var(--accent)} .seqshot.sqdrop.sqdrop-after{box-shadow:4px 0 0 var(--accent)}
 .ditresets{display:flex;flex-wrap:wrap;gap:.2rem;margin-top:.2rem} .clapat{font-family:ui-monospace,Menlo,monospace;margin-right:.4rem}
 .pvtotal td{border-top:2px solid var(--line2)} .pvbreak td{color:var(--muted)}
 .rchip{border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:999px;padding:.1rem .5rem;font:inherit;font-size:.8rem;cursor:pointer}
@@ -967,6 +969,24 @@ body.nosteps .mins.timing input{width:4.5em}
   .time{font-size:.92em}
   .sid{word-break:break-all}
 }
+
+/* ===== one bar for every view: Clipboard, Details, Sequence View and Edit share height, padding, title size,
+   button size, and the switcher sits in the same place (its Clipboard segment is the way back; Esc too) ===== */
+:root{--barpad-y:.7rem;--barpad-x:1.15rem;--barh:2.1rem}
+header.top{padding:var(--barpad-y) var(--barpad-x) .8rem}
+.nvhead,.edtop{position:sticky;top:0;z-index:3;flex-shrink:0;display:flex;flex-wrap:nowrap;align-items:center;gap:.6rem;box-sizing:border-box;min-height:calc(2*var(--barpad-y) + var(--barh));padding:var(--barpad-y) var(--barpad-x);background:var(--bg);border-bottom:1px solid var(--line)}
+.titlebar{min-height:var(--barh)}
+.titlebar h1,.nvtitle b,.edtitle{font-size:1.38rem;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.nvtitle{align-items:center} .nvtitle .note,.edrt,.titlebar h1 small{font-size:.85rem;color:var(--muted);font-weight:400}
+.nvhead>button,.edtop .btn.small,.titlebar .btn.small,header.top .toolbar .btn,.edtop select,.edtop input[type=text]{height:var(--barh);min-height:var(--barh);box-sizing:border-box;border-radius:8px}
+.nvhead>button{font-size:1rem;min-width:var(--barh);padding:0 .55rem;line-height:1}
+.vswitch,.viewer .vswitch{margin:0 0 0 auto;height:var(--barh);box-sizing:border-box;align-items:stretch}
+.vsw,.viewer .vsw{font-size:.84rem;padding:0 .75rem}
+.edtop>span[style*="flex:1"]{display:none}
+.edtop .edtgt{margin-right:auto} .edtop .vswitch{margin-left:.2rem}
+.nvhead .nvtitle{flex:0 1 auto;min-width:0} .nvhead .nvtitle+button{margin-right:auto}
+@media (max-width:760px){ .nvhead,.edtop{flex-wrap:wrap} .nvhead .nvtitle{flex:1 1 0;min-width:0} .nvhead .nvtitle+button{margin-right:0} .nvhead .vswitch{order:20;flex-basis:100%;margin:0} }
+@media (max-width:640px){ :root{--barpad-x:.7rem;--barh:2.3rem} }
 </style>
 </head>
 <body>
@@ -1029,7 +1049,7 @@ body.nosteps .mins.timing input{width:4.5em}
       </span>
       <nav class="vswitch onsetgroup" id="viewSwitch" role="tablist" aria-label="Views">
         <button class="vsw vsw-clip on" id="clipBtn" role="tab" aria-selected="true" title="Clipboard: the whole day's shotlist, to plan and run the day">Clipboard</button>
-        <button class="vsw vsw-slate" id="slateBtn" role="tab" aria-selected="false" title="Slate: full-screen slate for the next shot, with timecode, clap, reset and cut"><span class="clapicon" aria-hidden="true"></span>Slate</button>
+        <button class="vsw vsw-slate" id="slateBtn" role="tab" aria-selected="false" title="Slate: full-screen slate for the next shot, with timecode, clap, reset and cut">Slate</button>
         <button class="vsw vsw-details" id="notesBtn" role="tab" aria-selected="false" title="Details: one shot full screen, with its storyboard, description, takes, notes and scribbles">Details</button>
         <button class="vsw vsw-edit" id="editBtn" role="tab" aria-selected="false" title="Edit: time a cut from boards, takes and video, play it through, export an EDL or FCP XML">Edit</button>
       </nav>
@@ -1256,7 +1276,7 @@ body.nosteps .mins.timing input{width:4.5em}
 
   <h3>Four ways in: Clipboard, Slate, Details, Edit</h3>
   <ul>
-    <li>The switcher at the top right moves between four views of the same data. <b>Clipboard</b> is the day's full shotlist, for planning and running the day. <b>Slate</b> is the full-screen slate (clap, reset, cut). <b>Details</b> is one shot at a time, with its storyboard, takes, notes and scribble (a sequence opens as Sequence View). <b>Edit</b> is the cutting room. The switcher is also inside each view, and moving between Slate and Details keeps the shot you're on. Esc, or ✕, goes back to the Clipboard.</li>
+    <li>The switcher at the top right moves between four views of the same data. <b>Clipboard</b> is the day's full shotlist, for planning and running the day. <b>Slate</b> is the full-screen slate (clap, reset, cut). <b>Details</b> is one shot at a time, with its storyboard, takes, notes and scribble (a sequence opens as Sequence View). <b>Edit</b> is the cutting room. The switcher is also inside each view, and moving between Slate and Details keeps the shot you're on. The bar at the top looks and works the same in every view, with the switcher always in the same place. To go back, pick Clipboard in the switcher or press Esc.</li>
     <li>On a phone the switcher has its own row under the header.</li>
   </ul>
   <h3>How times are worked out</h3>
@@ -1473,12 +1493,13 @@ body.nosteps .mins.timing input{width:4.5em}
     <li><b>Slate View</b> shows the sequence (and its range) for any of its shots, and Clap logs the sequence's take.</li>
     <li><b>In the table</b> each sequence has a header row: its name, range, start and end, takes and (Live Action) how many shots are caught. <b>▾</b> folds the sequence into that row; <b>fold all</b> / <b>unfold all</b> appear on the first one. Folding is just for your screen.</li>
     <li><b>Rename</b>: double-click the sequence's name (in its header row, the Sequence column or Sequence View), type, Enter. <b>One shot at a time</b>: the <b>▾</b> next to a shot's sequence moves it to another sequence, takes it out, or starts a new sequence with it; the <b>+</b> on a shot that isn't in one adds it to a sequence. If you take out a sequence's first shot, the sequence and its takes carry on with the next.</li>
-    <li><b>Moving things around a sequence</b>: drag a break, lunch or shot onto a sequence's header row, folded or not: drop on its top half to put it above the sequence, its bottom half for below. Drag the header's <b>⠿</b> to move the whole sequence (all its shots together). If a break, lunch or another shot ends up between a sequence's shots, the header row says so: <b>move after</b> or <b>move before</b> puts it outside the sequence in one click.</li>
+    <li><b>Moving things around a sequence</b>: drag a break, lunch or shot onto a sequence's header row, folded or not: drop on its top half to put it above the sequence, its bottom half for below. Drag the header's <b>⠿</b> to move the whole sequence (all its shots together). If something ends up between a sequence's shots, the header row says so. When it's other shots, <b>gather at Shot 04</b> (the first) or <b>gather at Shot 09</b> (the last) moves the sequence's own shots to sit together at that place, and the other shots stay where they are. When it's only a break or lunch, <b>move Lunch out after</b> or <b>out before</b> moves the break out of the sequence.</li>
     <li><b>Start a sequence at a time</b>: click its times on the header row (e.g. 09:00 → 10:15), type the time it should start and press Enter. All its shots move together to the slot that starts closest; the preview says where before you confirm.</li>
     <li><b>Reference video for a sequence</b>: Sequence View has its own video panel. Paste Google Drive (or other) links there, as in Details; it sits beside the shots once there's a video, and keeps playing while you mark takes. Shots that have their own videos show <b>▶ shot video</b>.</li>
     <li><b>Time as one</b> (header row or Sequence View): one setup and one shoot time for the whole sequence instead of per shot. It starts from the shots' longest setup and their shoots added up; type over them. The shots then show <i>in seq</i>. <b>Time per shot</b> switches back, with each shot's own times as they were.</li>
     <li><b>Duplicate</b> (header row or Sequence View): a copy of the sequence straight after it, with the same shots, storyboards and timings, no takes, named "(2)", "(3)"... Handy for another pass. The copies stay linked: when you change the original or a copy (its timing, notes, or which shots are in it), you're asked whether to make the same change to the others. Shots added are copied in; a shot taken out goes from the copies too (unless a copy has already shot it, when it just leaves that sequence).</li>
     <li><b>Editing a sequence's shots</b> in Sequence View: <b>Edit shots</b> lists the sequence's own shots first, ticked, then the rest of the day. Under each shot, <b>Move…</b> puts it in another sequence (or starts a new one) and <b>Remove</b> takes it out of the sequence; it stays on the day.</li>
+    <li><b>Reordering</b> in Sequence View: drag a shot by its <b>⠿</b> handle to a new place (or focus the handle and press ↑ / ↓). The shots' rows move to match in the day, the sequence's takes and name stay with whichever shot is now first, and if the sequence has copies you're asked whether they should follow.</li>
     <li><b>From the sheet</b>: a column headed <b>Seq</b> or <b>Sequence</b> groups shots with the same letter or name (/, -, n/a and none mean not in a sequence). When you update from a revised sheet, the preview lists each sequence's shots and offers to <b>put the running order in sequence order</b> (A, B, C... with shot numbers in order inside each, then the shots not in a sequence; breaks and tech rows stay where they are). One Undo takes it back.</li>
     <li><b>VCS</b>: tick the VCS column (in Camera &amp; look) for shots where the virtual camera is recorded into the take. It shows on the slate, in Details and in Sequence View. Shown by default on Mocap days; on Live Action days turn it on from the Columns menu.</li>
   </ul>
@@ -1608,9 +1629,10 @@ body.nosteps .mins.timing input{width:4.5em}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const VERSION = "2.44.0";
+const VERSION = "2.44.1";
 const CHANGELOG = [
-  ["2.44.0","2026-11-22","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
+  ["2.44.1","2026-11-22","One look for the bar at the top of Clipboard, Details, Sequence View and Edit: the same height, padding, title size and button size, with the view switcher in the same place in every view. Its Clipboard segment (or Esc) is the way back, so the separate ✕ has gone. Details keeps ‹ and › either side of the shot; Edit's buttons sit beside the switcher. Sequence View: drag a shot by its ⠿ handle (or use the arrow keys on it) to reorder the sequence; its rows move in the day to match, and a duplicated sequence offers to follow. A sequence with other shots in the middle now offers gather at Shot 04 or Shot 09: its shots move together to the first or last shot's place and the others stay put (before, both buttons moved the other shots, which looked the same). With only a break in the middle it offers to move the break out after or before."],
+  ["2.44.0","","Shotlist Scheduler is now Set Sense: break down projects, not people. New name in the header, browser tab, home-screen icon, join screen, Help and exported workbooks. Your projects, links and data are unchanged."],
   ["2.43.0","","Four views, one switcher: Clipboard (the shotlist), Slate, Details and Edit, at the top and inside each view. Edit: import an EDL or FCP XML back from the edit (matched to shots and takes), a target length, Not in this cut, a shot picker for unmatched clips, a phone layout, and two people can work on one cut at once. The clap is kept on each take (or reset): Edit starts takes just after it, with a SYNC note in the EDL and a Clap marker in the XML. Drive videos can play in Edit with a project Google API key. Details: Columns ▾ picks what the Notes card edits, and an Edit card shows how long the shot runs in each cut. Daily backups with Download and Restore. The server now refuses to delete archived days without the admin key. Wrap report: plan against actual. Resets in DIT names and the wrap report. Sequence View: Edit shots lists the sequence's shots first, Move… and Remove on each shot, and changes to a duplicated sequence offer to update its copies. Shoot-day focus also folds the day settings."],
   ["2.42.0","","Admins can delete archived days: Delete next to each one in the Archived list (or Delete all), with a confirmation that says how many shots and takes go with it, and Undo straight after. Shown only with the site's admin key saved on the device (or for a project kept only in this browser)."],
   ["2.41.3","","Slate: the clap flash shows even with Reduce motion on (in Display settings or on the device), which had been switching it off. It's now a straight invert held for at least 3 frames (never under 120 ms), with its own on / off in the slate settings: Flash the screen on the clap."],
@@ -3955,8 +3977,7 @@ function renderNotes(){
       h("span",{class:"note"},(d?d.name:"")+(r?" · next take "+nextTake(r,d):"")),L?h("span",{class:"pacepill "+(L.slip<=-5?"ahead":L.slip<=2?"ontrack":L.slip<=15?"slipping":"behind")},L.slip===0?"±0 on time":(L.slip>0?"+"+dur(L.slip)+" behind":"−"+dur(-L.slip)+" ahead")):null,r?onNowBtn(r):null),
     h("button",{title:"Next shot",onclick:()=>notesStep(1)},"›"),
     h("button",{class:"nvreset",title:"Put the panels back in their usual places and sizes",onclick:resetNvLayout,hidden:!nvCustom()},"Reset layout"),
-    viewSwitch(),
-    h("button",{title:"Back to the Clipboard (Esc)",onclick:closeNotes},"✕"));
+    viewSwitch());
   v.insertBefore(head,body); if(!r){host.innerHTML="";host.dataset.key="";host.className="nvvhost";return}
   // what the shot is
   const pics=h("div",{class:"nvpics"}); for(const k of ["ref1","ref2","ref3","scribble"]) if(r[k]){const im=h("img",{alt:k});imgSrc(r[k]).then(s=>{if(s)im.src=s});im.addEventListener("click",()=>{$("#lightImg").src=im.src;$("#lightbox").classList.add("open")});pics.append(im)}
@@ -6330,8 +6351,13 @@ function seqHeadRow(id,C,d,first){
   const inside=idx.length>1?all.slice(lo,hi+1).filter(r=>r.seq!==id&&!r.cut):[];
   if(inside.length){ const names=inside.map(r=>isBlock(r)?blockName(r):"Shot "+(r.shot||"-"));
     box.append(h("span",{class:"seqinside"},`${names.slice(0,3).join(", ")}${names.length>3?" and "+(names.length-3)+" more":""} ${inside.length===1?"sits":"sit"} inside this sequence`),
-      h("button",{class:"lnk noprint",title:"Put them straight after the sequence's last shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[hi].id,true)},"move after"),
-      h("button",{class:"lnk noprint",title:"Put them straight before the sequence's first shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[lo].id,false)},"move before")); }
+      ...(inside.some(r=>!isBlock(r))?[
+        // other shots in the way: bring the sequence's own shots together, the rest stay where they are
+        h("button",{class:"lnk noprint",title:"Move the sequence's shots up to sit together where its first shot is; the other shots stay put",onclick:()=>gatherSeq(id,"first")},"gather at Shot "+(all[lo].shot||"-")),
+        h("button",{class:"lnk noprint",title:"Move the sequence's shots down to sit together where its last shot is; the other shots stay put",onclick:()=>gatherSeq(id,"last")},"gather at Shot "+(all[hi].shot||"-"))]
+      :[ // only breaks in the way: move them out, after or before
+        h("button",{class:"lnk noprint",title:"Put "+names.join(", ")+" straight after the sequence's last shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[hi].id,true)},"move "+(inside.length===1?names[0]:"them")+" out after"),
+        h("button",{class:"lnk noprint",title:"Put "+names.join(", ")+" straight before the sequence's first shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[lo].id,false)},"out before")])); }
   box.append(h("span",{class:"meta"},`${tl} take${tl===1?"":"s"}`+(la&&mem.length?` · ${mem.length-cov.missing.length}/${mem.length} caught`:"")),
     h("button",{class:"lnk noprint",onclick:()=>dupSeq(id)},"duplicate"),
     ...(first&&Object.keys(P.seqFold||{}).length?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold={};savePrefs();renderBody()}},"unfold all")]:[]),
@@ -6435,15 +6461,16 @@ function renderSeqView(){
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
     h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
-    viewSwitch(),
-    h("button",{title:"Back to the Clipboard (Esc)",onclick:closeSeqView},"✕"));
+    viewSwitch());
   // DIT name for the next take
   const dit=h("section",{},h("h3",{},"DIT name"),h("div",{class:"seqdit"},h("code",{},name||"-"),h("button",{class:"btn small",onclick:async()=>{if(await copyText(name))toast("Copied "+name)}},"Copy")),
     h("p",{class:"note"},"Covers shots "+seqRange(a,d)+". "+(la?"Every storyboard shot still needs catching: tick what each take got.":"Mocap: each take records the whole action; framing is set in post.")));
   // the shots
   const shots=h("section",{class:"seqshots"},h("h3",{},`Shots (${mem.length})`));
   for(const m of mem){ const got=cov.caught.get(m.id); const im=h("img",{alt:""}); if(m.ref1) imgSrc(m.ref1).then(s=>{if(s)im.src=s});
-    shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):"")},m.ref1?im:h("div",{class:"noimg"}),
+    shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):""),"data-id":m.id},
+      h("button",{class:"sqgrip",type:"button",title:"Drag to reorder (or use the arrow keys)","aria-label":"Reorder shot "+(m.shot||""),onpointerdown:e=>sqDrag(e,m.id),onkeydown:e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();e.stopPropagation();sqMove(m.id,e.key==="ArrowUp"?-1:1,true)}}},"⠿"),
+      m.ref1?im:h("div",{class:"noimg"}),
       h("div",{},h("b",{},"Shot "+(m.shot||"-")),m.vcs?h("span",{class:"pill"},"VCS"):null,h("p",{},String(m.action||m.description||"").slice(0,120)),
         la?h("small",{},got?"Caught in "+got.map(n=>"T"+n).join(", "):"Not caught yet"):null,
         h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Details"),
@@ -7060,8 +7087,7 @@ function renderEditNow(){
     h("button",{class:"btn small edwide",title:"Bring in a cut from the edit (EDL or FCP XML): clip names are matched to shots and takes",onclick:edImport},"Import EDL / XML"),
     h("button",{class:"btn small edwide",title:"CMX3600 EDL for Premiere, Resolve or Avid",onclick:()=>edExport("edl")},"Export EDL"),
     h("button",{class:"btn small edwide",title:"Final Cut Pro 7 XML: opens in Premiere and Resolve",onclick:()=>edExport("xml")},"Export FCP XML"),
-    viewSwitch(),
-    h("button",{class:"btn small vclose",title:"Back to the Clipboard (Esc)","aria-label":"Close",onclick:closeEdit},"✕"));
+    viewSwitch());
   // player
   const tcBox=h("span",{class:"edtc",id:"edTcNow"},edTc(ED.t));
   const btn=(label,title,fn)=>h("button",{class:"btn small",title,"aria-label":title,onclick:fn},label);
@@ -7637,6 +7663,58 @@ function nvEditCard(r){
   }
   const durS=durSec(r.duration); if(durS&&T.length){ const f=T[0].clip.f/fps, d=f-durS; if(Math.abs(d)>=0.5) box.append(h("p",{class:"note"},`Planned screen duration is ${durS}s: the cut runs it ${d>0?"+":"−"}${Math.abs(d).toFixed(1)}s ${d>0?"longer":"shorter"}.`)); }
   return box;
+}
+
+/* ---------- Sequence View: drag the shots into a new order (their rows move in the day to match) ---------- */
+const SEQF_ALL=["seqName","takeLog","seqNotes","seqTime","seqSetup","seqShoot","seqVideo","seqDup"];
+// put a sequence's shots in this order, in the slots the sequence already holds in the day; the first shot carries the sequence
+function seqReorder(anchorId,order){
+  const a=R(anchorId); if(!a) return null; const d=findRow(a.id).d, mem=seqMembers(a,d);
+  const slots=mem.map(x=>d.rows.indexOf(x)).sort((x,y)=>x-y), rows=order.map(id=>R(id)).filter(Boolean);
+  if(rows.length!==mem.length) return null;
+  slots.forEach((ix,i)=>{ d.rows[ix]=rows[i]; });
+  const na=rows[0];
+  if(na.id!==a.id){ for(const k of SEQF_ALL) na[k]=a[k]; na.takes=a.takes; a.takes=0; Object.assign(a,{seqName:"",takeLog:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0,seqVideo:"",seqDup:""}); rows.forEach(x=>x.seq=na.id); if(SQV.id===a.id) SQV.id=na.id; }
+  return na.id;
+}
+function sqApplyOrder(order,fromId){
+  if(frozenNo()) return; commit();
+  const nid=seqReorder(fromId,order); if(!nid) return;
+  commit(); renderAll(); renderSeqView(); toast("Shot order changed - Undo to put it back");
+  offerSeqPush(nid,"its shot order",c=>{ const d=findRow(c.id).d, cm=seqMembers(c,d), want=order.map(id=>twinKey(R(id)));
+    const ord=[...cm].sort((x,y)=>{const i=want.indexOf(twinKey(x)),j=want.indexOf(twinKey(y));return (i<0?999:i)-(j<0?999:j)}); seqReorder(c.id,ord.map(x=>x.id)); });
+}
+function sqMove(id,dir,keepFocus){
+  const a=R(SQV.id); if(!a) return; const d=findRow(a.id).d, ids=seqMembers(a,d).map(x=>x.id), i=ids.indexOf(id), j=i+dir;
+  if(i<0||j<0||j>=ids.length) return; ids.splice(j,0,ids.splice(i,1)[0]); sqApplyOrder(ids,a.id);
+  if(keepFocus) setTimeout(()=>{const g=$(`#seqView .seqshot[data-id="${id}"] .sqgrip`);if(g)g.focus()},30);
+}
+function sqDrag(e,id){
+  if(e.button>0) return; e.preventDefault(); const g=e.currentTarget, card=g.closest(".seqshot"), list=card.parentNode;
+  try{g.setPointerCapture(e.pointerId)}catch(err){}
+  card.classList.add("sqmoving"); let target=null, after=false;
+  const cards=()=>[...list.querySelectorAll(".seqshot")].filter(c=>c!==card);
+  const mv=ev=>{ $$(".sqdrop").forEach(x=>x.classList.remove("sqdrop","sqdrop-after")); target=null;
+    // the nearest card (they wrap in rows): drop before or after it by which half you're over
+    let best=null,dist=1e9; for(const c of cards()){ const r=c.getBoundingClientRect(); const dx=Math.max(r.left-ev.clientX,0,ev.clientX-r.right), dy=Math.max(r.top-ev.clientY,0,ev.clientY-r.bottom), dd=dx*dx+dy*dy; if(dd<dist){dist=dd;best=c} }
+    if(!best||dist>120*120) return; const r=best.getBoundingClientRect(); target=best; after=ev.clientX>r.left+r.width/2; best.classList.add("sqdrop"); if(after) best.classList.add("sqdrop-after"); };
+  const up=()=>{ g.removeEventListener("pointermove",mv); g.removeEventListener("pointerup",up); g.removeEventListener("pointercancel",up);
+    card.classList.remove("sqmoving"); $$(".sqdrop").forEach(x=>x.classList.remove("sqdrop","sqdrop-after"));
+    if(!target) return; const a=R(SQV.id); if(!a) return; const d=findRow(a.id).d, ids=seqMembers(a,d).map(x=>x.id);
+    ids.splice(ids.indexOf(id),1); let j=ids.indexOf(target.dataset.id); if(after) j++; ids.splice(j,0,id);
+    if(ids.join()!==seqMembers(a,d).map(x=>x.id).join()) sqApplyOrder(ids,a.id); };
+  g.addEventListener("pointermove",mv); g.addEventListener("pointerup",up); g.addEventListener("pointercancel",up);
+}
+
+// a sequence whose shots are spread out: move them to sit together where the first (or last) one is, in their order
+function gatherSeq(id,where){
+  if(frozenNo()) return; const a=R(id); if(!a) return; const d=findRow(a.id).d, mem=seqMembers(a,d); if(mem.length<2) return;
+  commit();
+  const keep=where==="last"?mem[mem.length-1]:mem[0], moving=mem.filter(x=>x!==keep);
+  const rest=d.rows.filter(x=>!moving.includes(x)); let i=rest.indexOf(keep);
+  if(where==="last") rest.splice(i,0,...moving); else rest.splice(i+1,0,...moving);
+  d.rows=rest; commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView();
+  toast(`${seqTitle(a)} gathered at Shot ${keep.shot||"-"} - Undo to put it back`);
 }
 
 boot();

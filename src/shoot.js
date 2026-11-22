@@ -650,8 +650,13 @@ function seqHeadRow(id,C,d,first){
   const inside=idx.length>1?all.slice(lo,hi+1).filter(r=>r.seq!==id&&!r.cut):[];
   if(inside.length){ const names=inside.map(r=>isBlock(r)?blockName(r):"Shot "+(r.shot||"-"));
     box.append(h("span",{class:"seqinside"},`${names.slice(0,3).join(", ")}${names.length>3?" and "+(names.length-3)+" more":""} ${inside.length===1?"sits":"sit"} inside this sequence`),
-      h("button",{class:"lnk noprint",title:"Put them straight after the sequence's last shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[hi].id,true)},"move after"),
-      h("button",{class:"lnk noprint",title:"Put them straight before the sequence's first shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[lo].id,false)},"move before")); }
+      ...(inside.some(r=>!isBlock(r))?[
+        // other shots in the way: bring the sequence's own shots together, the rest stay where they are
+        h("button",{class:"lnk noprint",title:"Move the sequence's shots up to sit together where its first shot is; the other shots stay put",onclick:()=>gatherSeq(id,"first")},"gather at Shot "+(all[lo].shot||"-")),
+        h("button",{class:"lnk noprint",title:"Move the sequence's shots down to sit together where its last shot is; the other shots stay put",onclick:()=>gatherSeq(id,"last")},"gather at Shot "+(all[hi].shot||"-"))]
+      :[ // only breaks in the way: move them out, after or before
+        h("button",{class:"lnk noprint",title:"Put "+names.join(", ")+" straight after the sequence's last shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[hi].id,true)},"move "+(inside.length===1?names[0]:"them")+" out after"),
+        h("button",{class:"lnk noprint",title:"Put "+names.join(", ")+" straight before the sequence's first shot",onclick:()=>moveRowsTo(inside.map(r=>r.id),all[lo].id,false)},"out before")])); }
   box.append(h("span",{class:"meta"},`${tl} take${tl===1?"":"s"}`+(la&&mem.length?` · ${mem.length-cov.missing.length}/${mem.length} caught`:"")),
     h("button",{class:"lnk noprint",onclick:()=>dupSeq(id)},"duplicate"),
     ...(first&&Object.keys(P.seqFold||{}).length?[h("button",{class:"lnk noprint",onclick:()=>{P.seqFold={};savePrefs();renderBody()}},"unfold all")]:[]),
@@ -755,15 +760,16 @@ function renderSeqView(){
     h("button",{title:"Next sequence",onclick:()=>seqStep(1)},"›"),
     h("button",{class:"nvreset",onclick:()=>{const nid=dupSeq(a.id);if(nid){SQV.id=nid;renderSeqView()}}},"Duplicate"),
     h("button",{class:"nvreset",onclick:()=>openSeqDialog(a.id)},"Edit shots"),
-    viewSwitch(),
-    h("button",{title:"Back to the Clipboard (Esc)",onclick:closeSeqView},"✕"));
+    viewSwitch());
   // DIT name for the next take
   const dit=h("section",{},h("h3",{},"DIT name"),h("div",{class:"seqdit"},h("code",{},name||"-"),h("button",{class:"btn small",onclick:async()=>{if(await copyText(name))toast("Copied "+name)}},"Copy")),
     h("p",{class:"note"},"Covers shots "+seqRange(a,d)+". "+(la?"Every storyboard shot still needs catching: tick what each take got.":"Mocap: each take records the whole action; framing is set in post.")));
   // the shots
   const shots=h("section",{class:"seqshots"},h("h3",{},`Shots (${mem.length})`));
   for(const m of mem){ const got=cov.caught.get(m.id); const im=h("img",{alt:""}); if(m.ref1) imgSrc(m.ref1).then(s=>{if(s)im.src=s});
-    shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):"")},m.ref1?im:h("div",{class:"noimg"}),
+    shots.append(h("div",{class:"seqshot"+(la?(got?" got":" miss"):""),"data-id":m.id},
+      h("button",{class:"sqgrip",type:"button",title:"Drag to reorder (or use the arrow keys)","aria-label":"Reorder shot "+(m.shot||""),onpointerdown:e=>sqDrag(e,m.id),onkeydown:e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();e.stopPropagation();sqMove(m.id,e.key==="ArrowUp"?-1:1,true)}}},"⠿"),
+      m.ref1?im:h("div",{class:"noimg"}),
       h("div",{},h("b",{},"Shot "+(m.shot||"-")),m.vcs?h("span",{class:"pill"},"VCS"):null,h("p",{},String(m.action||m.description||"").slice(0,120)),
         la?h("small",{},got?"Caught in "+got.map(n=>"T"+n).join(", "):"Not caught yet"):null,
         h("button",{class:"go",onclick:()=>{closeSeqView();openNotes(m.id)}},"Details"),
@@ -1380,8 +1386,7 @@ function renderEditNow(){
     h("button",{class:"btn small edwide",title:"Bring in a cut from the edit (EDL or FCP XML): clip names are matched to shots and takes",onclick:edImport},"Import EDL / XML"),
     h("button",{class:"btn small edwide",title:"CMX3600 EDL for Premiere, Resolve or Avid",onclick:()=>edExport("edl")},"Export EDL"),
     h("button",{class:"btn small edwide",title:"Final Cut Pro 7 XML: opens in Premiere and Resolve",onclick:()=>edExport("xml")},"Export FCP XML"),
-    viewSwitch(),
-    h("button",{class:"btn small vclose",title:"Back to the Clipboard (Esc)","aria-label":"Close",onclick:closeEdit},"✕"));
+    viewSwitch());
   // player
   const tcBox=h("span",{class:"edtc",id:"edTcNow"},edTc(ED.t));
   const btn=(label,title,fn)=>h("button",{class:"btn small",title,"aria-label":title,onclick:fn},label);
@@ -1957,4 +1962,56 @@ function nvEditCard(r){
   }
   const durS=durSec(r.duration); if(durS&&T.length){ const f=T[0].clip.f/fps, d=f-durS; if(Math.abs(d)>=0.5) box.append(h("p",{class:"note"},`Planned screen duration is ${durS}s: the cut runs it ${d>0?"+":"−"}${Math.abs(d).toFixed(1)}s ${d>0?"longer":"shorter"}.`)); }
   return box;
+}
+
+/* ---------- Sequence View: drag the shots into a new order (their rows move in the day to match) ---------- */
+const SEQF_ALL=["seqName","takeLog","seqNotes","seqTime","seqSetup","seqShoot","seqVideo","seqDup"];
+// put a sequence's shots in this order, in the slots the sequence already holds in the day; the first shot carries the sequence
+function seqReorder(anchorId,order){
+  const a=R(anchorId); if(!a) return null; const d=findRow(a.id).d, mem=seqMembers(a,d);
+  const slots=mem.map(x=>d.rows.indexOf(x)).sort((x,y)=>x-y), rows=order.map(id=>R(id)).filter(Boolean);
+  if(rows.length!==mem.length) return null;
+  slots.forEach((ix,i)=>{ d.rows[ix]=rows[i]; });
+  const na=rows[0];
+  if(na.id!==a.id){ for(const k of SEQF_ALL) na[k]=a[k]; na.takes=a.takes; a.takes=0; Object.assign(a,{seqName:"",takeLog:"",seqNotes:"",seqTime:false,seqSetup:0,seqShoot:0,seqVideo:"",seqDup:""}); rows.forEach(x=>x.seq=na.id); if(SQV.id===a.id) SQV.id=na.id; }
+  return na.id;
+}
+function sqApplyOrder(order,fromId){
+  if(frozenNo()) return; commit();
+  const nid=seqReorder(fromId,order); if(!nid) return;
+  commit(); renderAll(); renderSeqView(); toast("Shot order changed - Undo to put it back");
+  offerSeqPush(nid,"its shot order",c=>{ const d=findRow(c.id).d, cm=seqMembers(c,d), want=order.map(id=>twinKey(R(id)));
+    const ord=[...cm].sort((x,y)=>{const i=want.indexOf(twinKey(x)),j=want.indexOf(twinKey(y));return (i<0?999:i)-(j<0?999:j)}); seqReorder(c.id,ord.map(x=>x.id)); });
+}
+function sqMove(id,dir,keepFocus){
+  const a=R(SQV.id); if(!a) return; const d=findRow(a.id).d, ids=seqMembers(a,d).map(x=>x.id), i=ids.indexOf(id), j=i+dir;
+  if(i<0||j<0||j>=ids.length) return; ids.splice(j,0,ids.splice(i,1)[0]); sqApplyOrder(ids,a.id);
+  if(keepFocus) setTimeout(()=>{const g=$(`#seqView .seqshot[data-id="${id}"] .sqgrip`);if(g)g.focus()},30);
+}
+function sqDrag(e,id){
+  if(e.button>0) return; e.preventDefault(); const g=e.currentTarget, card=g.closest(".seqshot"), list=card.parentNode;
+  try{g.setPointerCapture(e.pointerId)}catch(err){}
+  card.classList.add("sqmoving"); let target=null, after=false;
+  const cards=()=>[...list.querySelectorAll(".seqshot")].filter(c=>c!==card);
+  const mv=ev=>{ $$(".sqdrop").forEach(x=>x.classList.remove("sqdrop","sqdrop-after")); target=null;
+    // the nearest card (they wrap in rows): drop before or after it by which half you're over
+    let best=null,dist=1e9; for(const c of cards()){ const r=c.getBoundingClientRect(); const dx=Math.max(r.left-ev.clientX,0,ev.clientX-r.right), dy=Math.max(r.top-ev.clientY,0,ev.clientY-r.bottom), dd=dx*dx+dy*dy; if(dd<dist){dist=dd;best=c} }
+    if(!best||dist>120*120) return; const r=best.getBoundingClientRect(); target=best; after=ev.clientX>r.left+r.width/2; best.classList.add("sqdrop"); if(after) best.classList.add("sqdrop-after"); };
+  const up=()=>{ g.removeEventListener("pointermove",mv); g.removeEventListener("pointerup",up); g.removeEventListener("pointercancel",up);
+    card.classList.remove("sqmoving"); $$(".sqdrop").forEach(x=>x.classList.remove("sqdrop","sqdrop-after"));
+    if(!target) return; const a=R(SQV.id); if(!a) return; const d=findRow(a.id).d, ids=seqMembers(a,d).map(x=>x.id);
+    ids.splice(ids.indexOf(id),1); let j=ids.indexOf(target.dataset.id); if(after) j++; ids.splice(j,0,id);
+    if(ids.join()!==seqMembers(a,d).map(x=>x.id).join()) sqApplyOrder(ids,a.id); };
+  g.addEventListener("pointermove",mv); g.addEventListener("pointerup",up); g.addEventListener("pointercancel",up);
+}
+
+// a sequence whose shots are spread out: move them to sit together where the first (or last) one is, in their order
+function gatherSeq(id,where){
+  if(frozenNo()) return; const a=R(id); if(!a) return; const d=findRow(a.id).d, mem=seqMembers(a,d); if(mem.length<2) return;
+  commit();
+  const keep=where==="last"?mem[mem.length-1]:mem[0], moving=mem.filter(x=>x!==keep);
+  const rest=d.rows.filter(x=>!moving.includes(x)); let i=rest.indexOf(keep);
+  if(where==="last") rest.splice(i,0,...moving); else rest.splice(i+1,0,...moving);
+  d.rows=rest; commit(); renderAll(); if($("#seqView").classList.contains("open")) renderSeqView();
+  toast(`${seqTitle(a)} gathered at Shot ${keep.shot||"-"} - Undo to put it back`);
 }

@@ -438,6 +438,8 @@ body.calm .timeline.actual .seg.live{animation:none}
 /* resets: R1, R2... within a take */
 .nvresets{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;flex-basis:100%;margin-top:.15rem}
 .seqpickhd{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.5rem 0 .2rem;padding-top:.3rem;border-top:1px solid var(--line)} .seqpickhd:first-child{border-top:none;margin-top:0}
+.seqshot{position:relative} .sqgrip{align-self:center;border:none;background:none;color:var(--muted);font-size:1.1rem;cursor:grab;padding:.4rem .2rem;touch-action:none;border-radius:6px} .sqgrip:hover,.sqgrip:focus-visible{color:var(--ink);background:var(--panel2)}
+.seqshot.sqmoving{opacity:.45} .seqshot.sqdrop{box-shadow:-4px 0 0 var(--accent)} .seqshot.sqdrop.sqdrop-after{box-shadow:4px 0 0 var(--accent)}
 .ditresets{display:flex;flex-wrap:wrap;gap:.2rem;margin-top:.2rem} .clapat{font-family:ui-monospace,Menlo,monospace;margin-right:.4rem}
 .pvtotal td{border-top:2px solid var(--line2)} .pvbreak td{color:var(--muted)}
 .rchip{border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:999px;padding:.1rem .5rem;font:inherit;font-size:.8rem;cursor:pointer}
@@ -967,6 +969,24 @@ body.nosteps .mins.timing input{width:4.5em}
   .time{font-size:.92em}
   .sid{word-break:break-all}
 }
+
+/* ===== one bar for every view: Clipboard, Details, Sequence View and Edit share height, padding, title size,
+   button size, and the switcher sits in the same place (its Clipboard segment is the way back; Esc too) ===== */
+:root{--barpad-y:.7rem;--barpad-x:1.15rem;--barh:2.1rem}
+header.top{padding:var(--barpad-y) var(--barpad-x) .8rem}
+.nvhead,.edtop{position:sticky;top:0;z-index:3;flex-shrink:0;display:flex;flex-wrap:nowrap;align-items:center;gap:.6rem;box-sizing:border-box;min-height:calc(2*var(--barpad-y) + var(--barh));padding:var(--barpad-y) var(--barpad-x);background:var(--bg);border-bottom:1px solid var(--line)}
+.titlebar{min-height:var(--barh)}
+.titlebar h1,.nvtitle b,.edtitle{font-size:1.38rem;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.nvtitle{align-items:center} .nvtitle .note,.edrt,.titlebar h1 small{font-size:.85rem;color:var(--muted);font-weight:400}
+.nvhead>button,.edtop .btn.small,.titlebar .btn.small,header.top .toolbar .btn,.edtop select,.edtop input[type=text]{height:var(--barh);min-height:var(--barh);box-sizing:border-box;border-radius:8px}
+.nvhead>button{font-size:1rem;min-width:var(--barh);padding:0 .55rem;line-height:1}
+.vswitch,.viewer .vswitch{margin:0 0 0 auto;height:var(--barh);box-sizing:border-box;align-items:stretch}
+.vsw,.viewer .vsw{font-size:.84rem;padding:0 .75rem}
+.edtop>span[style*="flex:1"]{display:none}
+.edtop .edtgt{margin-right:auto} .edtop .vswitch{margin-left:.2rem}
+.nvhead .nvtitle{flex:0 1 auto;min-width:0} .nvhead .nvtitle+button{margin-right:auto}
+@media (max-width:760px){ .nvhead,.edtop{flex-wrap:wrap} .nvhead .nvtitle{flex:1 1 0;min-width:0} .nvhead .nvtitle+button{margin-right:0} .nvhead .vswitch{order:20;flex-basis:100%;margin:0} }
+@media (max-width:640px){ :root{--barpad-x:.7rem;--barh:2.3rem} }
 </style>
 </head>
 <body>
@@ -1029,7 +1049,7 @@ body.nosteps .mins.timing input{width:4.5em}
       </span>
       <nav class="vswitch onsetgroup" id="viewSwitch" role="tablist" aria-label="Views">
         <button class="vsw vsw-clip on" id="clipBtn" role="tab" aria-selected="true" title="Clipboard: the whole day's shotlist, to plan and run the day">Clipboard</button>
-        <button class="vsw vsw-slate" id="slateBtn" role="tab" aria-selected="false" title="Slate: full-screen slate for the next shot, with timecode, clap, reset and cut"><span class="clapicon" aria-hidden="true"></span>Slate</button>
+        <button class="vsw vsw-slate" id="slateBtn" role="tab" aria-selected="false" title="Slate: full-screen slate for the next shot, with timecode, clap, reset and cut">Slate</button>
         <button class="vsw vsw-details" id="notesBtn" role="tab" aria-selected="false" title="Details: one shot full screen, with its storyboard, description, takes, notes and scribbles">Details</button>
         <button class="vsw vsw-edit" id="editBtn" role="tab" aria-selected="false" title="Edit: time a cut from boards, takes and video, play it through, export an EDL or FCP XML">Edit</button>
       </nav>
